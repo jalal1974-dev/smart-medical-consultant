@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, mediaContent, InsertMediaContent } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,152 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function markFreeConsultationUsed(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(users).set({ hasUsedFreeConsultation: true }).where(eq(users.id, userId));
+}
+
+// Consultation queries
+export async function createConsultation(consultation: InsertConsultation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(consultations).values(consultation);
+  return result;
+}
+
+export async function getConsultationsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(consultations).where(eq(consultations.userId, userId)).orderBy(desc(consultations.createdAt));
+}
+
+export async function getAllConsultations() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(consultations).orderBy(desc(consultations.createdAt));
+}
+
+export async function getConsultationById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(consultations).where(eq(consultations.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateConsultationStatus(id: number, status: "pending" | "confirmed" | "completed" | "cancelled", adminNotes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = { status };
+  if (adminNotes !== undefined) {
+    updateData.adminNotes = adminNotes;
+  }
+
+  await db.update(consultations).set(updateData).where(eq(consultations.id, id));
+}
+
+export async function updateConsultationPayment(id: number, paymentStatus: "pending" | "completed" | "failed" | "refunded", transactionId?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: any = { paymentStatus };
+  if (transactionId) {
+    updateData.paypalTransactionId = transactionId;
+  }
+
+  await db.update(consultations).set(updateData).where(eq(consultations.id, id));
+}
+
+// Media content queries
+export async function createMediaContent(media: InsertMediaContent) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(mediaContent).values(media);
+  return result;
+}
+
+export async function getPublishedMedia(type?: "video" | "podcast") {
+  const db = await getDb();
+  if (!db) return [];
+
+  if (type) {
+    return await db.select().from(mediaContent).where(and(eq(mediaContent.type, type), eq(mediaContent.isPublished, true))).orderBy(desc(mediaContent.createdAt));
+  }
+
+  return await db.select().from(mediaContent).where(eq(mediaContent.isPublished, true)).orderBy(desc(mediaContent.createdAt));
+}
+
+export async function getAllMedia() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(mediaContent).orderBy(desc(mediaContent.createdAt));
+}
+
+export async function getMediaById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(mediaContent).where(eq(mediaContent.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateMediaContent(id: number, updates: Partial<InsertMediaContent>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(mediaContent).set(updates).where(eq(mediaContent.id, id));
+}
+
+export async function deleteMediaContent(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(mediaContent).where(eq(mediaContent.id, id));
+}
+
+export async function incrementMediaViews(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const media = await getMediaById(id);
+  if (media) {
+    await db.update(mediaContent).set({ viewCount: (media.viewCount || 0) + 1 }).where(eq(mediaContent.id, id));
+  }
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+export async function getConsultationStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, pending: 0, confirmed: 0, completed: 0 };
+
+  const allConsultations = await db.select().from(consultations);
+  
+  return {
+    total: allConsultations.length,
+    pending: allConsultations.filter(c => c.status === "pending").length,
+    confirmed: allConsultations.filter(c => c.status === "confirmed").length,
+    completed: allConsultations.filter(c => c.status === "completed").length,
+  };
+}

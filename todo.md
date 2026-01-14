@@ -1,0 +1,46 @@
+# Smart Medical Consultant - Project TODO
+
+## Phase 1: Project Structure & Database
+- [x] Set up database schema for consultations, media content, and user tracking
+- [x] Create bilingual infrastructure (i18n system with Arabic and English)
+- [x] Copy and integrate logo into project
+- [x] Configure theme and global styling for medical service platform
+
+## Phase 2: Authentication & UI Components
+- [x] Implement user authentication (Google, Facebook, iCloud via Manus OAuth)
+- [x] Create language toggle component accessible on all pages
+- [x] Build bilingual navigation header
+- [x] Create bilingual home page introducing the service
+- [x] Set up responsive layout for all pages
+
+## Phase 3: Consultation Booking System
+- [x] Create consultation booking form with bilingual support
+- [x] Implement free consultation tracking (one per user)
+- [x] Integrate PayPal payment for paid consultations
+- [x] Create consultation management backend procedures
+- [x] Build consultation confirmation and notification system
+
+## Phase 4: Media Section
+- [x] Create videos section with bilingual content support
+- [x] Create podcasts section with bilingual content support
+- [x] Implement media player components
+- [x] Add admin functionality to manage media content
+
+## Phase 5: Dashboards
+- [x] Build user dashboard showing consultation history
+- [x] Create consultation tracking interface
+- [x] Build admin panel for managing consultations
+- [x] Add admin user management interface
+- [x] Add admin content management for media
+
+## Phase 6: Testing & Deployment
+- [x] Write vitest tests for critical procedures
+- [x] Test all bilingual content displays correctly
+- [x] Test authentication flow with all providers
+- [x] Test consultation booking and payment flow
+- [x] Create checkpoint for deployment
+
+## Future Enhancements (Not in current scope)
+- [ ] Monthly subscription model
+- [ ] n8n automation integration
+- [ ] AI-generated reports after payment
