@@ -47,3 +47,6 @@
 
 ## Bug Fixes
 - [x] Fix nested anchor tag error in Header navigation
+
+## Content Updates
+- [x] Update home page with new detailed service description in Arabic and English

@@ -22,9 +22,9 @@ export const translations = {
     signOut: "Sign Out",
     
     // Home page
-    heroTitle: "Your Trusted Medical Consultant",
-    heroSubtitle: "Get professional medical consultations from certified healthcare experts. Available in Arabic and English.",
-    heroDescription: "We provide comprehensive medical consultation services with experienced healthcare professionals. Book your consultation today and get expert medical advice tailored to your needs.",
+    heroTitle: "Your Smart Medical Consultant",
+    heroSubtitle: "Trusted and simplified medical content based on the latest medical advances across all specialties.",
+    heroDescription: "We provide personalized consultations for each patient based on their health condition and medical reports, delivering detailed reports about their medical status based on the latest medical research and advances.",
     getStarted: "Get Started",
     bookConsultation: "Book Consultation",
     learnMore: "Learn More",
@@ -133,9 +133,9 @@ export const translations = {
     signOut: "تسجيل الخروج",
     
     // Home page
-    heroTitle: "مستشارك الطبي الموثوق",
-    heroSubtitle: "احصل على استشارات طبية احترافية من خبراء الرعاية الصحية المعتمدين. متاح بالعربية والإنجليزية.",
-    heroDescription: "نقدم خدمات استشارات طبية شاملة مع متخصصين في الرعاية الصحية ذوي خبرة. احجز استشارتك اليوم واحصل على نصائح طبية متخصصة تناسب احتياجاتك.",
+    heroTitle: "مستشارك الطبي الذكي",
+    heroSubtitle: "محتوى طبي موثوق ومبسط يستند إلى أحدث ما توصل إليه الطب في كل التخصصات.",
+    heroDescription: "نقدم استشارات خاصة لكل مريض حسب حالته الصحية وتقاريره الطبية، ونقدم تقارير مفصلة عن حالته الطبية بناءً على أحدث ما توصل له الطب.",
     getStarted: "ابدأ الآن",
     bookConsultation: "احجز استشارة",
     learnMore: "اعرف المزيد",
