@@ -81,3 +81,11 @@
 - [x] Include consultation details in email (ID, amount, date, status)
 - [x] Add next steps guidance in email
 - [x] Support bilingual emails (Arabic and English)
+
+## Secure File Upload System
+- [x] Create backend file upload API endpoint using S3 storage
+- [x] Implement file validation (type, size limits)
+- [x] Add frontend file upload UI with drag-and-drop
+- [x] Show upload progress indicators
+- [x] Update consultation submission to use uploaded file URLs
+- [x] Add file preview functionality

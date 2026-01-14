@@ -6,6 +6,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { sendConsultationReceipt, sendConsultationStatusUpdate } from "./emailNotifications";
+import { storagePut } from "./storage";
+import { nanoid } from "nanoid";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -25,6 +27,70 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+
+  // File upload route
+  upload: router({
+    file: protectedProcedure
+      .input(z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        fileData: z.string(), // base64 encoded file data
+        category: z.enum(['medical_report', 'lab_result', 'xray', 'other']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // Validate file type
+          const allowedTypes = [
+            'application/pdf',
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          ];
+
+          if (!allowedTypes.includes(input.fileType)) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Invalid file type. Only PDF, images, and Word documents are allowed.',
+            });
+          }
+
+          // Convert base64 to buffer
+          const fileBuffer = Buffer.from(input.fileData, 'base64');
+
+          // Validate file size (max 10MB)
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          if (fileBuffer.length > maxSize) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'File size exceeds 10MB limit.',
+            });
+          }
+
+          // Generate unique file key
+          const fileExtension = input.fileName.split('.').pop();
+          const uniqueId = nanoid();
+          const fileKey = `consultations/${ctx.user.id}/${input.category}/${uniqueId}.${fileExtension}`;
+
+          // Upload to S3
+          const { url } = await storagePut(fileKey, fileBuffer, input.fileType);
+
+          return {
+            success: true,
+            url,
+            fileKey,
+          };
+        } catch (error: any) {
+          console.error('File upload error:', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to upload file',
+          });
+        }
+      }),
   }),
 
   consultation: router({

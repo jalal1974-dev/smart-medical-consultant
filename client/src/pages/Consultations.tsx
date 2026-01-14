@@ -10,9 +10,9 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
-import { Upload, FileText, Image as ImageIcon, FlaskConical, FileStack } from "lucide-react";
 import { Header } from "@/components/Header";
 import { useLocation } from "wouter";
+import { FileUpload } from "@/components/FileUpload";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -62,19 +62,18 @@ export default function Consultations() {
     }
   };
 
-  // Simulated file upload handler (in production, this would upload to S3)
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
+  const handleFileUploadComplete = (
+    url: string,
     setter: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
-    const files = e.target.files;
-    if (!files) return;
+    setter(prev => [...prev, url]);
+  };
 
-    // TODO: Implement actual S3 upload using storagePut
-    // For now, we'll simulate with local file names
-    const fileUrls = Array.from(files).map(f => `https://storage.example.com/${f.name}`);
-    setter(prev => [...prev, ...fileUrls]);
-    toast.success(`${files.length} file(s) uploaded`);
+  const handleFileRemove = (
+    index: number,
+    setter: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setter(prev => prev.filter((_, i) => i !== index));
   };
 
   if (loading) {
@@ -237,87 +236,40 @@ export default function Consultations() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     {/* Medical Reports */}
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                      <Label htmlFor="medicalReports" className="flex items-center gap-2 cursor-pointer">
-                        <FileText className="h-5 w-5" />
-                        {language === "ar" ? "التقارير الطبية" : "Medical Reports"}
-                      </Label>
-                      <Input
-                        id="medicalReports"
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => handleFileUpload(e, setMedicalReports)}
-                        className="mt-2"
-                      />
-                      {medicalReports.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {medicalReports.length} {language === "ar" ? "ملف" : "file(s)"}
-                        </p>
-                      )}
-                    </div>
+                    <FileUpload
+                      category="medical_report"
+                      label={language === "ar" ? "التقارير الطبية" : "Medical Reports"}
+                      description={language === "ar" ? "ملفات PDF أو Word" : "PDF or Word files"}
+                      onUploadComplete={(url) => handleFileUploadComplete(url, setMedicalReports)}
+                      onRemove={() => handleFileRemove(medicalReports.length - 1, setMedicalReports)}
+                    />
 
                     {/* Lab Results */}
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                      <Label htmlFor="labResults" className="flex items-center gap-2 cursor-pointer">
-                        <FlaskConical className="h-5 w-5" />
-                        {language === "ar" ? "نتائج التحاليل" : "Lab Results"}
-                      </Label>
-                      <Input
-                        id="labResults"
-                        type="file"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => handleFileUpload(e, setLabResults)}
-                        className="mt-2"
-                      />
-                      {labResults.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {labResults.length} {language === "ar" ? "ملف" : "file(s)"}
-                        </p>
-                      )}
-                    </div>
+                    <FileUpload
+                      category="lab_result"
+                      label={language === "ar" ? "نتائج التحاليل" : "Lab Results"}
+                      description={language === "ar" ? "ملفات PDF أو صور" : "PDF or image files"}
+                      onUploadComplete={(url) => handleFileUploadComplete(url, setLabResults)}
+                      onRemove={() => handleFileRemove(labResults.length - 1, setLabResults)}
+                    />
 
                     {/* X-ray Images */}
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                      <Label htmlFor="xrayImages" className="flex items-center gap-2 cursor-pointer">
-                        <ImageIcon className="h-5 w-5" />
-                        {language === "ar" ? "صور الأشعة" : "X-ray Images"}
-                      </Label>
-                      <Input
-                        id="xrayImages"
-                        type="file"
-                        multiple
-                        accept=".jpg,.jpeg,.png,.dicom"
-                        onChange={(e) => handleFileUpload(e, setXrayImages)}
-                        className="mt-2"
-                      />
-                      {xrayImages.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {xrayImages.length} {language === "ar" ? "ملف" : "file(s)"}
-                        </p>
-                      )}
-                    </div>
+                    <FileUpload
+                      category="xray"
+                      label={language === "ar" ? "صور الأشعة" : "X-ray Images"}
+                      description={language === "ar" ? "صور الأشعة السينية" : "X-ray image files"}
+                      onUploadComplete={(url) => handleFileUploadComplete(url, setXrayImages)}
+                      onRemove={() => handleFileRemove(xrayImages.length - 1, setXrayImages)}
+                    />
 
                     {/* Other Documents */}
-                    <div className="border-2 border-dashed rounded-lg p-4">
-                      <Label htmlFor="otherDocuments" className="flex items-center gap-2 cursor-pointer">
-                        <FileStack className="h-5 w-5" />
-                        {language === "ar" ? "مستندات أخرى" : "Other Documents"}
-                      </Label>
-                      <Input
-                        id="otherDocuments"
-                        type="file"
-                        multiple
-                        onChange={(e) => handleFileUpload(e, setOtherDocuments)}
-                        className="mt-2"
-                      />
-                      {otherDocuments.length > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {otherDocuments.length} {language === "ar" ? "ملف" : "file(s)"}
-                        </p>
-                      )}
-                    </div>
+                    <FileUpload
+                      category="other"
+                      label={language === "ar" ? "مستندات أخرى" : "Other Documents"}
+                      description={language === "ar" ? "أي مستندات طبية أخرى" : "Any other medical documents"}
+                      onUploadComplete={(url) => handleFileUploadComplete(url, setOtherDocuments)}
+                      onRemove={() => handleFileRemove(otherDocuments.length - 1, setOtherDocuments)}
+                    />
                   </div>
                 </div>
 
