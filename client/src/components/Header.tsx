@@ -53,16 +53,16 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
           {navItems.map((item) => (
-            <Link key={item.path} href={item.path}>
-              <a
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location === item.path
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {item.label}
-              </a>
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location === item.path
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {item.label}
             </Link>
           ))}
         </nav>
@@ -95,17 +95,17 @@ export function Header() {
         <div className="md:hidden border-t bg-background">
           <nav className="container py-4 flex flex-col gap-4">
             {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    location === item.path
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.label}
-                </a>
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location === item.path
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
               </Link>
             ))}
             <div className="flex items-center gap-3 pt-2 border-t">

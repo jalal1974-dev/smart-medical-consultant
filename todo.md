@@ -44,3 +44,6 @@
 - [ ] Monthly subscription model
 - [ ] n8n automation integration
 - [ ] AI-generated reports after payment
+
+## Bug Fixes
+- [x] Fix nested anchor tag error in Header navigation
