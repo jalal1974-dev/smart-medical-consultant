@@ -50,3 +50,4 @@
 
 ## Content Updates
 - [x] Update home page with new detailed service description in Arabic and English
+- [x] Add AI technology information to home page bio

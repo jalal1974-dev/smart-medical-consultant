@@ -24,7 +24,7 @@ export const translations = {
     // Home page
     heroTitle: "Your Smart Medical Consultant",
     heroSubtitle: "Trusted and simplified medical content based on the latest medical advances across all specialties.",
-    heroDescription: "We provide personalized consultations for each patient based on their health condition and medical reports, delivering detailed reports about their medical status based on the latest medical research and advances.",
+    heroDescription: "We provide personalized consultations for each patient based on their health condition and medical reports, using the latest artificial intelligence technology under the supervision of our medical specialist doctors in all specialties. We deliver detailed reports about their medical status based on the latest medical research and advances.",
     getStarted: "Get Started",
     bookConsultation: "Book Consultation",
     learnMore: "Learn More",
@@ -135,7 +135,7 @@ export const translations = {
     // Home page
     heroTitle: "مستشارك الطبي الذكي",
     heroSubtitle: "محتوى طبي موثوق ومبسط يستند إلى أحدث ما توصل إليه الطب في كل التخصصات.",
-    heroDescription: "نقدم استشارات خاصة لكل مريض حسب حالته الصحية وتقاريره الطبية، ونقدم تقارير مفصلة عن حالته الطبية بناءً على أحدث ما توصل له الطب.",
+    heroDescription: "نقدم استشارات خاصة لكل مريض حسب حالته الصحية وتقاريره الطبية، باستخدام أحدث تقنيات الذكاء الاصطناعي تحت إشراف أطبائنا المتخصصين في جميع التخصصات. ونقدم تقارير مفصلة عن حالته الطبية بناءً على أحدث ما توصل له الطب.",
     getStarted: "ابدأ الآن",
     bookConsultation: "احجز استشارة",
     learnMore: "اعرف المزيد",
