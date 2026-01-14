@@ -12,6 +12,7 @@ import Podcasts from "./pages/Podcasts";
 import Consultations from "./pages/Consultations";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
+import PaymentConfirmation from "./pages/PaymentConfirmation";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
         <Route path={"/consultations"} component={Consultations} />
         <Route path={"/dashboard"} component={Dashboard} />
         <Route path={"/admin"} component={AdminPanel} />
+        <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
       </Switch>

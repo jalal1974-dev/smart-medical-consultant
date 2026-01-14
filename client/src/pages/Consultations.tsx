@@ -12,10 +12,12 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { Upload, FileText, Image as ImageIcon, FlaskConical, FileStack } from "lucide-react";
 import { Header } from "@/components/Header";
+import { useLocation } from "wouter";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
   const { t, language } = useLanguage();
+  const [, setLocation] = useLocation();
   const createMutation = trpc.consultation.create.useMutation();
 
   const [formData, setFormData] = useState({
@@ -53,25 +55,8 @@ export default function Consultations() {
 
       toast.success(t("consultationBooked"));
       
-      // Reset form
-      setFormData({
-        patientName: "",
-        patientEmail: "",
-        patientPhone: "",
-        symptoms: "",
-        medicalHistory: "",
-        preferredLanguage: language as "en" | "ar",
-      });
-      setMedicalReports([]);
-      setLabResults([]);
-      setXrayImages([]);
-      setOtherDocuments([]);
-
-      // If not free, redirect to payment (PayPal integration would go here)
-      if (!isFree) {
-        toast.info(t("paymentRequired"));
-        // TODO: Integrate PayPal payment
-      }
+      // Redirect to payment confirmation page
+      setLocation(`/payment-confirmation/${result.consultationId}`);
     } catch (error: any) {
       toast.error(error.message || t("consultationError"));
     }
