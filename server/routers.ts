@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
+import { sendConsultationReceipt, sendConsultationStatusUpdate } from "./emailNotifications";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -78,6 +79,18 @@ export const appRouter = router({
         if (input.isFree) {
           await db.markFreeConsultationUsed(ctx.user.id);
         }
+
+        // Send email receipt to patient
+        await sendConsultationReceipt({
+          consultationId: Number(consultationId),
+          patientName: input.patientName,
+          patientEmail: input.patientEmail,
+          amount: input.isFree ? 0 : 5,
+          isFree: input.isFree,
+          preferredLanguage: input.preferredLanguage,
+          createdAt: new Date(),
+          status: 'submitted',
+        });
 
         return { success: true, consultationId: Number(consultationId) };
       }),
@@ -168,6 +181,19 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await db.updateConsultationStatus(input.id, input.status);
+        
+        // Get consultation details to send email notification
+        const consultation = await db.getConsultationById(input.id);
+        if (consultation) {
+          await sendConsultationStatusUpdate(
+            consultation.id,
+            consultation.patientName,
+            consultation.patientEmail,
+            input.status,
+            consultation.preferredLanguage as "en" | "ar"
+          );
+        }
+        
         return { success: true };
       }),
 

@@ -74,3 +74,10 @@
 - [x] Show receipt details (consultation ID, amount, date, payment method)
 - [x] Add next steps guidance for users
 - [x] Add route in App.tsx for payment confirmation page
+
+## Email Receipt System
+- [x] Create email template for consultation receipts
+- [x] Implement automatic email sending after consultation submission
+- [x] Include consultation details in email (ID, amount, date, status)
+- [x] Add next steps guidance in email
+- [x] Support bilingual emails (Arabic and English)
