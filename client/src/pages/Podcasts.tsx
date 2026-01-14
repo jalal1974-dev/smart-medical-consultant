@@ -7,7 +7,7 @@ import { Headphones, Clock, Eye } from "lucide-react";
 export default function Podcasts() {
   const { t, language } = useLanguage();
   const { data: podcasts, isLoading } = trpc.media.podcasts.useQuery();
-  const incrementViews = trpc.media.incrementViews.useMutation();
+  const incrementViews = trpc.media.incrementPodcastViews.useMutation();
 
   const handlePodcastClick = (id: number, url: string) => {
     incrementViews.mutate({ id });
@@ -61,7 +61,7 @@ export default function Podcasts() {
               <Card
                 key={podcast.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handlePodcastClick(podcast.id, podcast.mediaUrl)}
+                onClick={() => handlePodcastClick(podcast.id, podcast.audioUrl)}
               >
                 <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5">
                   {podcast.thumbnailUrl ? (
@@ -79,7 +79,7 @@ export default function Podcasts() {
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="secondary">
-                      {podcast.language === "both" ? "EN/AR" : podcast.language.toUpperCase()}
+                      {language === "en" ? "English" : "العربية"}
                     </Badge>
                   </div>
                   <CardTitle className="line-clamp-2">
@@ -97,7 +97,7 @@ export default function Podcasts() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Eye className="w-4 h-4" />
-                      <span>{podcast.viewCount}</span>
+                      <span>{podcast.views}</span>
                     </div>
                   </div>
                 </CardContent>

@@ -130,20 +130,18 @@ export default function Dashboard() {
                         <FileText className="w-5 h-5 text-muted-foreground mt-0.5" />
                         <div>
                           <p className="text-sm font-medium">{t("consultationReason")}</p>
-                          <p className="text-sm text-muted-foreground">{consultation.description}</p>
+                          <p className="text-sm text-muted-foreground">{consultation.symptoms}</p>
                         </div>
                       </div>
-                      {consultation.scheduledAt && (
-                        <div className="flex items-start gap-2">
-                          <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm font-medium">{t("scheduleDate")}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {format(new Date(consultation.scheduledAt), "PPpp")}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-2">
+                        <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Submitted Date</p>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(consultation.createdAt), "PPpp")}
+                          </p>
                         </div>
-                      )}
+                      </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-start gap-2">
@@ -159,16 +157,56 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm font-medium">{t("preferredLanguage")}</p>
                           <p className="text-sm text-muted-foreground">
-                            {consultation.language === "en" ? "English" : "العربية"}
+                            {consultation.preferredLanguage === "en" ? "English" : "العربية"}
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  {consultation.adminNotes && (
+                  {consultation.specialistNotes && (
                     <div className="mt-4 p-4 bg-muted rounded-lg">
-                      <p className="text-sm font-medium mb-1">Admin Notes</p>
-                      <p className="text-sm text-muted-foreground">{consultation.adminNotes}</p>
+                      <p className="text-sm font-medium mb-1">Specialist Notes</p>
+                      <p className="text-sm text-muted-foreground">{consultation.specialistNotes}</p>
+                    </div>
+                  )}
+                  {consultation.aiAnalysis && (
+                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium mb-2">AI Analysis</p>
+                      <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {consultation.aiReportUrl && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
+                              Download PDF Report
+                            </a>
+                          </Button>
+                        )}
+                        {consultation.aiVideoUrl && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={consultation.aiVideoUrl} target="_blank" rel="noopener noreferrer">
+                              Watch Video Explanation
+                            </a>
+                          </Button>
+                        )}
+                        {consultation.aiInfographicUrl && (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                              View Infographic
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {consultation.followUpNotes && (
+                    <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm font-medium mb-1">Treatment Follow-up</p>
+                      <p className="text-sm text-muted-foreground">{consultation.followUpNotes}</p>
+                      {consultation.followUpStatus && (
+                        <Badge className="mt-2" variant={consultation.followUpStatus === 'approved' ? 'default' : consultation.followUpStatus === 'concerns' ? 'destructive' : 'secondary'}>
+                          {consultation.followUpStatus}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </CardContent>

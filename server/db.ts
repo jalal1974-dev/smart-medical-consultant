@@ -1,11 +1,10 @@
 import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, mediaContent, InsertMediaContent } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -17,6 +16,8 @@ export async function getDb() {
   }
   return _db;
 }
+
+// ==================== User Functions ====================
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -85,7 +86,6 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -97,6 +97,13 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(users).orderBy(desc(users.createdAt));
+}
+
 export async function markFreeConsultationUsed(userId: number) {
   const db = await getDb();
   if (!db) return;
@@ -104,13 +111,22 @@ export async function markFreeConsultationUsed(userId: number) {
   await db.update(users).set({ hasUsedFreeConsultation: true }).where(eq(users.id, userId));
 }
 
-// Consultation queries
-export async function createConsultation(consultation: InsertConsultation) {
+// ==================== Consultation Functions ====================
+
+export async function createConsultation(data: InsertConsultation) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(consultations).values(consultation);
-  return result;
+  const result = await db.insert(consultations).values(data);
+  return result[0].insertId;
+}
+
+export async function getConsultationById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(consultations).where(eq(consultations.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getConsultationsByUserId(userId: number) {
@@ -127,114 +143,173 @@ export async function getAllConsultations() {
   return await db.select().from(consultations).orderBy(desc(consultations.createdAt));
 }
 
-export async function getConsultationById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db.select().from(consultations).where(eq(consultations.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function updateConsultationStatus(id: number, status: "pending" | "confirmed" | "completed" | "cancelled", adminNotes?: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const updateData: any = { status };
-  if (adminNotes !== undefined) {
-    updateData.adminNotes = adminNotes;
-  }
-
-  await db.update(consultations).set(updateData).where(eq(consultations.id, id));
-}
-
-export async function updateConsultationPayment(id: number, paymentStatus: "pending" | "completed" | "failed" | "refunded", transactionId?: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const updateData: any = { paymentStatus };
-  if (transactionId) {
-    updateData.paypalTransactionId = transactionId;
-  }
-
-  await db.update(consultations).set(updateData).where(eq(consultations.id, id));
-}
-
-// Media content queries
-export async function createMediaContent(media: InsertMediaContent) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  const result = await db.insert(mediaContent).values(media);
-  return result;
-}
-
-export async function getPublishedMedia(type?: "video" | "podcast") {
-  const db = await getDb();
-  if (!db) return [];
-
-  if (type) {
-    return await db.select().from(mediaContent).where(and(eq(mediaContent.type, type), eq(mediaContent.isPublished, true))).orderBy(desc(mediaContent.createdAt));
-  }
-
-  return await db.select().from(mediaContent).where(eq(mediaContent.isPublished, true)).orderBy(desc(mediaContent.createdAt));
-}
-
-export async function getAllMedia() {
-  const db = await getDb();
-  if (!db) return [];
-
-  return await db.select().from(mediaContent).orderBy(desc(mediaContent.createdAt));
-}
-
-export async function getMediaById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db.select().from(mediaContent).where(eq(mediaContent.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function updateMediaContent(id: number, updates: Partial<InsertMediaContent>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db.update(mediaContent).set(updates).where(eq(mediaContent.id, id));
-}
-
-export async function deleteMediaContent(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  await db.delete(mediaContent).where(eq(mediaContent.id, id));
-}
-
-export async function incrementMediaViews(id: number) {
+export async function updateConsultationStatus(id: number, status: typeof consultations.$inferSelect.status) {
   const db = await getDb();
   if (!db) return;
 
-  const media = await getMediaById(id);
-  if (media) {
-    await db.update(mediaContent).set({ viewCount: (media.viewCount || 0) + 1 }).where(eq(mediaContent.id, id));
-  }
+  await db.update(consultations).set({ status, updatedAt: new Date() }).where(eq(consultations.id, id));
 }
 
-export async function getAllUsers() {
+export async function updateConsultationPayment(id: number, paymentStatus: typeof consultations.$inferSelect.paymentStatus, paymentId?: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return;
 
-  return await db.select().from(users).orderBy(desc(users.createdAt));
+  await db.update(consultations).set({ 
+    paymentStatus, 
+    paymentId,
+    updatedAt: new Date() 
+  }).where(eq(consultations.id, id));
+}
+
+export async function updateConsultationAIResults(
+  id: number,
+  data: {
+    aiAnalysis?: string;
+    aiReportUrl?: string;
+    aiVideoUrl?: string;
+    aiInfographicUrl?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(consultations).set({ 
+    ...data,
+    status: 'specialist_review',
+    updatedAt: new Date() 
+  }).where(eq(consultations.id, id));
+}
+
+export async function updateConsultationSpecialistReview(
+  id: number,
+  specialistNotes: string,
+  reviewedBy: number
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(consultations).set({ 
+    specialistNotes,
+    reviewedBy,
+    reviewedAt: new Date(),
+    status: 'completed',
+    updatedAt: new Date() 
+  }).where(eq(consultations.id, id));
+}
+
+export async function updateConsultationFollowUp(
+  id: number,
+  data: {
+    treatmentPlan?: string;
+    followUpNotes?: string;
+    followUpStatus?: typeof consultations.$inferSelect.followUpStatus;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(consultations).set({ 
+    ...data,
+    status: 'follow_up',
+    updatedAt: new Date() 
+  }).where(eq(consultations.id, id));
 }
 
 export async function getConsultationStats() {
   const db = await getDb();
-  if (!db) return { total: 0, pending: 0, confirmed: 0, completed: 0 };
+  if (!db) return { total: 0, submitted: 0, processing: 0, completed: 0 };
 
-  const allConsultations = await db.select().from(consultations);
+  const all = await db.select().from(consultations);
   
   return {
-    total: allConsultations.length,
-    pending: allConsultations.filter(c => c.status === "pending").length,
-    confirmed: allConsultations.filter(c => c.status === "confirmed").length,
-    completed: allConsultations.filter(c => c.status === "completed").length,
+    total: all.length,
+    submitted: all.filter(c => c.status === 'submitted').length,
+    processing: all.filter(c => c.status === 'ai_processing' || c.status === 'specialist_review').length,
+    completed: all.filter(c => c.status === 'completed').length,
+    followUp: all.filter(c => c.status === 'follow_up').length,
   };
+}
+
+// ==================== Video Functions ====================
+
+export async function createVideo(data: InsertVideo) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(videos).values(data);
+  return result[0].insertId;
+}
+
+export async function getAllVideos() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(videos).orderBy(desc(videos.createdAt));
+}
+
+export async function getVideoById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(videos).where(eq(videos.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function incrementVideoViews(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const video = await getVideoById(id);
+  if (video) {
+    await db.update(videos).set({ views: video.views + 1 }).where(eq(videos.id, id));
+  }
+}
+
+export async function deleteVideo(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(videos).where(eq(videos.id, id));
+}
+
+// ==================== Podcast Functions ====================
+
+export async function createPodcast(data: InsertPodcast) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(podcasts).values(data);
+  return result[0].insertId;
+}
+
+export async function getAllPodcasts() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(podcasts).orderBy(desc(podcasts.createdAt));
+}
+
+export async function getPodcastById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(podcasts).where(eq(podcasts.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function incrementPodcastViews(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const podcast = await getPodcastById(id);
+  if (podcast) {
+    await db.update(podcasts).set({ views: podcast.views + 1 }).where(eq(podcasts.id, id));
+  }
+}
+
+export async function deletePodcast(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(podcasts).where(eq(podcasts.id, id));
 }

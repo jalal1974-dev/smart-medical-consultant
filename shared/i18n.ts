@@ -24,9 +24,9 @@ export const translations = {
     // Home page
     heroTitle: "Your Smart Medical Consultant",
     heroSubtitle: "Trusted and simplified medical content based on the latest medical advances across all specialties.",
-    heroDescription: "We provide personalized consultations for each patient based on their health condition and medical reports, using the latest artificial intelligence technology under the supervision of our medical specialist doctors in all specialties. We deliver detailed reports about their medical status based on the latest medical research and advances.",
+    heroDescription: "We offer AI-powered medical analysis where patients submit their medical reports, lab results, X-rays, symptoms, and medical history. Our advanced AI system analyzes this information and generates comprehensive reports, explanatory videos, and infographics—all reviewed by our medical specialists. This empowers patients with better understanding to discuss with their doctors and helps them evaluate if their treatment aligns with the latest medical literature.",
     getStarted: "Get Started",
-    bookConsultation: "Book Consultation",
+    bookConsultation: "Submit for AI Analysis",
     learnMore: "Learn More",
     
     // Features
@@ -41,19 +41,19 @@ export const translations = {
     feature4Desc: "Access our library of medical videos and podcasts",
     
     // Consultation
-    consultationTitle: "Book Your Consultation",
+    consultationTitle: "Submit Medical Analysis Request",
     freeConsultation: "Free Consultation Available",
     freeConsultationUsed: "Free consultation already used",
     consultationFee: "Consultation Fee",
     patientName: "Patient Name",
     patientEmail: "Patient Email",
     patientPhone: "Patient Phone",
-    consultationReason: "Reason for Consultation",
+    consultationReason: "Symptoms & Medical Concerns",
     preferredLanguage: "Preferred Language",
     scheduleDate: "Preferred Date & Time",
     submit: "Submit",
     payNow: "Pay Now",
-    bookFree: "Book Free Consultation",
+    bookFree: "Submit Free Analysis",
     
     // Consultation status
     pending: "Pending",
@@ -135,9 +135,9 @@ export const translations = {
     // Home page
     heroTitle: "مستشارك الطبي الذكي",
     heroSubtitle: "محتوى طبي موثوق ومبسط يستند إلى أحدث ما توصل إليه الطب في كل التخصصات.",
-    heroDescription: "نقدم استشارات خاصة لكل مريض حسب حالته الصحية وتقاريره الطبية، باستخدام أحدث تقنيات الذكاء الاصطناعي تحت إشراف أطبائنا المتخصصين في جميع التخصصات. ونقدم تقارير مفصلة عن حالته الطبية بناءً على أحدث ما توصل له الطب.",
+    heroDescription: "نقدم تحليلاً طبيًا مدعومًا بالذكاء الاصطناعي حيث يرسل المرضى تقاريرهم الطبية ونتائج المختبر والأشعة والأعراض والتاريخ الطبي. يقوم نظام الذكاء الاصطناعي المتقدم لدينا بتحليل هذه المعلومات وإنشاء تقارير شاملة ومقاطع فيديو توضيحية ورسوم بيانية—يتم مراجعتها جميعًا من قبل أخصائيينا الطبيين. هذا يمكّن المرضى من فهم أفضل لمناقشة حالتهم مع أطبائهم ويساعدهم على تقييم ما إذا كان علاجهم يتماشى مع أحدث الأبحاث الطبية.",
     getStarted: "ابدأ الآن",
-    bookConsultation: "احجز استشارة",
+    bookConsultation: "إرسال للتحليل بالذكاء الاصطناعي",
     learnMore: "اعرف المزيد",
     
     // Features
@@ -152,19 +152,19 @@ export const translations = {
     feature4Desc: "استفد من مكتبتنا من الفيديوهات والبودكاست الطبية",
     
     // Consultation
-    consultationTitle: "احجز استشارتك",
+    consultationTitle: "إرسال طلب تحليل طبي",
     freeConsultation: "استشارة مجانية متاحة",
     freeConsultationUsed: "تم استخدام الاستشارة المجانية",
     consultationFee: "رسوم الاستشارة",
     patientName: "اسم المريض",
     patientEmail: "البريد الإلكتروني",
     patientPhone: "رقم الهاتف",
-    consultationReason: "سبب الاستشارة",
+    consultationReason: "الأعراض والمخاوف الطبية",
     preferredLanguage: "اللغة المفضلة",
     scheduleDate: "التاريخ والوقت المفضل",
     submit: "إرسال",
     payNow: "ادفع الآن",
-    bookFree: "احجز استشارة مجانية",
+    bookFree: "إرسال تحليل مجاني",
     
     // Consultation status
     pending: "قيد الانتظار",

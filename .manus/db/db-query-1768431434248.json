@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS videos (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  titleEn VARCHAR(255) NOT NULL,\n  titleAr VARCHAR(255) NOT NULL,\n  descriptionEn TEXT,\n  descriptionAr TEXT,\n  videoUrl VARCHAR(500) NOT NULL,\n  thumbnailUrl VARCHAR(500),\n  duration INT,\n  views INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n);\n\nCREATE TABLE IF NOT EXISTS podcasts (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  titleEn VARCHAR(255) NOT NULL,\n  titleAr VARCHAR(255) NOT NULL,\n  descriptionEn TEXT,\n  descriptionAr TEXT,\n  audioUrl VARCHAR(500) NOT NULL,\n  thumbnailUrl VARCHAR(500),\n  duration INT,\n  views INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute CREATE TABLE IF NOT EXISTS videos (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  titleEn VARCHAR(255) NOT NULL,\n  titleAr VARCHAR(255) NOT NULL,\n  descriptionEn TEXT,\n  descriptionAr TEXT,\n  videoUrl VARCHAR(500) NOT NULL,\n  thumbnailUrl VARCHAR(500),\n  duration INT,\n  views INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n);\n\nCREATE TABLE IF NOT EXISTS podcasts (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  titleEn VARCHAR(255) NOT NULL,\n  titleAr VARCHAR(255) NOT NULL,\n  descriptionEn TEXT,\n  descriptionAr TEXT,\n  audioUrl VARCHAR(500) NOT NULL,\n  thumbnailUrl VARCHAR(500),\n  duration INT,\n  views INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1999
+}

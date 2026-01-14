@@ -7,7 +7,7 @@ import { Play, Clock, Eye } from "lucide-react";
 export default function Videos() {
   const { t, language } = useLanguage();
   const { data: videos, isLoading } = trpc.media.videos.useQuery();
-  const incrementViews = trpc.media.incrementViews.useMutation();
+  const incrementViews = trpc.media.incrementVideoViews.useMutation();
 
   const handleVideoClick = (id: number, url: string) => {
     incrementViews.mutate({ id });
@@ -61,7 +61,7 @@ export default function Videos() {
               <Card
                 key={video.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleVideoClick(video.id, video.mediaUrl)}
+                onClick={() => handleVideoClick(video.id, video.videoUrl)}
               >
                 <div className="relative aspect-video bg-muted">
                   {video.thumbnailUrl ? (
@@ -82,7 +82,7 @@ export default function Videos() {
                 <CardHeader>
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="secondary">
-                      {video.language === "both" ? "EN/AR" : video.language.toUpperCase()}
+                      {language === "en" ? "English" : "العربية"}
                     </Badge>
                   </div>
                   <CardTitle className="line-clamp-2">
@@ -100,7 +100,7 @@ export default function Videos() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Eye className="w-4 h-4" />
-                      <span>{video.viewCount}</span>
+                      <span>{video.views}</span>
                     </div>
                   </div>
                 </CardContent>

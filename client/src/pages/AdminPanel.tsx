@@ -24,7 +24,9 @@ export default function AdminPanel() {
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: consultations } = trpc.admin.consultations.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: users } = trpc.admin.users.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const { data: media } = trpc.admin.allMedia.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const { data: videos } = trpc.admin.videos.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const { data: podcasts } = trpc.admin.podcasts.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const media = [...(videos || []), ...(podcasts || [])];
 
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [mediaForm, setMediaForm] = useState({
@@ -40,7 +42,7 @@ export default function AdminPanel() {
     isPublished: false,
   });
 
-  const updateConsultationStatus = trpc.admin.updateConsultationStatus.useMutation({
+  const updateConsultationStatus = trpc.admin.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Consultation updated");
       utils.admin.consultations.invalidate();
@@ -48,10 +50,10 @@ export default function AdminPanel() {
     onError: () => toast.error("Failed to update consultation"),
   });
 
-  const createMedia = trpc.admin.createMedia.useMutation({
+  const createVideo = trpc.admin.videos.create.useMutation({
     onSuccess: () => {
       toast.success("Media created successfully");
-      utils.admin.allMedia.invalidate();
+      utils.admin.videos.list.invalidate();
       utils.media.videos.invalidate();
       utils.media.podcasts.invalidate();
       setMediaDialogOpen(false);
@@ -71,20 +73,20 @@ export default function AdminPanel() {
     onError: () => toast.error("Failed to create media"),
   });
 
-  const updateMedia = trpc.admin.updateMedia.useMutation({
+  const updateVideo = trpc.admin.videos.create.useMutation({
     onSuccess: () => {
       toast.success("Media updated");
-      utils.admin.allMedia.invalidate();
+      utils.admin.videos.list.invalidate();
       utils.media.videos.invalidate();
       utils.media.podcasts.invalidate();
     },
     onError: () => toast.error("Failed to update media"),
   });
 
-  const deleteMedia = trpc.admin.deleteMedia.useMutation({
+  const deleteVideo = trpc.admin.videos.delete.useMutation({
     onSuccess: () => {
       toast.success("Media deleted");
-      utils.admin.allMedia.invalidate();
+      utils.admin.videos.list.invalidate();
       utils.media.videos.invalidate();
       utils.media.podcasts.invalidate();
     },
@@ -130,10 +132,20 @@ export default function AdminPanel() {
       return;
     }
 
-    createMedia.mutate({
-      ...mediaForm,
-      duration: mediaForm.duration ? parseInt(mediaForm.duration) : undefined,
-    });
+    if (mediaForm.type === 'video') {
+      createVideo.mutate({
+        titleEn: mediaForm.titleEn,
+        titleAr: mediaForm.titleAr,
+        descriptionEn: mediaForm.descriptionEn,
+        descriptionAr: mediaForm.descriptionAr,
+        videoUrl: mediaForm.mediaUrl,
+        thumbnailUrl: mediaForm.thumbnailUrl,
+        duration: mediaForm.duration ? parseInt(mediaForm.duration) : undefined,
+      });
+    } else {
+      // TODO: Add podcast creation
+      toast.error('Podcast creation not yet implemented');
+    }
   };
 
   return (
@@ -171,7 +183,7 @@ export default function AdminPanel() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.pendingConsultations}</div>
+                <div className="text-2xl font-bold">{stats.submittedConsultations}</div>
               </CardContent>
             </Card>
             <Card>
@@ -206,7 +218,45 @@ export default function AdminPanel() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm">{consultation.description}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Symptoms:</p>
+                    <p className="text-sm text-muted-foreground">{consultation.symptoms}</p>
+                  </div>
+                  {consultation.medicalHistory && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Medical History:</p>
+                      <p className="text-sm text-muted-foreground">{consultation.medicalHistory}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4">
+                    {consultation.medicalReports?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium">Medical Reports: {consultation.medicalReports.length} file(s)</p>
+                      </div>
+                    )}
+                    {consultation.labResults?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium">Lab Results: {consultation.labResults.length} file(s)</p>
+                      </div>
+                    )}
+                    {consultation.xrayImages?.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium">X-rays: {consultation.xrayImages.length} file(s)</p>
+                      </div>
+                    )}
+                  </div>
+                  {consultation.aiAnalysis && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium mb-2">AI Analysis:</p>
+                      <p className="text-sm text-muted-foreground">{consultation.aiAnalysis}</p>
+                    </div>
+                  )}
+                  {consultation.specialistNotes && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-sm font-medium mb-2">Specialist Notes:</p>
+                      <p className="text-sm text-muted-foreground">{consultation.specialistNotes}</p>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Select
                       value={consultation.status}
@@ -221,10 +271,11 @@ export default function AdminPanel() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="submitted">Submitted</SelectItem>
+                        <SelectItem value="ai_processing">AI Processing</SelectItem>
+                        <SelectItem value="specialist_review">Specialist Review</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="follow_up">Follow-up</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -361,14 +412,14 @@ export default function AdminPanel() {
                     />
                     <Label htmlFor="isPublished">Publish immediately</Label>
                   </div>
-                  <Button onClick={handleCreateMedia} disabled={createMedia.isPending}>
-                    {createMedia.isPending ? "Creating..." : "Create Media"}
+                  <Button onClick={handleCreateMedia} disabled={createVideo.isPending}>
+                    {createVideo.isPending ? "Creating..." : "Create Media"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            {media?.map((item) => (
+            {media?.map((item: any) => (
               <Card key={item.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -391,10 +442,7 @@ export default function AdminPanel() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      updateMedia.mutate({
-                        id: item.id,
-                        isPublished: !item.isPublished,
-                      })
+                      toast.info('Update feature coming soon')
                     }
                   >
                     {item.isPublished ? "Unpublish" : "Publish"}
@@ -404,7 +452,7 @@ export default function AdminPanel() {
                     variant="destructive"
                     onClick={() => {
                       if (confirm("Are you sure you want to delete this media?")) {
-                        deleteMedia.mutate({ id: item.id });
+                        deleteVideo.mutate({ id: item.id });
                       }
                     }}
                   >

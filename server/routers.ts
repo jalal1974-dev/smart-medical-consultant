@@ -27,15 +27,19 @@ export const appRouter = router({
   }),
 
   consultation: router({
-    // Create a new consultation
+    // Create a new AI-powered consultation request
     create: protectedProcedure
       .input(z.object({
         patientName: z.string().min(1),
         patientEmail: z.string().email(),
         patientPhone: z.string().optional(),
-        description: z.string().min(10),
-        language: z.enum(["en", "ar"]),
-        scheduledAt: z.string().optional(),
+        symptoms: z.string().min(10),
+        medicalHistory: z.string().optional(),
+        medicalReports: z.array(z.string()).optional(), // Array of file URLs
+        labResults: z.array(z.string()).optional(),
+        xrayImages: z.array(z.string()).optional(),
+        otherDocuments: z.array(z.string()).optional(),
+        preferredLanguage: z.enum(["en", "ar"]),
         isFree: z.boolean(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -44,7 +48,7 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
         }
 
-        // Check if trying to book free consultation but already used
+        // Check if trying to use free consultation but already used
         if (input.isFree && user.hasUsedFreeConsultation) {
           throw new TRPCError({ 
             code: 'BAD_REQUEST', 
@@ -52,16 +56,21 @@ export const appRouter = router({
           });
         }
 
-        const consultation = await db.createConsultation({
+        const consultationId = await db.createConsultation({
           userId: ctx.user.id,
           patientName: input.patientName,
           patientEmail: input.patientEmail,
           patientPhone: input.patientPhone || null,
-          description: input.description,
-          language: input.language,
-          scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
+          symptoms: input.symptoms,
+          medicalHistory: input.medicalHistory || null,
+          medicalReports: input.medicalReports ? JSON.stringify(input.medicalReports) : null,
+          labResults: input.labResults ? JSON.stringify(input.labResults) : null,
+          xrayImages: input.xrayImages ? JSON.stringify(input.xrayImages) : null,
+          otherDocuments: input.otherDocuments ? JSON.stringify(input.otherDocuments) : null,
+          preferredLanguage: input.preferredLanguage,
+          status: 'submitted',
           isFree: input.isFree,
-          amount: input.isFree ? "0.00" : "50.00", // Default consultation fee
+          amount: input.isFree ? 0 : 50, // Default consultation fee $50
           paymentStatus: input.isFree ? "completed" : "pending",
         });
 
@@ -70,12 +79,20 @@ export const appRouter = router({
           await db.markFreeConsultationUsed(ctx.user.id);
         }
 
-        return { success: true, consultationId: Number(consultation[0]?.insertId || 0) };
+        return { success: true, consultationId: Number(consultationId) };
       }),
 
     // Get user's consultations
     list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getConsultationsByUserId(ctx.user.id);
+      const consultations = await db.getConsultationsByUserId(ctx.user.id);
+      // Parse JSON fields
+      return consultations.map(c => ({
+        ...c,
+        medicalReports: c.medicalReports ? JSON.parse(c.medicalReports) : [],
+        labResults: c.labResults ? JSON.parse(c.labResults) : [],
+        xrayImages: c.xrayImages ? JSON.parse(c.xrayImages) : [],
+        otherDocuments: c.otherDocuments ? JSON.parse(c.otherDocuments) : [],
+      }));
     }),
 
     // Get single consultation
@@ -92,14 +109,20 @@ export const appRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
 
-        return consultation;
+        return {
+          ...consultation,
+          medicalReports: consultation.medicalReports ? JSON.parse(consultation.medicalReports) : [],
+          labResults: consultation.labResults ? JSON.parse(consultation.labResults) : [],
+          xrayImages: consultation.xrayImages ? JSON.parse(consultation.xrayImages) : [],
+          otherDocuments: consultation.otherDocuments ? JSON.parse(consultation.otherDocuments) : [],
+        };
       }),
 
     // Update payment status (called after PayPal payment)
     updatePayment: protectedProcedure
       .input(z.object({
         consultationId: z.number(),
-        transactionId: z.string(),
+        paymentId: z.string(),
         status: z.enum(["completed", "failed"]),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -111,143 +134,196 @@ export const appRouter = router({
         await db.updateConsultationPayment(
           input.consultationId,
           input.status,
-          input.transactionId
+          input.paymentId
         );
 
-        return { success: true };
-      }),
-  }),
-
-  media: router({
-    // Get published videos
-    videos: publicProcedure.query(async () => {
-      return await db.getPublishedMedia("video");
-    }),
-
-    // Get published podcasts
-    podcasts: publicProcedure.query(async () => {
-      return await db.getPublishedMedia("podcast");
-    }),
-
-    // Get single media item
-    get: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        const media = await db.getMediaById(input.id);
-        if (!media || !media.isPublished) {
-          throw new TRPCError({ code: 'NOT_FOUND' });
+        // If payment completed, move to AI processing
+        if (input.status === "completed") {
+          await db.updateConsultationStatus(input.consultationId, "ai_processing");
         }
-        return media;
-      }),
 
-    // Increment view count
-    incrementViews: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.incrementMediaViews(input.id);
         return { success: true };
       }),
   }),
 
+  // Admin routes for managing consultations and AI workflow
   admin: router({
     // Get all consultations
     consultations: adminProcedure.query(async () => {
-      return await db.getAllConsultations();
+      const consultations = await db.getAllConsultations();
+      return consultations.map(c => ({
+        ...c,
+        medicalReports: c.medicalReports ? JSON.parse(c.medicalReports) : [],
+        labResults: c.labResults ? JSON.parse(c.labResults) : [],
+        xrayImages: c.xrayImages ? JSON.parse(c.xrayImages) : [],
+        otherDocuments: c.otherDocuments ? JSON.parse(c.otherDocuments) : [],
+      }));
     }),
 
     // Update consultation status
-    updateConsultationStatus: adminProcedure
+    updateStatus: adminProcedure
       .input(z.object({
         id: z.number(),
-        status: z.enum(["pending", "confirmed", "completed", "cancelled"]),
-        adminNotes: z.string().optional(),
+        status: z.enum(['submitted', 'ai_processing', 'specialist_review', 'completed', 'follow_up']),
       }))
       .mutation(async ({ input }) => {
-        await db.updateConsultationStatus(input.id, input.status, input.adminNotes);
+        await db.updateConsultationStatus(input.id, input.status);
         return { success: true };
       }),
+
+    // Upload AI-generated results
+    uploadAIResults: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        aiAnalysis: z.string().optional(),
+        aiReportUrl: z.string().optional(),
+        aiVideoUrl: z.string().optional(),
+        aiInfographicUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateConsultationAIResults(input.consultationId, {
+          aiAnalysis: input.aiAnalysis,
+          aiReportUrl: input.aiReportUrl,
+          aiVideoUrl: input.aiVideoUrl,
+          aiInfographicUrl: input.aiInfographicUrl,
+        });
+        return { success: true };
+      }),
+
+    // Specialist review and approval
+    reviewConsultation: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        specialistNotes: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateConsultationSpecialistReview(
+          input.consultationId,
+          input.specialistNotes,
+          ctx.user.id
+        );
+        return { success: true };
+      }),
+
+    // Add follow-up information
+    addFollowUp: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        treatmentPlan: z.string().optional(),
+        followUpNotes: z.string().optional(),
+        followUpStatus: z.enum(['pending', 'approved', 'concerns']).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateConsultationFollowUp(input.consultationId, {
+          treatmentPlan: input.treatmentPlan,
+          followUpNotes: input.followUpNotes,
+          followUpStatus: input.followUpStatus,
+        });
+        return { success: true };
+      }),
+
+    // Get statistics
+    stats: adminProcedure.query(async () => {
+      const consultationStats = await db.getConsultationStats();
+      const users = await db.getAllUsers();
+      
+      return {
+        totalUsers: users.length,
+        totalConsultations: consultationStats.total,
+        submittedConsultations: consultationStats.submitted,
+        processingConsultations: consultationStats.processing,
+        completedConsultations: consultationStats.completed,
+        followUpConsultations: consultationStats.followUp || 0,
+      };
+    }),
 
     // Get all users
     users: adminProcedure.query(async () => {
       return await db.getAllUsers();
     }),
 
-    // Get all media (including unpublished)
-    allMedia: adminProcedure.query(async () => {
-      return await db.getAllMedia();
+    // Video management
+    videos: router({
+      list: adminProcedure.query(async () => {
+        return await db.getAllVideos();
+      }),
+
+      create: adminProcedure
+        .input(z.object({
+          titleEn: z.string(),
+          titleAr: z.string(),
+          descriptionEn: z.string().optional(),
+          descriptionAr: z.string().optional(),
+          videoUrl: z.string().url(),
+          thumbnailUrl: z.string().url().optional(),
+          duration: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const id = await db.createVideo(input);
+          return { success: true, id };
+        }),
+
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await db.deleteVideo(input.id);
+          return { success: true };
+        }),
     }),
 
-    // Create media content
-    createMedia: adminProcedure
-      .input(z.object({
-        type: z.enum(["video", "podcast"]),
-        titleEn: z.string().min(1),
-        titleAr: z.string().min(1),
-        descriptionEn: z.string().optional(),
-        descriptionAr: z.string().optional(),
-        mediaUrl: z.string().url(),
-        thumbnailUrl: z.string().url().optional(),
-        duration: z.number().optional(),
-        language: z.enum(["en", "ar", "both"]),
-        isPublished: z.boolean().default(false),
-      }))
-      .mutation(async ({ input }) => {
-        const result = await db.createMediaContent({
-          type: input.type,
-          titleEn: input.titleEn,
-          titleAr: input.titleAr,
-          descriptionEn: input.descriptionEn || null,
-          descriptionAr: input.descriptionAr || null,
-          mediaUrl: input.mediaUrl,
-          thumbnailUrl: input.thumbnailUrl || null,
-          duration: input.duration || null,
-          language: input.language,
-          isPublished: input.isPublished,
-        });
-        return { success: true, mediaId: Number(result[0]?.insertId || 0) };
+    // Podcast management
+    podcasts: router({
+      list: adminProcedure.query(async () => {
+        return await db.getAllPodcasts();
       }),
 
-    // Update media content
-    updateMedia: adminProcedure
-      .input(z.object({
-        id: z.number(),
-        titleEn: z.string().optional(),
-        titleAr: z.string().optional(),
-        descriptionEn: z.string().optional(),
-        descriptionAr: z.string().optional(),
-        mediaUrl: z.string().url().optional(),
-        thumbnailUrl: z.string().url().optional(),
-        duration: z.number().optional(),
-        language: z.enum(["en", "ar", "both"]).optional(),
-        isPublished: z.boolean().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...updates } = input;
-        await db.updateMediaContent(id, updates);
-        return { success: true };
-      }),
+      create: adminProcedure
+        .input(z.object({
+          titleEn: z.string(),
+          titleAr: z.string(),
+          descriptionEn: z.string().optional(),
+          descriptionAr: z.string().optional(),
+          audioUrl: z.string().url(),
+          thumbnailUrl: z.string().url().optional(),
+          duration: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const id = await db.createPodcast(input);
+          return { success: true, id };
+        }),
 
-    // Delete media content
-    deleteMedia: adminProcedure
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await db.deletePodcast(input.id);
+          return { success: true };
+        }),
+    }),
+  }),
+
+  // Public routes for videos and podcasts
+  media: router({
+    videos: publicProcedure.query(async () => {
+      return await db.getAllVideos();
+    }),
+
+    podcasts: publicProcedure.query(async () => {
+      return await db.getAllPodcasts();
+    }),
+
+    incrementVideoViews: publicProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        await db.deleteMediaContent(input.id);
+        await db.incrementVideoViews(input.id);
         return { success: true };
       }),
 
-    // Get dashboard stats
-    stats: adminProcedure.query(async () => {
-      const users = await db.getAllUsers();
-      const consultationStats = await db.getConsultationStats();
-      
-      return {
-        totalUsers: users.length,
-        totalConsultations: consultationStats.total,
-        pendingConsultations: consultationStats.pending,
-        confirmedConsultations: consultationStats.confirmed,
-        completedConsultations: consultationStats.completed,
-      };
-    }),
+    incrementPodcastViews: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.incrementPodcastViews(input.id);
+        return { success: true };
+      }),
   }),
 });
 
