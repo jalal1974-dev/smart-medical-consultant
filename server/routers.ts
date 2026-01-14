@@ -70,7 +70,7 @@ export const appRouter = router({
           preferredLanguage: input.preferredLanguage,
           status: 'submitted',
           isFree: input.isFree,
-          amount: input.isFree ? 0 : 50, // Default consultation fee $50
+          amount: input.isFree ? 0 : 5, // Consultation fee $5
           paymentStatus: input.isFree ? "completed" : "pending",
         });
 

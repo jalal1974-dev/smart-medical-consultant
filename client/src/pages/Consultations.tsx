@@ -355,7 +355,7 @@ export default function Consultations() {
                       onClick={(e) => handleSubmit(e as any, false)}
                       className="flex-1"
                     >
-                      {createMutation.isPending ? t("loading") : `${t("submit")} - $50`}
+                      {createMutation.isPending ? t("loading") : `${t("submit")} - $5`}
                     </Button>
                   )}
                 </div>

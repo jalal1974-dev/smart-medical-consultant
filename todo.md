@@ -64,3 +64,6 @@
 - [x] Add treatment follow-up tracking system
 - [x] Update all UI text to reflect AI analysis service (not doctor meetings)
 - [x] Update home page to explain AI-powered analysis concept
+
+## Pricing Update
+- [x] Update consultation fee from $50 to $5 for paid consultations
