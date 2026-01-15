@@ -89,3 +89,14 @@
 - [x] Show upload progress indicators
 - [x] Update consultation submission to use uploaded file URLs
 - [x] Add file preview functionality
+
+## Patient Profile Page
+- [x] Update database schema for follow-up questions
+- [x] Add subscription status tracking to user table
+- [x] Create comprehensive patient profile page
+- [x] Display all consultations with uploaded documents
+- [x] Show AI-generated responses (reports, infographics, videos, audio)
+- [x] Display subscription status (free vs pay-per-case)
+- [x] Implement follow-up question system for each consultation
+- [x] Add document viewer for uploaded files
+- [x] Create timeline view of consultation progress

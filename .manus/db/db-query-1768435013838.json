@@ -1,0 +1,9 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS consultation_questions (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  consultation_id INT NOT NULL,\n  user_id INT NOT NULL,\n  question TEXT NOT NULL,\n  answer TEXT,\n  answered_by INT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  answered_at TIMESTAMP NULL,\n  FOREIGN KEY (consultation_id) REFERENCES consultations(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY (answered_by) REFERENCES users(id) ON DELETE SET NULL\n);\n\nALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_type ENUM('free', 'pay_per_case', 'monthly') DEFAULT 'free';\nALTER TABLE users ADD COLUMN IF NOT EXISTS consultations_remaining INT DEFAULT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nCREATE TABLE IF NOT EXISTS consultation_questions (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  consultation_id INT NOT NULL,\n  user_id INT NOT NULL,\n  question TEXT NOT NULL,\n  answer TEXT,\n  answered_by INT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  answered_at TIMESTAMP NULL,\n  FOREIGN KEY (consultation_id) REFERENCES consultations(id) ON DELETE CASCADE,\n  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,\n  FOREIGN KEY (answered_by) REFERENCES users(id) ON DELETE SET NULL\n);\n\nALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_type ENUM('free', 'pay_per_case', 'monthly') DEFAULT 'free';\nALTER TABLE users ADD COLUMN IF NOT EXISTS consultations_remaining INT DEFAULT 1;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3008
+}

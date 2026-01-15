@@ -1,6 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -133,7 +133,22 @@ export async function getConsultationsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(consultations).where(eq(consultations.userId, userId)).orderBy(desc(consultations.createdAt));
+  const userConsultations = await db.select().from(consultations)
+    .where(eq(consultations.userId, userId))
+    .orderBy(desc(consultations.createdAt));
+
+  // Get questions for each consultation
+  const consultationsWithQuestions = await Promise.all(
+    userConsultations.map(async (consultation) => {
+      const questions = await getQuestionsByConsultationId(consultation.id);
+      return {
+        ...consultation,
+        questions,
+      };
+    })
+  );
+
+  return consultationsWithQuestions;
 }
 
 export async function getAllConsultations() {
@@ -312,4 +327,34 @@ export async function deletePodcast(id: number) {
   if (!db) return;
 
   await db.delete(podcasts).where(eq(podcasts.id, id));
+}
+
+// ==================== Consultation Question Functions ====================
+
+export async function createConsultationQuestion(data: InsertConsultationQuestion) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(consultationQuestions).values(data);
+  return result[0].insertId;
+}
+
+export async function getQuestionsByConsultationId(consultationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(consultationQuestions)
+    .where(eq(consultationQuestions.consultationId, consultationId))
+    .orderBy(desc(consultationQuestions.createdAt));
+}
+
+export async function answerQuestion(id: number, answer: string, answeredBy: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(consultationQuestions).set({
+    answer,
+    answeredBy,
+    answeredAt: new Date(),
+  }).where(eq(consultationQuestions.id, id));
 }

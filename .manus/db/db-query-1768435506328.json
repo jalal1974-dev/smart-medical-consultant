@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE consultation_questions CHANGE COLUMN created_at createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL; ALTER TABLE consultation_questions CHANGE COLUMN answered_at answeredAt TIMESTAMP NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute ALTER TABLE consultation_questions CHANGE COLUMN created_at createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL; ALTER TABLE consultation_questions CHANGE COLUMN answered_at answeredAt TIMESTAMP NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2070
+}

@@ -11,6 +11,8 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   hasUsedFreeConsultation: boolean("hasUsedFreeConsultation").default(false).notNull(),
+  subscriptionType: mysqlEnum("subscription_type", ["free", "pay_per_case", "monthly"]).default("free").notNull(),
+  consultationsRemaining: int("consultations_remaining").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -116,3 +118,20 @@ export const podcasts = mysqlTable("podcasts", {
 
 export type Podcast = typeof podcasts.$inferSelect;
 export type InsertPodcast = typeof podcasts.$inferInsert;
+
+/**
+ * Consultation questions table - follow-up questions from patients
+ */
+export const consultationQuestions = mysqlTable("consultation_questions", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull(),
+  userId: int("user_id").notNull(),
+  question: text("question").notNull(),
+  answer: text("answer"),
+  answeredBy: int("answered_by"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  answeredAt: timestamp("answeredAt"),
+});
+
+export type ConsultationQuestion = typeof consultationQuestions.$inferSelect;
+export type InsertConsultationQuestion = typeof consultationQuestions.$inferInsert;

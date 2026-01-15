@@ -13,6 +13,7 @@ import Consultations from "./pages/Consultations";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
+import PatientProfile from "./pages/PatientProfile";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
         <Route path={"/podcasts"} component={Podcasts} />
         <Route path={"/consultations"} component={Consultations} />
         <Route path={"/dashboard"} component={Dashboard} />
+        <Route path={"/profile"} component={PatientProfile} />
         <Route path={"/admin"} component={AdminPanel} />
         <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
         <Route path={"/404"} component={NotFound} />

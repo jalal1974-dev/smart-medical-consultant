@@ -197,6 +197,50 @@ export const appRouter = router({
         };
       }),
 
+    // Get consultations by user ID (with questions)
+    getByUserId: protectedProcedure
+      .input(z.number())
+      .query(async ({ ctx, input }) => {
+        // Only allow users to see their own consultations unless admin
+        if (input !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        
+        const consultations = await db.getConsultationsByUserId(input);
+        return consultations.map(c => ({
+          ...c,
+          medicalReports: c.medicalReports ? JSON.parse(c.medicalReports) : [],
+          labResults: c.labResults ? JSON.parse(c.labResults) : [],
+          xrayImages: c.xrayImages ? JSON.parse(c.xrayImages) : [],
+          otherDocuments: c.otherDocuments ? JSON.parse(c.otherDocuments) : [],
+        }));
+      }),
+
+    // Ask a follow-up question about a consultation
+    askQuestion: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        question: z.string().min(10),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify user owns this consultation
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation || consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+
+        const questionId = await db.createConsultationQuestion({
+          consultationId: input.consultationId,
+          userId: ctx.user.id,
+          question: input.question,
+          answer: null,
+          answeredBy: null,
+          answeredAt: null,
+        });
+
+        return { success: true, questionId: Number(questionId) };
+      }),
+
     // Update payment status (called after PayPal payment)
     updatePayment: protectedProcedure
       .input(z.object({
@@ -333,6 +377,17 @@ export const appRouter = router({
     users: adminProcedure.query(async () => {
       return await db.getAllUsers();
     }),
+
+    // Answer a patient's follow-up question
+    answerQuestion: adminProcedure
+      .input(z.object({
+        questionId: z.number(),
+        answer: z.string().min(10),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.answerQuestion(input.questionId, input.answer, ctx.user.id);
+        return { success: true };
+      }),
 
     // Video management
     videos: router({
