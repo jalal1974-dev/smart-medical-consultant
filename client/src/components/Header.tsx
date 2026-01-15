@@ -32,6 +32,7 @@ export function Header() {
   }
 
   if (user?.role === "admin") {
+    navItems.push({ path: "/analytics", label: language === "ar" ? "التحليلات" : "Analytics" });
     navItems.push({ path: "/admin", label: t("admin") });
   }
 

@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -357,4 +357,136 @@ export async function answerQuestion(id: number, answer: string, answeredBy: num
     answeredBy,
     answeredAt: new Date(),
   }).where(eq(consultationQuestions.id, id));
+}
+
+// ============================================
+// Analytics Functions
+// ============================================
+
+export interface ConsultationAnalytics {
+  totalConsultations: number;
+  freeConsultations: number;
+  paidConsultations: number;
+  totalRevenue: number;
+  averageResponseTime: number; // in hours
+  completionRate: number; // percentage
+  statusDistribution: {
+    submitted: number;
+    ai_processing: number;
+    specialist_review: number;
+    completed: number;
+    follow_up: number;
+  };
+  consultationsByDate: Array<{ date: string; count: number }>;
+  revenueByDate: Array<{ date: string; revenue: number }>;
+}
+
+export async function getConsultationAnalytics(
+  startDate?: Date,
+  endDate?: Date
+): Promise<ConsultationAnalytics> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Apply date filters if provided
+  let allConsultations;
+  if (startDate && endDate) {
+    allConsultations = await db.select().from(consultations).where(
+      and(
+        gte(consultations.createdAt, startDate),
+        lte(consultations.createdAt, endDate)
+      )
+    );
+  } else {
+    allConsultations = await db.select().from(consultations);
+  }
+
+  // Calculate metrics
+  const totalConsultations = allConsultations.length;
+  const freeConsultations = allConsultations.filter(c => c.isFree).length;
+  const paidConsultations = allConsultations.filter(c => !c.isFree).length;
+  const totalRevenue = allConsultations.reduce((sum, c) => sum + Number(c.amount), 0);
+
+  // Calculate average response time (from submission to completion)
+  const completedConsultations = allConsultations.filter(c => c.status === "completed");
+  let averageResponseTime = 0;
+  if (completedConsultations.length > 0) {
+    const totalResponseTime = completedConsultations.reduce((sum, c) => {
+      const created = new Date(c.createdAt).getTime();
+      const updated = new Date(c.updatedAt).getTime();
+      return sum + (updated - created);
+    }, 0);
+    averageResponseTime = totalResponseTime / completedConsultations.length / (1000 * 60 * 60); // Convert to hours
+  }
+
+  // Calculate completion rate
+  const completionRate = totalConsultations > 0
+    ? (completedConsultations.length / totalConsultations) * 100
+    : 0;
+
+  // Status distribution
+  const statusDistribution = {
+    submitted: allConsultations.filter(c => c.status === "submitted").length,
+    ai_processing: allConsultations.filter(c => c.status === "ai_processing").length,
+    specialist_review: allConsultations.filter(c => c.status === "specialist_review").length,
+    completed: allConsultations.filter(c => c.status === "completed").length,
+    follow_up: allConsultations.filter(c => c.status === "follow_up").length,
+  };
+
+  // Group by date
+  const consultationsByDate: { [key: string]: number } = {};
+  const revenueByDate: { [key: string]: number } = {};
+
+  allConsultations.forEach(c => {
+    const date = new Date(c.createdAt).toISOString().split('T')[0];
+    consultationsByDate[date] = (consultationsByDate[date] || 0) + 1;
+    revenueByDate[date] = (revenueByDate[date] || 0) + Number(c.amount);
+  });
+
+  return {
+    totalConsultations,
+    freeConsultations,
+    paidConsultations,
+    totalRevenue,
+    averageResponseTime,
+    completionRate,
+    statusDistribution,
+    consultationsByDate: Object.entries(consultationsByDate).map(([date, count]) => ({ date, count })),
+    revenueByDate: Object.entries(revenueByDate).map(([date, revenue]) => ({ date, revenue })),
+  };
+}
+
+export async function getQuestionAnalytics() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const allQuestions = await db.select().from(consultationQuestions);
+
+  const totalQuestions = allQuestions.length;
+  const answeredQuestions = allQuestions.filter(q => q.answer !== null).length;
+  const unansweredQuestions = totalQuestions - answeredQuestions;
+
+  // Calculate average response time for answered questions
+  let averageQuestionResponseTime = 0;
+  const questionsWithAnswers = allQuestions.filter(q => q.answer !== null && q.answeredAt !== null);
+  if (questionsWithAnswers.length > 0) {
+    const totalResponseTime = questionsWithAnswers.reduce((sum, q) => {
+      const created = new Date(q.createdAt).getTime();
+      const answered = new Date(q.answeredAt!).getTime();
+      return sum + (answered - created);
+    }, 0);
+    averageQuestionResponseTime = totalResponseTime / questionsWithAnswers.length / (1000 * 60 * 60); // Convert to hours
+  }
+
+  return {
+    totalQuestions,
+    answeredQuestions,
+    unansweredQuestions,
+    averageQuestionResponseTime,
+    answerRate: totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0,
+  };
 }

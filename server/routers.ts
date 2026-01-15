@@ -386,6 +386,25 @@ export const appRouter = router({
       return await db.getAllUsers();
     }),
 
+    // Get analytics data
+    analytics: adminProcedure
+      .input(z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const startDate = input.startDate ? new Date(input.startDate) : undefined;
+        const endDate = input.endDate ? new Date(input.endDate) : undefined;
+        
+        const consultationAnalytics = await db.getConsultationAnalytics(startDate, endDate);
+        const questionAnalytics = await db.getQuestionAnalytics();
+        
+        return {
+          consultations: consultationAnalytics,
+          questions: questionAnalytics,
+        };
+      }),
+
     // Answer a patient's follow-up question
     answerQuestion: adminProcedure
       .input(z.object({

@@ -107,3 +107,12 @@
 - [x] Integrate admin notification when patient asks question
 - [x] Integrate patient notification when admin answers question
 - [x] Test email notification flow
+
+## Analytics Dashboard
+- [x] Create backend analytics functions (consultation volume, response times, status distribution)
+- [x] Add patient satisfaction tracking
+- [x] Build analytics dashboard UI with charts
+- [x] Display key metrics (total consultations, avg response time, completion rate)
+- [x] Add time-based filtering (daily, weekly, monthly)
+- [x] Create visualizations using charts library
+- [x] Test analytics calculations

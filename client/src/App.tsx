@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
 import PatientProfile from "./pages/PatientProfile";
+import Analytics from "./pages/Analytics";
 
 function Router() {
   return (
@@ -25,7 +26,8 @@ function Router() {
         <Route path={"/podcasts"} component={Podcasts} />
         <Route path={"/consultations"} component={Consultations} />
         <Route path={"/dashboard"} component={Dashboard} />
-        <Route path={"/profile"} component={PatientProfile} />
+        <Route path="/profile" component={PatientProfile} />
+        <Route path="/analytics" component={Analytics} />
         <Route path={"/admin"} component={AdminPanel} />
         <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
         <Route path={"/404"} component={NotFound} />
