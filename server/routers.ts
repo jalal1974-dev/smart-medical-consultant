@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
-import { sendConsultationReceipt, sendConsultationStatusUpdate } from "./emailNotifications";
+import { sendConsultationReceipt, sendConsultationStatusUpdate, sendNewQuestionNotification, sendQuestionAnsweredNotification } from "./emailNotifications";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 
@@ -238,6 +238,14 @@ export const appRouter = router({
           answeredAt: null,
         });
 
+        // Send notification to admins
+        await sendNewQuestionNotification(
+          input.consultationId,
+          ctx.user.name || "Patient",
+          ctx.user.email || "",
+          input.question
+        );
+
         return { success: true, questionId: Number(questionId) };
       }),
 
@@ -385,7 +393,39 @@ export const appRouter = router({
         answer: z.string().min(10),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Get the question details first
+        const questions = await db.getQuestionsByConsultationId(0); // Will filter below
+        const allQuestions = [];
+        
+        // Get all consultations to find the question
+        const consultations = await db.getAllConsultations();
+        for (const consultation of consultations) {
+          const consultationQuestions = await db.getQuestionsByConsultationId(consultation.id);
+          allQuestions.push(...consultationQuestions.map(q => ({ ...q, consultation })));
+        }
+        
+        const questionWithConsultation = allQuestions.find(q => q.id === input.questionId);
+        
+        // Answer the question
         await db.answerQuestion(input.questionId, input.answer, ctx.user.id);
+        
+        // Send notification to patient if we found the question
+        if (questionWithConsultation) {
+          const consultation = questionWithConsultation.consultation;
+          const user = await db.getUserById(consultation.userId);
+          
+          if (user && user.email) {
+            await sendQuestionAnsweredNotification(
+              user.email,
+              user.name || "Patient",
+              consultation.id,
+              questionWithConsultation.question,
+              input.answer,
+              consultation.preferredLanguage as "en" | "ar"
+            );
+          }
+        }
+        
         return { success: true };
       }),
 

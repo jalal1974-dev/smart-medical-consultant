@@ -100,3 +100,10 @@
 - [x] Implement follow-up question system for each consultation
 - [x] Add document viewer for uploaded files
 - [x] Create timeline view of consultation progress
+
+## Email Notifications for Q&A System
+- [x] Create email template for notifying admins of new patient questions
+- [x] Create email template for notifying patients when questions are answered
+- [x] Integrate admin notification when patient asks question
+- [x] Integrate patient notification when admin answers question
+- [x] Test email notification flow

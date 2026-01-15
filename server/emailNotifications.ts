@@ -223,3 +223,100 @@ Smart Medical Consultant Team
     return false;
   }
 }
+
+/**
+ * Send email notification to admins when a patient asks a new question
+ */
+export async function sendNewQuestionNotification(
+  consultationId: number,
+  patientName: string,
+  patientEmail: string,
+  question: string
+): Promise<boolean> {
+  const title = "🔔 New Patient Question";
+  const content = `
+A patient has submitted a new question about their consultation.
+
+Patient Details:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Name: ${patientName}
+• Email: ${patientEmail}
+• Consultation ID: #${consultationId}
+
+Question:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${question}
+
+Please log in to the admin panel to answer this question.
+  `.trim();
+
+  try {
+    await notifyOwner({ title, content });
+    return true;
+  } catch (error) {
+    console.error("Failed to send new question notification:", error);
+    return false;
+  }
+}
+
+/**
+ * Send email notification to patient when their question is answered
+ */
+export async function sendQuestionAnsweredNotification(
+  patientEmail: string,
+  patientName: string,
+  consultationId: number,
+  question: string,
+  answer: string,
+  preferredLanguage: "en" | "ar"
+): Promise<boolean> {
+  const isArabic = preferredLanguage === "ar";
+  
+  const title = isArabic 
+    ? `تم الرد على سؤالك - استشارة #${consultationId}`
+    : `Your Question Has Been Answered - Consultation #${consultationId}`;
+
+  const greeting = isArabic
+    ? `عزيزي/عزيزتي ${patientName}،`
+    : `Dear ${patientName},`;
+
+  const intro = isArabic
+    ? "تم الرد على سؤالك من قبل أحد أطبائنا المتخصصين:"
+    : "Your question has been answered by one of our medical specialists:";
+
+  const questionLabel = isArabic ? "سؤالك:" : "Your Question:";
+  const answerLabel = isArabic ? "الإجابة:" : "Answer:";
+  const viewLabel = isArabic ? "لعرض التفاصيل الكاملة، يرجى تسجيل الدخول إلى حسابك." : "To view full details, please log in to your account.";
+  const thanksLabel = isArabic ? "شكراً لثقتك بنا،" : "Thank you for trusting us,";
+  const teamLabel = isArabic ? "فريق مستشارك الطبي الذكي" : "Smart Medical Consultant Team";
+
+  const content = `
+${greeting}
+
+${intro}
+
+${questionLabel}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${question}
+
+${answerLabel}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${answer}
+
+${viewLabel}
+
+${thanksLabel}
+${teamLabel}
+  `.trim();
+
+  try {
+    await notifyOwner({
+      title: `[Patient Email] ${title}`,
+      content: `To: ${patientEmail}\n\n${content}`,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send question answered notification:", error);
+    return false;
+  }
+}
