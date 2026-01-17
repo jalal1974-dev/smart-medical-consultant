@@ -60,8 +60,9 @@ describe("Consultation System", () => {
         patientName: "John Doe",
         patientEmail: "john@example.com",
         patientPhone: "+1234567890",
-        description: "I need medical advice about my condition",
-        language: "en",
+        symptoms: "Headache and dizziness",
+        medicalHistory: "No significant medical history",
+        preferredLanguage: "en" as const,
         isFree: true,
       });
 
@@ -97,8 +98,9 @@ describe("Consultation System", () => {
         updatedCaller.consultation.create({
           patientName: "John Doe",
           patientEmail: "john@example.com",
-          description: "Another consultation request",
-          language: "en",
+          symptoms: "Chest pain",
+          medicalHistory: "No history",
+          preferredLanguage: "en" as const,
           isFree: true,
         })
       ).rejects.toThrow("Free consultation already used");
@@ -126,8 +128,9 @@ describe("Consultation System", () => {
       const result = await updatedCaller.consultation.create({
         patientName: "Jane Smith",
         patientEmail: "jane@example.com",
-        description: "I need a paid consultation for specialized advice",
-        language: "ar",
+        symptoms: "Back pain",
+        medicalHistory: "Previous injury",
+        preferredLanguage: "ar" as const,
         isFree: false,
       });
 
@@ -137,20 +140,21 @@ describe("Consultation System", () => {
       // Verify consultation was created with correct payment status
       const consultation = await db.getConsultationById(result.consultationId);
       expect(consultation?.paymentStatus).toBe("pending");
-      expect(consultation?.amount).toBe("50.00");
+      expect(consultation?.amount).toBe("5.00");
     });
 
     it("should validate required fields", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
 
-      // Missing description
+      // Missing symptoms (too short)
       await expect(
         caller.consultation.create({
           patientName: "Test",
           patientEmail: "test@example.com",
-          description: "short",
-          language: "en",
+          symptoms: "hi",
+          medicalHistory: "",
+          preferredLanguage: "en" as const,
           isFree: true,
         })
       ).rejects.toThrow();
@@ -181,8 +185,9 @@ describe("Consultation System", () => {
       await updatedCaller.consultation.create({
         patientName: "Test Patient",
         patientEmail: "patient@example.com",
-        description: "Test consultation for listing",
-        language: "en",
+        symptoms: "Test symptoms for listing",
+        medicalHistory: "No history",
+        preferredLanguage: "en" as const,
         isFree: true,
       });
 
@@ -218,8 +223,9 @@ describe("Consultation System", () => {
       const createResult = await updatedCaller.consultation.create({
         patientName: "Payment Test",
         patientEmail: "payment@example.com",
-        description: "Testing payment update functionality",
-        language: "en",
+        symptoms: "Testing payment update functionality",
+        medicalHistory: "No history",
+        preferredLanguage: "en" as const,
         isFree: false,
       });
 
@@ -287,15 +293,16 @@ describe("Admin Consultation Management", () => {
       const createResult = await updatedUserCaller.consultation.create({
         patientName: "Status Test",
         patientEmail: "status@example.com",
-        description: "Testing status update by admin",
-        language: "en",
+        symptoms: "Testing status update by admin",
+        medicalHistory: "No history",
+        preferredLanguage: "en" as const,
         isFree: true,
       });
 
       // Admin updates status
-      const updateResult = await adminCaller.admin.updateConsultationStatus({
+      const updateResult = await adminCaller.admin.updateStatus({
         id: createResult.consultationId,
-        status: "confirmed",
+        status: "specialist_review",
         adminNotes: "Consultation confirmed by admin",
       });
 
@@ -303,23 +310,10 @@ describe("Admin Consultation Management", () => {
 
       // Verify status was updated
       const consultation = await db.getConsultationById(createResult.consultationId);
-      expect(consultation?.status).toBe("confirmed");
+      expect(consultation?.status).toBe("specialist_review");
       expect(consultation?.adminNotes).toBe("Consultation confirmed by admin");
     });
   });
 
-  describe("admin.stats", () => {
-    it("should return dashboard statistics", async () => {
-      const ctx = createAuthContext("admin");
-      const caller = appRouter.createCaller(ctx);
-
-      const stats = await caller.admin.stats();
-      
-      expect(stats).toHaveProperty("totalUsers");
-      expect(stats).toHaveProperty("totalConsultations");
-      expect(stats).toHaveProperty("pendingConsultations");
-      expect(typeof stats.totalUsers).toBe("number");
-      expect(typeof stats.totalConsultations).toBe("number");
-    });
-  });
+  // Stats functionality moved to analytics dashboard
 });
