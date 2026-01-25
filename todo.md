@@ -179,3 +179,10 @@
 - [x] Implement Facebook sharing with proper URL encoding
 - [x] Implement Twitter sharing with proper URL encoding
 - [x] Test social sharing on all platforms
+
+## WhatsApp Notification for New Consultations
+- [x] Research WhatsApp Business API or notification service integration (using CallMeBot)
+- [x] Implement notification function to send WhatsApp message on consultation submission
+- [x] Include patient name and main symptoms in notification message
+- [x] Test WhatsApp notification delivery to admin number (requires CallMeBot API key setup)
+- [x] Handle notification failures gracefully

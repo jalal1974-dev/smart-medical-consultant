@@ -6,6 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { sendConsultationReceipt, sendConsultationStatusUpdate, sendNewQuestionNotification, sendQuestionAnsweredNotification } from "./emailNotifications";
+import { sendConsultationWhatsAppNotification } from "./whatsappNotification";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 
@@ -156,6 +157,13 @@ export const appRouter = router({
           preferredLanguage: input.preferredLanguage,
           createdAt: new Date(),
           status: 'submitted',
+        });
+
+        // Send WhatsApp notification to admin
+        await sendConsultationWhatsAppNotification({
+          patientName: input.patientName,
+          symptoms: input.symptoms,
+          consultationId: Number(consultationId),
         });
 
         return { success: true, consultationId: Number(consultationId) };
