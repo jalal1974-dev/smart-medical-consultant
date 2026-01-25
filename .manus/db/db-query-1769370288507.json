@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE consultations \nADD COLUMN aiAudioUrl VARCHAR(500),\nADD COLUMN aiSlideDeckUrl VARCHAR(500),\nADD COLUMN aiMindMapUrl VARCHAR(500),\nADD COLUMN aiProcessingAttempts INT DEFAULT 0 NOT NULL,\nADD COLUMN aiLastProcessedAt TIMESTAMP,\nADD COLUMN specialistApprovalStatus ENUM('pending_review', 'approved', 'rejected', 'needs_deep_analysis') DEFAULT 'pending_review',\nADD COLUMN specialistRejectionReason TEXT;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute ALTER TABLE consultations \nADD COLUMN aiAudioUrl VARCHAR(500),\nADD COLUMN aiSlideDeckUrl VARCHAR(500),\nADD COLUMN aiMindMapUrl VARCHAR(500),\nADD COLUMN aiProcessingAttempts INT DEFAULT 0 NOT NULL,\nADD COLUMN aiLastProcessedAt TIMESTAMP,\nADD COLUMN specialistApprovalStatus ENUM('pending_review', 'approved', 'rejected', 'needs_deep_analysis') DEFAULT 'pending_review',\nADD COLUMN specialistRejectionReason TEXT;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3611
+}

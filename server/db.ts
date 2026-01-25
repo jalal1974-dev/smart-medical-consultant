@@ -631,3 +631,19 @@ export async function getContinueWatching(userId: number) {
     }
   }).filter(item => item.media !== null); // Filter out items where media was deleted
 }
+
+/**
+ * General consultation update function for AI processing workflow
+ */
+export async function updateConsultation(
+  id: number,
+  data: Partial<typeof consultations.$inferInsert>
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(consultations).set({ 
+    ...data,
+    updatedAt: new Date() 
+  }).where(eq(consultations.id, id));
+}

@@ -9,6 +9,7 @@ import { sendConsultationReceipt, sendConsultationStatusUpdate, sendNewQuestionN
 import { sendConsultationWhatsAppNotification } from "./whatsappNotification";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
+import { processConsultationWithAI, reprocessConsultationAfterRejection } from "./aiProcessingOrchestrator";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -164,6 +165,11 @@ export const appRouter = router({
           patientName: input.patientName,
           symptoms: input.symptoms,
           consultationId: Number(consultationId),
+        });
+
+        // Trigger AI processing in the background (non-blocking)
+        processConsultationWithAI(Number(consultationId)).catch(error => {
+          console.error(`Background AI processing failed for consultation #${consultationId}:`, error);
         });
 
         return { success: true, consultationId: Number(consultationId) };
@@ -353,6 +359,51 @@ export const appRouter = router({
           input.consultationId,
           input.specialistNotes,
           ctx.user.id
+        );
+        return { success: true };
+      }),
+
+    // Approve AI-generated content
+    approveAIContent: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        specialistNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateConsultation(input.consultationId, {
+          specialistApprovalStatus: "approved",
+          status: "completed",
+          specialistNotes: input.specialistNotes || null,
+          reviewedBy: ctx.user.id,
+          reviewedAt: new Date(),
+        });
+
+        // Send notification to patient that results are ready
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (consultation) {
+          await sendConsultationStatusUpdate(
+            consultation.id,
+            consultation.patientName,
+            consultation.patientEmail,
+            "completed",
+            consultation.preferredLanguage as "en" | "ar"
+          );
+        }
+
+        return { success: true };
+      }),
+
+    // Reject AI-generated content and trigger reprocessing
+    rejectAIContent: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        rejectionReason: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        // Trigger reprocessing with specialist feedback
+        await reprocessConsultationAfterRejection(
+          input.consultationId,
+          input.rejectionReason
         );
         return { success: true };
       }),

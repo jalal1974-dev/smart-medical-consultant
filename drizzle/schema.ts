@@ -53,13 +53,25 @@ export const consultations = mysqlTable("consultations", {
   ]).default("submitted").notNull(),
   
   // AI Analysis results
-  aiAnalysis: text("aiAnalysis"), // AI-generated analysis text
+  aiAnalysis: text("aiAnalysis"), // AI-generated comprehensive medical analysis
   aiReportUrl: varchar("aiReportUrl", { length: 500 }), // PDF report URL
   aiVideoUrl: varchar("aiVideoUrl", { length: 500 }), // Video explanation URL
+  aiAudioUrl: varchar("aiAudioUrl", { length: 500 }), // Audio summary URL
   aiInfographicUrl: varchar("aiInfographicUrl", { length: 500 }), // Infographic URL
+  aiSlideDeckUrl: varchar("aiSlideDeckUrl", { length: 500 }), // Slide presentation URL
+  aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
+  aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts
+  aiLastProcessedAt: timestamp("aiLastProcessedAt"), // Last AI processing timestamp
   
-  // Specialist review
-  specialistNotes: text("specialistNotes"),
+  // Specialist review and approval workflow
+  specialistApprovalStatus: mysqlEnum("specialistApprovalStatus", [
+    "pending_review",
+    "approved",
+    "rejected",
+    "needs_deep_analysis"
+  ]).default("pending_review"),
+  specialistNotes: text("specialistNotes"), // Specialist feedback
+  specialistRejectionReason: text("specialistRejectionReason"), // Why content was rejected
   reviewedBy: int("reviewedBy"), // Admin user ID who reviewed
   reviewedAt: timestamp("reviewedAt"),
   
