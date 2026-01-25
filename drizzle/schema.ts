@@ -135,3 +135,21 @@ export const consultationQuestions = mysqlTable("consultation_questions", {
 
 export type ConsultationQuestion = typeof consultationQuestions.$inferSelect;
 export type InsertConsultationQuestion = typeof consultationQuestions.$inferInsert;
+
+/**
+ * Watch history table - tracks user progress on videos and podcasts
+ */
+export const watchHistory = mysqlTable("watch_history", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  mediaType: mysqlEnum("media_type", ["video", "podcast"]).notNull(),
+  mediaId: int("media_id").notNull(),
+  progress: int("progress").default(0).notNull(), // Current position in seconds
+  duration: int("duration").notNull(), // Total duration in seconds
+  completed: boolean("completed").default(false).notNull(),
+  lastWatchedAt: timestamp("last_watched_at").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WatchHistory = typeof watchHistory.$inferSelect;
+export type InsertWatchHistory = typeof watchHistory.$inferInsert;

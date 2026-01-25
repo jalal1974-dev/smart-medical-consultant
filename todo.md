@@ -149,3 +149,13 @@
 - [x] Update Videos page to use modal instead of external link
 - [x] Update Podcasts page to use modal instead of external link
 - [x] Test video and audio playback in modals
+
+## Watch History Tracking System
+- [x] Create database schema for watch history (user, media, progress, timestamp)
+- [x] Add backend API to save watch progress
+- [x] Add backend API to retrieve user's watch history
+- [x] Update video player to track and save progress
+- [x] Update podcast player to track and save progress
+- [x] Create Continue Watching component for dashboard
+- [x] Add Continue Watching section to user dashboard
+- [x] Test watch history tracking and resume functionality

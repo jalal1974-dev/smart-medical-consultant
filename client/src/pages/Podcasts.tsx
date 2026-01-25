@@ -5,12 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { Headphones, Clock, Eye, Search } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Podcasts() {
   const { t, language } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const { data: podcasts, isLoading } = trpc.media.podcasts.useQuery();
   const incrementViews = trpc.media.incrementPodcastViews.useMutation();
+  const saveProgress = trpc.media.saveWatchProgress.useMutation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPodcast, setSelectedPodcast] = useState<{
     id: number;
@@ -19,6 +22,8 @@ export default function Podcasts() {
     description: string;
     thumbnailUrl: string | null;
   } | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handlePodcastClick = (
     id: number, 
@@ -213,10 +218,56 @@ export default function Podcasts() {
               <div className="bg-muted rounded-lg p-4">
                 {selectedPodcast && (
                   <audio
+                    ref={audioRef}
                     src={selectedPodcast.url}
                     controls
                     autoPlay
                     className="w-full"
+                    onPlay={() => {
+                      // Save progress every 5 seconds while playing
+                      if (isAuthenticated && audioRef.current) {
+                        progressIntervalRef.current = setInterval(() => {
+                          if (audioRef.current && !audioRef.current.paused) {
+                            saveProgress.mutate({
+                              mediaType: "podcast",
+                              mediaId: selectedPodcast.id,
+                              progress: Math.floor(audioRef.current.currentTime),
+                              duration: Math.floor(audioRef.current.duration),
+                            });
+                          }
+                        }, 5000);
+                      }
+                    }}
+                    onPause={() => {
+                      // Clear interval and save final progress
+                      if (progressIntervalRef.current) {
+                        clearInterval(progressIntervalRef.current);
+                        progressIntervalRef.current = null;
+                      }
+                      if (isAuthenticated && audioRef.current) {
+                        saveProgress.mutate({
+                          mediaType: "podcast",
+                          mediaId: selectedPodcast.id,
+                          progress: Math.floor(audioRef.current.currentTime),
+                          duration: Math.floor(audioRef.current.duration),
+                        });
+                      }
+                    }}
+                    onEnded={() => {
+                      // Clear interval and mark as completed
+                      if (progressIntervalRef.current) {
+                        clearInterval(progressIntervalRef.current);
+                        progressIntervalRef.current = null;
+                      }
+                      if (isAuthenticated && audioRef.current) {
+                        saveProgress.mutate({
+                          mediaType: "podcast",
+                          mediaId: selectedPodcast.id,
+                          progress: Math.floor(audioRef.current.duration),
+                          duration: Math.floor(audioRef.current.duration),
+                        });
+                      }
+                    }}
                   >
                     {language === "en" 
                       ? "Your browser does not support the audio tag."

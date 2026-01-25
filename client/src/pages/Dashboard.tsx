@@ -5,8 +5,106 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText } from "lucide-react";
+import { Calendar, DollarSign, FileText, Play, Headphones, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
+
+function ContinueWatchingSection({ language }: { language: "en" | "ar" }) {
+  const { data: continueWatching, isLoading } = trpc.media.getContinueWatching.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="mb-12">
+        <h2 className="text-2xl font-bold mb-4">
+          {language === "en" ? "Continue Watching" : "استكمال المشاهدة"}
+        </h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <div className="aspect-video bg-muted" />
+              <CardHeader>
+                <div className="h-6 bg-muted rounded" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!continueWatching || continueWatching.length === 0) {
+    return null; // Don't show section if no items
+  }
+
+  return (
+    <div className="mb-12">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">
+          {language === "en" ? "Continue Watching" : "استكمال المشاهدة"}
+        </h2>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {continueWatching.map((item) => {
+          const media = item.media as any;
+          if (!media) return null;
+
+          const title = language === "en" ? media.titleEn : media.titleAr;
+          const progressPercent = (item.progress / item.duration) * 100;
+          const remainingTime = Math.ceil((item.duration - item.progress) / 60); // minutes
+
+          const linkPath = item.mediaType === "video" ? "/videos" : "/podcasts";
+
+          return (
+            <Link key={`${item.mediaType}-${item.mediaId}`} href={linkPath}>
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <div className="relative aspect-video bg-muted">
+                  {media.thumbnailUrl ? (
+                    <img
+                      src={media.thumbnailUrl}
+                      alt={title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      {item.mediaType === "video" ? (
+                        <Play className="w-12 h-12 text-muted-foreground" />
+                      ) : (
+                        <Headphones className="w-12 h-12 text-primary" />
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    {item.mediaType === "video" ? (
+                      <Play className="w-12 h-12 text-white" />
+                    ) : (
+                      <Headphones className="w-12 h-12 text-white" />
+                    )}
+                  </div>
+                  {/* Progress bar */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                </div>
+                <CardHeader>
+                  <CardTitle className="line-clamp-2 text-base">{title}</CardTitle>
+                  <CardDescription className="flex items-center gap-1 text-xs">
+                    <Clock className="w-3 h-3" />
+                    {language === "en"
+                      ? `${remainingTime} min remaining`
+                      : `${remainingTime} دقيقة متبقية`}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -87,10 +185,18 @@ export default function Dashboard() {
     <div className="min-h-screen py-12">
       <div className="container max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">{t("myConsultations")}</h1>
+          <h1 className="text-4xl font-bold mb-2">{t("dashboard")}</h1>
           <p className="text-xl text-muted-foreground">
             {user?.hasUsedFreeConsultation ? t("freeConsultationUsed") : t("freeConsultation")}
           </p>
+        </div>
+
+        {/* Continue Watching Section */}
+        <ContinueWatchingSection language={language} />
+
+        {/* Consultations Section */}
+        <div className="mt-12 mb-6">
+          <h2 className="text-2xl font-bold">{t("myConsultations")}</h2>
         </div>
 
         {!consultations || consultations.length === 0 ? (

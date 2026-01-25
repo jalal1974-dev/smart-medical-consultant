@@ -530,6 +530,33 @@ export const appRouter = router({
         await db.incrementPodcastViews(input.id);
         return { success: true };
       }),
+
+    // Watch history endpoints
+    saveWatchProgress: protectedProcedure
+      .input(z.object({
+        mediaType: z.enum(["video", "podcast"]),
+        mediaId: z.number(),
+        progress: z.number(),
+        duration: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertWatchHistory({
+          userId: ctx.user.id,
+          mediaType: input.mediaType,
+          mediaId: input.mediaId,
+          progress: input.progress,
+          duration: input.duration,
+        });
+        return { success: true };
+      }),
+
+    getWatchHistory: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getUserWatchHistory(ctx.user.id);
+    }),
+
+    getContinueWatching: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getContinueWatching(ctx.user.id);
+    }),
   }),
 });
 

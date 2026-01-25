@@ -1,6 +1,6 @@
-import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -489,4 +489,145 @@ export async function getQuestionAnalytics() {
     averageQuestionResponseTime,
     answerRate: totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0,
   };
+}
+
+// ==================== Watch History Functions ====================
+
+export async function upsertWatchHistory(data: {
+  userId: number;
+  mediaType: "video" | "podcast";
+  mediaId: number;
+  progress: number;
+  duration: number;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const completed = data.progress >= data.duration * 0.9; // Consider 90% as completed
+
+  // Check if record exists
+  const existing = await db
+    .select()
+    .from(watchHistory)
+    .where(
+      and(
+        eq(watchHistory.userId, data.userId),
+        eq(watchHistory.mediaType, data.mediaType),
+        eq(watchHistory.mediaId, data.mediaId)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing record
+    await db
+      .update(watchHistory)
+      .set({
+        progress: data.progress,
+        duration: data.duration,
+        completed,
+        lastWatchedAt: new Date(),
+      })
+      .where(eq(watchHistory.id, existing[0].id));
+  } else {
+    // Insert new record using raw SQL to avoid Drizzle mapping issue
+    await db.execute(sql`
+      INSERT INTO watch_history (user_id, media_type, media_id, progress, duration, completed)
+      VALUES (${data.userId}, ${data.mediaType}, ${data.mediaId}, ${data.progress}, ${data.duration}, ${completed})
+    `);
+  }
+}
+
+export async function getUserWatchHistory(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Get all watch history for user, ordered by most recently watched
+  const history = await db
+    .select()
+    .from(watchHistory)
+    .where(eq(watchHistory.userId, userId))
+    .orderBy(desc(watchHistory.lastWatchedAt));
+
+  // Fetch video and podcast details
+  const videoIds = history.filter(h => h.mediaType === "video").map(h => h.mediaId);
+  const podcastIds = history.filter(h => h.mediaType === "podcast").map(h => h.mediaId);
+
+  const videoDetails = videoIds.length > 0
+    ? await db.select().from(videos).where(inArray(videos.id, videoIds))
+    : [];
+
+  const podcastDetails = podcastIds.length > 0
+    ? await db.select().from(podcasts).where(inArray(podcasts.id, podcastIds))
+    : [];
+
+  // Combine history with media details
+  return history.map(h => {
+    if (h.mediaType === "video") {
+      const video = videoDetails.find(v => v.id === h.mediaId);
+      return {
+        ...h,
+        media: video || null,
+      };
+    } else {
+      const podcast = podcastDetails.find(p => p.id === h.mediaId);
+      return {
+        ...h,
+        media: podcast || null,
+      };
+    }
+  });
+}
+
+export async function getContinueWatching(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Get incomplete watch history, ordered by most recently watched
+  const history = await db
+    .select()
+    .from(watchHistory)
+    .where(
+      and(
+        eq(watchHistory.userId, userId),
+        eq(watchHistory.completed, false)
+      )
+    )
+    .orderBy(desc(watchHistory.lastWatchedAt))
+    .limit(6); // Limit to 6 items for Continue Watching section
+
+  // Fetch video and podcast details
+  const videoIds = history.filter(h => h.mediaType === "video").map(h => h.mediaId);
+  const podcastIds = history.filter(h => h.mediaType === "podcast").map(h => h.mediaId);
+
+  const videoDetails = videoIds.length > 0
+    ? await db.select().from(videos).where(inArray(videos.id, videoIds))
+    : [];
+
+  const podcastDetails = podcastIds.length > 0
+    ? await db.select().from(podcasts).where(inArray(podcasts.id, podcastIds))
+    : [];
+
+  // Combine history with media details
+  return history.map(h => {
+    if (h.mediaType === "video") {
+      const video = videoDetails.find(v => v.id === h.mediaId);
+      return {
+        ...h,
+        media: video || null,
+      };
+    } else {
+      const podcast = podcastDetails.find(p => p.id === h.mediaId);
+      return {
+        ...h,
+        media: podcast || null,
+      };
+    }
+  }).filter(item => item.media !== null); // Filter out items where media was deleted
 }

@@ -5,12 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { Play, Clock, Eye, Search, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Videos() {
   const { t, language } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const { data: videos, isLoading } = trpc.media.videos.useQuery();
   const incrementViews = trpc.media.incrementVideoViews.useMutation();
+  const saveProgress = trpc.media.saveWatchProgress.useMutation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<{
     id: number;
@@ -18,6 +21,8 @@ export default function Videos() {
     title: string;
     description: string;
   } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleVideoClick = (id: number, url: string, titleEn: string, titleAr: string, descEn: string, descAr: string) => {
     incrementViews.mutate({ id });
@@ -196,10 +201,56 @@ export default function Videos() {
               <div className="aspect-video bg-black rounded-lg overflow-hidden">
                 {selectedVideo && (
                   <video
+                    ref={videoRef}
                     src={selectedVideo.url}
                     controls
                     autoPlay
                     className="w-full h-full"
+                    onPlay={() => {
+                      // Save progress every 5 seconds while playing
+                      if (isAuthenticated && videoRef.current) {
+                        progressIntervalRef.current = setInterval(() => {
+                          if (videoRef.current && !videoRef.current.paused) {
+                            saveProgress.mutate({
+                              mediaType: "video",
+                              mediaId: selectedVideo.id,
+                              progress: Math.floor(videoRef.current.currentTime),
+                              duration: Math.floor(videoRef.current.duration),
+                            });
+                          }
+                        }, 5000);
+                      }
+                    }}
+                    onPause={() => {
+                      // Clear interval and save final progress
+                      if (progressIntervalRef.current) {
+                        clearInterval(progressIntervalRef.current);
+                        progressIntervalRef.current = null;
+                      }
+                      if (isAuthenticated && videoRef.current) {
+                        saveProgress.mutate({
+                          mediaType: "video",
+                          mediaId: selectedVideo.id,
+                          progress: Math.floor(videoRef.current.currentTime),
+                          duration: Math.floor(videoRef.current.duration),
+                        });
+                      }
+                    }}
+                    onEnded={() => {
+                      // Clear interval and mark as completed
+                      if (progressIntervalRef.current) {
+                        clearInterval(progressIntervalRef.current);
+                        progressIntervalRef.current = null;
+                      }
+                      if (isAuthenticated && videoRef.current) {
+                        saveProgress.mutate({
+                          mediaType: "video",
+                          mediaId: selectedVideo.id,
+                          progress: Math.floor(videoRef.current.duration),
+                          duration: Math.floor(videoRef.current.duration),
+                        });
+                      }
+                    }}
                   >
                     {language === "en" 
                       ? "Your browser does not support the video tag."
