@@ -159,3 +159,9 @@
 - [x] Create Continue Watching component for dashboard
 - [x] Add Continue Watching section to user dashboard
 - [x] Test watch history tracking and resume functionality
+
+## Featured Media on Home Page
+- [x] Add backend query to fetch latest videos and podcasts
+- [x] Design and implement featured media section on home page
+- [x] Add links from home page media cards to full videos/podcasts pages
+- [x] Test featured media display and navigation
