@@ -123,3 +123,9 @@
 - [x] Create admin upload interface for podcasts with S3 integration
 - [x] Add video/podcast management (edit, delete) in admin panel
 - [x] Test video and podcast upload functionality
+
+## Media Search Functionality
+- [x] Add search bar to Videos page with bilingual search support
+- [x] Add search bar to Podcasts page with bilingual search support
+- [x] Implement real-time filtering based on search query
+- [x] Test search functionality in both English and Arabic

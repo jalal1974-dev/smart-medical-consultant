@@ -1,13 +1,16 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Headphones, Clock, Eye } from "lucide-react";
+import { Headphones, Clock, Eye, Search } from "lucide-react";
+import { useState, useMemo } from "react";
 
 export default function Podcasts() {
   const { t, language } = useLanguage();
   const { data: podcasts, isLoading } = trpc.media.podcasts.useQuery();
   const incrementViews = trpc.media.incrementPodcastViews.useMutation();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handlePodcastClick = (id: number, url: string) => {
     incrementViews.mutate({ id });
@@ -20,6 +23,27 @@ export default function Podcasts() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Filter podcasts based on search query (searches both English and Arabic)
+  const filteredPodcasts = useMemo(() => {
+    if (!podcasts) return [];
+    if (!searchQuery.trim()) return podcasts;
+
+    const query = searchQuery.toLowerCase().trim();
+    return podcasts.filter((podcast) => {
+      const titleEn = podcast.titleEn?.toLowerCase() || "";
+      const titleAr = podcast.titleAr?.toLowerCase() || "";
+      const descEn = podcast.descriptionEn?.toLowerCase() || "";
+      const descAr = podcast.descriptionAr?.toLowerCase() || "";
+
+      return (
+        titleEn.includes(query) ||
+        titleAr.includes(query) ||
+        descEn.includes(query) ||
+        descAr.includes(query)
+      );
+    });
+  }, [podcasts, searchQuery]);
 
   if (isLoading) {
     return (
@@ -49,15 +73,49 @@ export default function Podcasts() {
           <p className="text-xl text-muted-foreground">{t("feature4Desc")}</p>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder={language === "en" ? "Search podcasts..." : "ابحث عن البودكاست..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              dir={language === "ar" ? "rtl" : "ltr"}
+            />
+          </div>
+          {searchQuery && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {language === "en" 
+                ? `Found ${filteredPodcasts.length} podcast${filteredPodcasts.length !== 1 ? 's' : ''}`
+                : `تم العثور على ${filteredPodcasts.length} بودكاست`
+              }
+            </p>
+          )}
+        </div>
+
         {!podcasts || podcasts.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">{t("noPodcasts")}</p>
             </CardContent>
           </Card>
+        ) : filteredPodcasts.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                {language === "en" 
+                  ? "No podcasts found matching your search."
+                  : "لم يتم العثور على بودكاست مطابق لبحثك."
+                }
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {podcasts.map((podcast) => (
+            {filteredPodcasts.map((podcast) => (
               <Card
                 key={podcast.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"

@@ -1,13 +1,16 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Play, Clock, Eye } from "lucide-react";
+import { Play, Clock, Eye, Search } from "lucide-react";
+import { useState, useMemo } from "react";
 
 export default function Videos() {
   const { t, language } = useLanguage();
   const { data: videos, isLoading } = trpc.media.videos.useQuery();
   const incrementViews = trpc.media.incrementVideoViews.useMutation();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleVideoClick = (id: number, url: string) => {
     incrementViews.mutate({ id });
@@ -20,6 +23,27 @@ export default function Videos() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Filter videos based on search query (searches both English and Arabic)
+  const filteredVideos = useMemo(() => {
+    if (!videos) return [];
+    if (!searchQuery.trim()) return videos;
+
+    const query = searchQuery.toLowerCase().trim();
+    return videos.filter((video) => {
+      const titleEn = video.titleEn?.toLowerCase() || "";
+      const titleAr = video.titleAr?.toLowerCase() || "";
+      const descEn = video.descriptionEn?.toLowerCase() || "";
+      const descAr = video.descriptionAr?.toLowerCase() || "";
+
+      return (
+        titleEn.includes(query) ||
+        titleAr.includes(query) ||
+        descEn.includes(query) ||
+        descAr.includes(query)
+      );
+    });
+  }, [videos, searchQuery]);
 
   if (isLoading) {
     return (
@@ -49,15 +73,49 @@ export default function Videos() {
           <p className="text-xl text-muted-foreground">{t("feature4Desc")}</p>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder={language === "en" ? "Search videos..." : "ابحث عن الفيديوهات..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              dir={language === "ar" ? "rtl" : "ltr"}
+            />
+          </div>
+          {searchQuery && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {language === "en" 
+                ? `Found ${filteredVideos.length} video${filteredVideos.length !== 1 ? 's' : ''}`
+                : `تم العثور على ${filteredVideos.length} فيديو`
+              }
+            </p>
+          )}
+        </div>
+
         {!videos || videos.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">{t("noVideos")}</p>
             </CardContent>
           </Card>
+        ) : filteredVideos.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                {language === "en" 
+                  ? "No videos found matching your search."
+                  : "لم يتم العثور على فيديوهات مطابقة لبحثك."
+                }
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {videos.map((video) => (
+            {filteredVideos.map((video) => (
               <Card
                 key={video.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
