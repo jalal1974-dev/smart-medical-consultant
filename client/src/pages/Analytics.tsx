@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, TrendingUp, Users, Clock, CheckCircle, MessageSquare, DollarSign } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { translations } from "@shared/i18n";
 import { Header } from "@/components/Header";
 
@@ -267,6 +268,70 @@ export default function Analytics() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Revenue Trend Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    {language === "ar" ? "اتجاه الإيرادات" : "Revenue Trend"}
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  {language === "ar" ? "الإيرادات اليومية من الاستشارات المدفوعة" : "Daily revenue from paid consultations"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics.consultations.revenueByDate.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={analytics.consultations.revenueByDate}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="date" 
+                        className="text-xs"
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
+                        }}
+                      />
+                      <YAxis 
+                        className="text-xs"
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '6px'
+                        }}
+                        labelFormatter={(value) => {
+                          const date = new Date(value as string);
+                          return date.toLocaleDateString(language === "ar" ? "ar-SA" : "en-US", {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          });
+                        }}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, language === "ar" ? "الإيرادات" : "Revenue"]}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={{ fill: 'hsl(var(--primary))', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    {language === "ar" ? "لا توجد بيانات إيرادات متاحة" : "No revenue data available"}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
