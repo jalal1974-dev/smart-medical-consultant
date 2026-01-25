@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, TrendingUp, Users, Clock, CheckCircle, MessageSquare, DollarSign } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { translations } from "@shared/i18n";
 import { Header } from "@/components/Header";
 
