@@ -142,3 +142,10 @@
 - [x] Create line chart component for revenue trends
 - [x] Integrate chart into analytics dashboard
 - [x] Test chart displays correctly with real data
+
+## In-Page Media Player Enhancement
+- [x] Create modal dialog component for video playback
+- [x] Create modal dialog component for podcast playback
+- [x] Update Videos page to use modal instead of external link
+- [x] Update Podcasts page to use modal instead of external link
+- [x] Test video and audio playback in modals

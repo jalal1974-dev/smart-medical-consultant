@@ -2,6 +2,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { Headphones, Clock, Eye, Search } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -11,10 +12,31 @@ export default function Podcasts() {
   const { data: podcasts, isLoading } = trpc.media.podcasts.useQuery();
   const incrementViews = trpc.media.incrementPodcastViews.useMutation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPodcast, setSelectedPodcast] = useState<{
+    id: number;
+    url: string;
+    title: string;
+    description: string;
+    thumbnailUrl: string | null;
+  } | null>(null);
 
-  const handlePodcastClick = (id: number, url: string) => {
+  const handlePodcastClick = (
+    id: number, 
+    url: string, 
+    titleEn: string, 
+    titleAr: string, 
+    descEn: string, 
+    descAr: string,
+    thumbnailUrl: string | null
+  ) => {
     incrementViews.mutate({ id });
-    window.open(url, "_blank");
+    setSelectedPodcast({
+      id,
+      url,
+      title: language === "en" ? titleEn : titleAr,
+      description: language === "en" ? descEn : descAr,
+      thumbnailUrl,
+    });
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -119,7 +141,15 @@ export default function Podcasts() {
               <Card
                 key={podcast.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handlePodcastClick(podcast.id, podcast.audioUrl)}
+                onClick={() => handlePodcastClick(
+                  podcast.id, 
+                  podcast.audioUrl, 
+                  podcast.titleEn || "", 
+                  podcast.titleAr || "", 
+                  podcast.descriptionEn || "", 
+                  podcast.descriptionAr || "",
+                  podcast.thumbnailUrl
+                )}
               >
                 <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5">
                   {podcast.thumbnailUrl ? (
@@ -163,6 +193,42 @@ export default function Podcasts() {
             ))}
           </div>
         )}
+
+        {/* Podcast Player Modal */}
+        <Dialog open={!!selectedPodcast} onOpenChange={() => setSelectedPodcast(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedPodcast?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedPodcast?.thumbnailUrl && (
+                <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg overflow-hidden">
+                  <img
+                    src={selectedPodcast.thumbnailUrl}
+                    alt={selectedPodcast.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="bg-muted rounded-lg p-4">
+                {selectedPodcast && (
+                  <audio
+                    src={selectedPodcast.url}
+                    controls
+                    autoPlay
+                    className="w-full"
+                  >
+                    {language === "en" 
+                      ? "Your browser does not support the audio tag."
+                      : "متصفحك لا يدعم تشغيل الصوت."
+                    }
+                  </audio>
+                )}
+              </div>
+              <p className="text-muted-foreground">{selectedPodcast?.description}</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

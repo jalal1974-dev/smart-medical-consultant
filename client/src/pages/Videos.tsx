@@ -2,8 +2,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { Play, Clock, Eye, Search } from "lucide-react";
+import { Play, Clock, Eye, Search, X } from "lucide-react";
 import { useState, useMemo } from "react";
 
 export default function Videos() {
@@ -11,10 +12,21 @@ export default function Videos() {
   const { data: videos, isLoading } = trpc.media.videos.useQuery();
   const incrementViews = trpc.media.incrementVideoViews.useMutation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedVideo, setSelectedVideo] = useState<{
+    id: number;
+    url: string;
+    title: string;
+    description: string;
+  } | null>(null);
 
-  const handleVideoClick = (id: number, url: string) => {
+  const handleVideoClick = (id: number, url: string, titleEn: string, titleAr: string, descEn: string, descAr: string) => {
     incrementViews.mutate({ id });
-    window.open(url, "_blank");
+    setSelectedVideo({
+      id,
+      url,
+      title: language === "en" ? titleEn : titleAr,
+      description: language === "en" ? descEn : descAr,
+    });
   };
 
   const formatDuration = (seconds: number | null) => {
@@ -119,7 +131,14 @@ export default function Videos() {
               <Card
                 key={video.id}
                 className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => handleVideoClick(video.id, video.videoUrl)}
+                onClick={() => handleVideoClick(
+                  video.id, 
+                  video.videoUrl, 
+                  video.titleEn || "", 
+                  video.titleAr || "", 
+                  video.descriptionEn || "", 
+                  video.descriptionAr || ""
+                )}
               >
                 <div className="relative aspect-video bg-muted">
                   {video.thumbnailUrl ? (
@@ -166,6 +185,33 @@ export default function Videos() {
             ))}
           </div>
         )}
+
+        {/* Video Player Modal */}
+        <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{selectedVideo?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                {selectedVideo && (
+                  <video
+                    src={selectedVideo.url}
+                    controls
+                    autoPlay
+                    className="w-full h-full"
+                  >
+                    {language === "en" 
+                      ? "Your browser does not support the video tag."
+                      : "متصفحك لا يدعم تشغيل الفيديو."
+                    }
+                  </video>
+                )}
+              </div>
+              <p className="text-muted-foreground">{selectedVideo?.description}</p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
