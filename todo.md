@@ -165,3 +165,9 @@
 - [x] Design and implement featured media section on home page
 - [x] Add links from home page media cards to full videos/podcasts pages
 - [x] Test featured media display and navigation
+
+## Most Popular Section on Home Page
+- [x] Sort videos and podcasts by view count to get most popular items
+- [x] Add Most Popular section to home page between Latest and CTA sections
+- [x] Display top 6 most viewed media items (videos and podcasts combined)
+- [x] Test Most Popular section displays correctly

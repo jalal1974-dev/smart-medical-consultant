@@ -2,7 +2,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight } from "lucide-react";
+import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 export default function Home() {
@@ -13,6 +13,15 @@ export default function Home() {
   // Get latest 3 videos and 3 podcasts
   const latestVideos = videos?.slice(0, 3) || [];
   const latestPodcasts = podcasts?.slice(0, 3) || [];
+
+  // Get most popular media (combine videos and podcasts, sort by views, take top 6)
+  const allMedia = [
+    ...(videos?.map(v => ({ ...v, type: 'video' as const })) || []),
+    ...(podcasts?.map(p => ({ ...p, type: 'podcast' as const })) || [])
+  ];
+  const mostPopular = allMedia
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 6);
 
   const features = [
     {
@@ -229,6 +238,91 @@ export default function Home() {
                 </Link>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Most Popular Section */}
+      <section className="py-20 bg-background">
+        <div className="container">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
+              <TrendingUp className="w-5 h-5" />
+              <span className="font-semibold">
+                {language === "en" ? "Most Popular" : "الأكثر شعبية"}
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              {language === "en" 
+                ? "Trending Medical Content" 
+                : "المحتوى الطبي الأكثر مشاهدة"}
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              {language === "en" 
+                ? "Discover our most viewed educational content trusted by thousands"
+                : "اكتشف المحتوى التعليمي الأكثر مشاهدة والموثوق به من قبل الآلاف"}
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mostPopular.map((item) => {
+              const isVideo = item.type === 'video';
+              const title = language === "en" ? item.titleEn : item.titleAr;
+              const linkPath = isVideo ? "/videos" : "/podcasts";
+
+              return (
+                <Link key={`${item.type}-${item.id}`} href={linkPath}>
+                  <Card className="overflow-hidden hover:shadow-xl transition-all hover:scale-[1.03] cursor-pointer h-full border-2 hover:border-primary/50">
+                    <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5">
+                      {item.thumbnailUrl ? (
+                        <img
+                          src={item.thumbnailUrl}
+                          alt={title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          {isVideo ? (
+                            <Play className="w-16 h-16 text-primary" />
+                          ) : (
+                            <Headphones className="w-16 h-16 text-primary" />
+                          )}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        {isVideo ? (
+                          <Play className="w-12 h-12 text-white" />
+                        ) : (
+                          <Headphones className="w-12 h-12 text-white" />
+                        )}
+                      </div>
+                      {/* Trending badge */}
+                      <div className="absolute top-3 right-3 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" />
+                        {item.views.toLocaleString()}
+                      </div>
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="line-clamp-2 flex items-start gap-2">
+                        {isVideo ? (
+                          <Video className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
+                        ) : (
+                          <Headphones className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
+                        )}
+                        <span>{title}</span>
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-4 text-sm">
+                        {item.duration && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {Math.floor(item.duration / 60)} {language === "en" ? "min" : "دقيقة"}
+                          </span>
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
