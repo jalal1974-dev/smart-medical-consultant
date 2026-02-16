@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link } from "wouter";
 import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { SEO, OrganizationSchema, MedicalServiceSchema, WebsiteSchema } from "@/components/SEO";
 
 export default function Home() {
   const { t, language } = useLanguage();
@@ -47,7 +48,12 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <>
+      <SEO />
+      <OrganizationSchema />
+      <MedicalServiceSchema />
+      <WebsiteSchema />
+      <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-primary/10 via-background to-primary/5 py-20 md:py-32">
         <div className="container">
@@ -342,5 +348,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   );
 }

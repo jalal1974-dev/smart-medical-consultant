@@ -1,0 +1,13 @@
+# robots.txt for Smart Medical Consultant
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://smartmedcon-jsnymp6w.manus.space/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
