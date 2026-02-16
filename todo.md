@@ -215,3 +215,13 @@
 - [x] Ensure consultation documents are visible in patient dashboard
 - [x] Ensure consultation documents are visible in admin panel (AIConsultationReview)
 - [x] Test WhatsApp submission flow from patient perspective
+
+## Consultation Priority System
+- [x] Add priority field to consultations database schema (routine/urgent/critical)
+- [x] Update backend to handle priority field in consultation creation
+- [x] Add priority selector to consultation submission form UI
+- [x] Display priority badges in patient dashboard
+- [x] Update admin review interface to show priority levels
+- [x] Implement priority-based sorting in admin consultation list (critical > urgent > routine)
+- [x] Add visual indicators (colors/icons) for different priority levels
+- [x] Test priority system end-to-end

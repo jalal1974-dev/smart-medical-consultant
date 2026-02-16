@@ -27,6 +27,7 @@ export default function Consultations() {
     symptoms: "",
     medicalHistory: "",
     preferredLanguage: language as "en" | "ar",
+    priority: "routine" as "routine" | "urgent" | "critical",
   });
 
   // File upload states (URLs will be stored after upload to S3)
@@ -219,6 +220,34 @@ export default function Consultations() {
                         <SelectItem value="ar">العربية</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="priority">{language === "ar" ? "مستوى الأولوية" : "Priority Level"}</Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value: "routine" | "urgent" | "critical") => setFormData({ ...formData, priority: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="routine">
+                          {language === "ar" ? "🔵 روتيني" : "🔵 Routine"}
+                        </SelectItem>
+                        <SelectItem value="urgent">
+                          {language === "ar" ? "🟠 عاجل" : "🟠 Urgent"}
+                        </SelectItem>
+                        <SelectItem value="critical">
+                          {language === "ar" ? "🔴 حرج" : "🔴 Critical"}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {language === "ar" 
+                        ? "حدد مدى إلحاح حالتك لمساعدة الأخصائيين في تحديد الأولويات"
+                        : "Indicate the urgency of your case to help specialists prioritize"}
+                    </p>
                   </div>
                 </div>
 

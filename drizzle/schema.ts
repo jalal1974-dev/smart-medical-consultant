@@ -43,6 +43,9 @@ export const consultations = mysqlTable("consultations", {
   
   preferredLanguage: mysqlEnum("preferredLanguage", ["en", "ar"]).default("en").notNull(),
   
+  // Priority level for case triage
+  priority: mysqlEnum("priority", ["routine", "urgent", "critical"]).default("routine").notNull(),
+  
   // Status workflow: submitted → ai_processing → specialist_review → completed → follow_up
   status: mysqlEnum("status", [
     "submitted",

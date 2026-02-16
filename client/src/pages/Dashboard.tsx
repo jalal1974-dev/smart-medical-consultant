@@ -224,6 +224,17 @@ export default function Dashboard() {
                       <CardDescription>{consultation.patientEmail}</CardDescription>
                     </div>
                     <div className="flex flex-col gap-2 items-end">
+                      {(() => {
+                        const priority = consultation.priority || 'routine';
+                        switch (priority) {
+                          case 'critical':
+                            return <Badge variant="destructive" className="gap-1">🔴 {language === "ar" ? "حرج" : "Critical"}</Badge>;
+                          case 'urgent':
+                            return <Badge variant="default" className="gap-1 bg-orange-500">🟠 {language === "ar" ? "عاجل" : "Urgent"}</Badge>;
+                          default:
+                            return <Badge variant="secondary" className="gap-1">🔵 {language === "ar" ? "روتيني" : "Routine"}</Badge>;
+                        }
+                      })()}
                       {getStatusBadge(consultation.status)}
                       {getPaymentBadge(consultation.paymentStatus)}
                     </div>

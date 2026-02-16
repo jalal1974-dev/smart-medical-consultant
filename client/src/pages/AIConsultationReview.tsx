@@ -77,10 +77,28 @@ export default function AIConsultationReview() {
     );
   }
 
-  // Filter consultations that need review
-  const pendingReview = consultations?.filter(
+  // Filter consultations that need review and sort by priority
+  const priorityOrder = { critical: 0, urgent: 1, routine: 2 };
+  const pendingReview = (consultations?.filter(
     c => c.status === "specialist_review" && c.specialistApprovalStatus === "pending_review"
-  ) || [];
+  ) || []).sort((a, b) => {
+    const priorityDiff = priorityOrder[a.priority || 'routine'] - priorityOrder[b.priority || 'routine'];
+    if (priorityDiff !== 0) return priorityDiff;
+    // If same priority, sort by creation date (oldest first)
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
+  // Helper function to get priority badge
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'critical':
+        return <Badge variant="destructive" className="gap-1">🔴 {language === "ar" ? "حرج" : "Critical"}</Badge>;
+      case 'urgent':
+        return <Badge variant="default" className="gap-1 bg-orange-500">🟠 {language === "ar" ? "عاجل" : "Urgent"}</Badge>;
+      default:
+        return <Badge variant="secondary" className="gap-1">🔵 {language === "ar" ? "روتيني" : "Routine"}</Badge>;
+    }
+  };
 
   const selected = consultations?.find(c => c.id === selectedConsultation);
 
@@ -137,12 +155,10 @@ export default function AIConsultationReview() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {getPriorityBadge(consultation.priority || 'routine')}
                     <Badge variant="secondary">
                       {consultation.preferredLanguage === "ar" ? "العربية" : "English"}
-                    </Badge>
-                    <Badge variant="outline">
-                      {consultation.status}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">
