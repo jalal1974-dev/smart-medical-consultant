@@ -10,6 +10,7 @@ import { sendConsultationWhatsAppNotification } from "./whatsappNotification";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { processConsultationWithAI, reprocessConsultationAfterRejection } from "./aiProcessingOrchestrator";
+import { transcribeAudio } from "./voiceTranscription";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -99,16 +100,17 @@ export const appRouter = router({
     // Create a new AI-powered consultation request
     create: protectedProcedure
       .input(z.object({
-        patientName: z.string().min(1),
-        patientEmail: z.string().email(),
+        patientName: z.string().min(1, "Patient name is required"),
+        patientEmail: z.string().email("Valid email is required"),
         patientPhone: z.string().optional(),
-        symptoms: z.string().min(10),
+        symptoms: z.string().min(10, "Please describe your symptoms in at least 10 characters"),
         medicalHistory: z.string().optional(),
         medicalReports: z.array(z.string()).optional(), // Array of file URLs
         labResults: z.array(z.string()).optional(),
         xrayImages: z.array(z.string()).optional(),
         otherDocuments: z.array(z.string()).optional(),
         preferredLanguage: z.enum(["en", "ar"]),
+        priority: z.enum(["routine", "urgent", "critical"]).optional().default("routine"),
         isFree: z.boolean(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -137,6 +139,7 @@ export const appRouter = router({
           xrayImages: input.xrayImages ? JSON.stringify(input.xrayImages) : null,
           otherDocuments: input.otherDocuments ? JSON.stringify(input.otherDocuments) : null,
           preferredLanguage: input.preferredLanguage,
+          priority: input.priority || "routine",
           status: 'submitted',
           isFree: input.isFree,
           amount: input.isFree ? 0 : 5, // Consultation fee $5
@@ -710,6 +713,30 @@ export const appRouter = router({
       }
       return await db.getAllSatisfactionSurveys();
     }),
+  }),
+
+  voiceTranscription: router({
+    transcribe: protectedProcedure
+      .input(z.object({
+        audioUrl: z.string().url(),
+        language: z.enum(["en", "ar"]).optional(),
+        prompt: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await transcribeAudio({
+            audioUrl: input.audioUrl,
+            language: input.language,
+            prompt: input.prompt,
+          });
+          return result;
+        } catch (error: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'Failed to transcribe audio',
+          });
+        }
+      }),
   }),
 });
 

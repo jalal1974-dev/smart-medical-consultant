@@ -5,7 +5,16 @@ import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "./LanguageToggle";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
 
 export function Header() {
@@ -72,9 +81,41 @@ export function Header() {
         <div className="hidden md:flex items-center gap-3">
           <LanguageToggle />
           {isAuthenticated ? (
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              {t("signOut")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {user?.name?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
+                    {user?.email && (
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    {t("dashboard")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t("signOut")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Button size="sm" asChild>
               <a href={getLoginUrl()}>{t("signIn")}</a>
@@ -112,9 +153,25 @@ export function Header() {
             <div className="flex items-center gap-3 pt-2 border-t">
               <LanguageToggle />
               {isAuthenticated ? (
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  {t("signOut")}
-                </Button>
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {user?.name?.charAt(0).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{user?.name || "User"}</span>
+                      {user?.email && (
+                        <span className="text-xs text-muted-foreground">{user.email}</span>
+                      )}
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t("signOut")}
+                  </Button>
+                </div>
               ) : (
                 <Button size="sm" asChild>
                   <a href={getLoginUrl()}>{t("signIn")}</a>

@@ -234,3 +234,19 @@
 - [x] Create survey modal/form UI with rating and feedback fields
 - [x] Display survey results in admin analytics dashboard
 - [x] Test survey submission and results display
+
+## Bug Fixes - User Registration and Publishing
+- [ ] Investigate why new user accounts are not registering
+- [ ] Fix user registration flow to allow multiple accounts
+- [ ] Investigate "user is blocked" error when publishing
+- [ ] Resolve publishing blocked error
+- [ ] Test registration with new account
+- [ ] Test publishing after fixes
+
+## User Experience Improvements
+- [x] Add user profile icon/avatar in header to show logged-in status
+- [x] Add user dropdown menu with profile info and sign out option
+- [x] Fix free consultation submission error (code validation issue)
+- [x] Implement voice recording for main complaint field
+- [x] Add automatic voice-to-text transcription for recorded complaints
+- [x] Add visual feedback for voice recording (recording indicator, waveform)

@@ -13,6 +13,7 @@ import { getLoginUrl } from "@/const";
 import { Header } from "@/components/Header";
 import { useLocation } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -258,19 +259,35 @@ export default function Consultations() {
                   </h3>
 
                   <div>
-                    <Label htmlFor="symptoms">
-                      {language === "ar" ? "الأعراض الرئيسية" : "Main Symptoms"}
-                    </Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor="symptoms">
+                        {language === "ar" ? "الأعراض الرئيسية" : "Main Symptoms"}
+                      </Label>
+                      <VoiceRecorder
+                        language={formData.preferredLanguage}
+                        onTranscriptionComplete={(text) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            symptoms: prev.symptoms ? `${prev.symptoms}\n\n${text}` : text
+                          }));
+                        }}
+                      />
+                    </div>
                     <Textarea
                       id="symptoms"
                       value={formData.symptoms}
                       onChange={(e) => setFormData({ ...formData, symptoms: e.target.value })}
                       placeholder={language === "ar" 
-                        ? "صف الأعراض التي تعاني منها بالتفصيل..."
-                        : "Describe your symptoms in detail..."}
+                        ? "صف الأعراض التي تعاني منها بالتفصيل... أو استخدم التسجيل الصوتي"
+                        : "Describe your symptoms in detail... or use voice recording"}
                       rows={4}
                       required
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {language === "ar"
+                        ? "يمكنك الكتابة أو استخدام التسجيل الصوتي لوصف أعراضك"
+                        : "You can type or use voice recording to describe your symptoms"}
+                    </p>
                   </div>
 
                   <div>
