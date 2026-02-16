@@ -275,6 +275,46 @@ export default function Dashboard() {
                       <p className="text-sm text-muted-foreground">{consultation.specialistNotes}</p>
                     </div>
                   )}
+                  {/* Uploaded Medical Documents */}
+                  {(consultation.medicalReports?.length > 0 || consultation.labResults?.length > 0 || consultation.xrayImages?.length > 0 || consultation.otherDocuments?.length > 0) && (
+                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                      <p className="text-sm font-medium mb-3">{language === "ar" ? "المستندات الطبية المرفقة" : "Uploaded Medical Documents"}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {consultation.medicalReports && JSON.parse(consultation.medicalReports).map((url: string, idx: number) => (
+                          <Button key={idx} size="sm" variant="outline" asChild className="justify-start">
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {language === "ar" ? `تقرير طبي ${idx + 1}` : `Medical Report ${idx + 1}`}
+                            </a>
+                          </Button>
+                        ))}
+                        {consultation.labResults && JSON.parse(consultation.labResults).map((url: string, idx: number) => (
+                          <Button key={idx} size="sm" variant="outline" asChild className="justify-start">
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {language === "ar" ? `نتيجة تحليل ${idx + 1}` : `Lab Result ${idx + 1}`}
+                            </a>
+                          </Button>
+                        ))}
+                        {consultation.xrayImages && JSON.parse(consultation.xrayImages).map((url: string, idx: number) => (
+                          <Button key={idx} size="sm" variant="outline" asChild className="justify-start">
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {language === "ar" ? `صورة أشعة ${idx + 1}` : `X-ray Image ${idx + 1}`}
+                            </a>
+                          </Button>
+                        ))}
+                        {consultation.otherDocuments && JSON.parse(consultation.otherDocuments).map((url: string, idx: number) => (
+                          <Button key={idx} size="sm" variant="outline" asChild className="justify-start">
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <FileText className="w-4 h-4 mr-2" />
+                              {language === "ar" ? `مستند ${idx + 1}` : `Document ${idx + 1}`}
+                            </a>
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {consultation.aiAnalysis && (
                     <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <p className="text-sm font-medium mb-2">AI Analysis</p>

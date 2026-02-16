@@ -207,3 +207,11 @@
 - [x] Create edit modal for updating media details
 - [x] Allow updating thumbnails for existing media
 - [x] Test edit functionality for videos and podcasts
+
+## WhatsApp Consultation Submission
+- [x] Add "Submit via WhatsApp" button to consultation form
+- [x] Generate pre-filled WhatsApp message with consultation details
+- [x] Include patient name, symptoms, medical history in WhatsApp message
+- [x] Ensure consultation documents are visible in patient dashboard
+- [x] Ensure consultation documents are visible in admin panel (AIConsultationReview)
+- [x] Test WhatsApp submission flow from patient perspective

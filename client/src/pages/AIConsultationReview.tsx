@@ -205,6 +205,67 @@ export default function AIConsultationReview() {
                   </CardContent>
                 </Card>
 
+                {/* Uploaded Medical Documents */}
+                {(selected.medicalReports || selected.labResults || selected.xrayImages || selected.otherDocuments) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{language === "ar" ? "المستندات الطبية المرفقة" : "Uploaded Medical Documents"}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-3">
+                        {selected.medicalReports && JSON.parse(selected.medicalReports).map((url: string, idx: number) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{language === "ar" ? `تقرير طبي ${idx + 1}` : `Medical Report ${idx + 1}`}</span>
+                          </a>
+                        ))}
+                        {selected.labResults && JSON.parse(selected.labResults).map((url: string, idx: number) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{language === "ar" ? `نتيجة تحليل ${idx + 1}` : `Lab Result ${idx + 1}`}</span>
+                          </a>
+                        ))}
+                        {selected.xrayImages && JSON.parse(selected.xrayImages).map((url: string, idx: number) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{language === "ar" ? `صورة أشعة ${idx + 1}` : `X-ray Image ${idx + 1}`}</span>
+                          </a>
+                        ))}
+                        {selected.otherDocuments && JSON.parse(selected.otherDocuments).map((url: string, idx: number) => (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{language === "ar" ? `مستند ${idx + 1}` : `Document ${idx + 1}`}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* AI Analysis */}
                 <Card>
                   <CardHeader>
