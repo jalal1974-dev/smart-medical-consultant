@@ -534,6 +534,22 @@ export const appRouter = router({
           await db.deleteVideo(input.id);
           return { success: true };
         }),
+
+      update: adminProcedure
+        .input(z.object({
+          id: z.number(),
+          titleEn: z.string().optional(),
+          titleAr: z.string().optional(),
+          descriptionEn: z.string().optional(),
+          descriptionAr: z.string().optional(),
+          videoUrl: z.string().url().optional(),
+          thumbnailUrl: z.string().url().optional(),
+          duration: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          await db.updateVideo(input.id, input);
+          return { success: true };
+        }),
     }),
 
     // Podcast management
@@ -561,6 +577,22 @@ export const appRouter = router({
         .input(z.object({ id: z.number() }))
         .mutation(async ({ input }) => {
           await db.deletePodcast(input.id);
+          return { success: true };
+        }),
+
+      update: adminProcedure
+        .input(z.object({
+          id: z.number(),
+          titleEn: z.string().optional(),
+          titleAr: z.string().optional(),
+          descriptionEn: z.string().optional(),
+          descriptionAr: z.string().optional(),
+          audioUrl: z.string().url().optional(),
+          thumbnailUrl: z.string().url().optional(),
+          duration: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          await db.updatePodcast(input.id, input);
           return { success: true };
         }),
     }),

@@ -201,3 +201,9 @@
 - [x] Deliver approved content to patients (via consultation details)
 - [x] Test complete AI analysis and approval workflow
 - [x] Simplified workflow: Focus on PDF reports, infographics, slides, and mind maps (audio/video excluded)
+
+## Media Edit Feature
+- [x] Add edit button to video and podcast items in admin panel
+- [x] Create edit modal for updating media details
+- [x] Allow updating thumbnails for existing media
+- [x] Test edit functionality for videos and podcasts

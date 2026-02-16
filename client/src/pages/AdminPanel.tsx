@@ -28,6 +28,7 @@ export default function AdminPanel() {
   const { data: podcasts } = trpc.admin.podcasts.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
 
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+  const [editingMedia, setEditingMedia] = useState<{id: number, type: "video" | "podcast"} | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [mediaForm, setMediaForm] = useState({
@@ -94,7 +95,32 @@ export default function AdminPanel() {
     onError: () => toast.error("Failed to delete podcast"),
   });
 
+  const updateVideo = trpc.admin.videos.update.useMutation({
+    onSuccess: () => {
+      toast.success("Video updated successfully");
+      utils.admin.videos.list.invalidate();
+      utils.media.videos.invalidate();
+      setMediaDialogOpen(false);
+      setEditingMedia(null);
+      resetMediaForm();
+    },
+    onError: () => toast.error("Failed to update video"),
+  });
+
+  const updatePodcast = trpc.admin.podcasts.update.useMutation({
+    onSuccess: () => {
+      toast.success("Podcast updated successfully");
+      utils.admin.podcasts.list.invalidate();
+      utils.media.podcasts.invalidate();
+      setMediaDialogOpen(false);
+      setEditingMedia(null);
+      resetMediaForm();
+    },
+    onError: () => toast.error("Failed to update podcast"),
+  });
+
   const resetMediaForm = () => {
+    setEditingMedia(null);
     setMediaForm({
       type: "video",
       titleEn: "",
@@ -197,6 +223,21 @@ export default function AdminPanel() {
     }
   };
 
+  const handleOpenEditDialog = (media: any, type: "video" | "podcast") => {
+    setEditingMedia({ id: media.id, type });
+    setMediaForm({
+      type,
+      titleEn: media.titleEn,
+      titleAr: media.titleAr,
+      descriptionEn: media.descriptionEn || "",
+      descriptionAr: media.descriptionAr || "",
+      mediaUrl: type === "video" ? media.videoUrl : media.audioUrl,
+      thumbnailUrl: media.thumbnailUrl || "",
+      duration: media.duration?.toString() || "",
+    });
+    setMediaDialogOpen(true);
+  };
+
   const handleCreateMedia = () => {
     if (!mediaForm.titleEn || !mediaForm.titleAr || !mediaForm.mediaUrl) {
       toast.error("Please fill in required fields (titles and media file)");
@@ -212,16 +253,34 @@ export default function AdminPanel() {
       duration: mediaForm.duration ? parseInt(mediaForm.duration) : undefined,
     };
 
-    if (mediaForm.type === "video") {
-      createVideo.mutate({
-        ...commonData,
-        videoUrl: mediaForm.mediaUrl,
-      });
+    if (editingMedia) {
+      // Update existing media
+      if (mediaForm.type === "video") {
+        updateVideo.mutate({
+          id: editingMedia.id,
+          ...commonData,
+          videoUrl: mediaForm.mediaUrl,
+        });
+      } else {
+        updatePodcast.mutate({
+          id: editingMedia.id,
+          ...commonData,
+          audioUrl: mediaForm.mediaUrl,
+        });
+      }
     } else {
-      createPodcast.mutate({
-        ...commonData,
-        audioUrl: mediaForm.mediaUrl,
-      });
+      // Create new media
+      if (mediaForm.type === "video") {
+        createVideo.mutate({
+          ...commonData,
+          videoUrl: mediaForm.mediaUrl,
+        });
+      } else {
+        createPodcast.mutate({
+          ...commonData,
+          audioUrl: mediaForm.mediaUrl,
+        });
+      }
     }
   };
 
@@ -402,8 +461,8 @@ export default function AdminPanel() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New Media</DialogTitle>
-                  <DialogDescription>Upload a video or podcast with bilingual content</DialogDescription>
+                  <DialogTitle>{editingMedia ? "Edit Media" : "Add New Media"}</DialogTitle>
+                  <DialogDescription>{editingMedia ? "Update media details and thumbnail" : "Upload a video or podcast with bilingual content"}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -542,16 +601,16 @@ export default function AdminPanel() {
 
                   <Button
                     onClick={handleCreateMedia}
-                    disabled={createVideo.isPending || createPodcast.isPending || uploadingMedia || uploadingThumbnail}
+                    disabled={createVideo.isPending || createPodcast.isPending || updateVideo.isPending || updatePodcast.isPending || uploadingMedia || uploadingThumbnail}
                     className="w-full"
                   >
-                    {createVideo.isPending || createPodcast.isPending ? (
+                    {createVideo.isPending || createPodcast.isPending || updateVideo.isPending || updatePodcast.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
+                        {editingMedia ? "Updating..." : "Creating..."}
                       </>
                     ) : (
-                      `Create ${mediaForm.type === "video" ? "Video" : "Podcast"}`
+                      editingMedia ? `Update ${mediaForm.type === "video" ? "Video" : "Podcast"}` : `Create ${mediaForm.type === "video" ? "Video" : "Podcast"}`
                     )}
                   </Button>
                 </div>
@@ -597,6 +656,13 @@ export default function AdminPanel() {
                         onClick={() => window.open(video.videoUrl, "_blank")}
                       >
                         View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditDialog(video, "video")}
+                      >
+                        Edit
                       </Button>
                       <Button
                         size="sm"
@@ -654,6 +720,13 @@ export default function AdminPanel() {
                         onClick={() => window.open(podcast.audioUrl, "_blank")}
                       >
                         Listen
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditDialog(podcast, "podcast")}
+                      >
+                        Edit
                       </Button>
                       <Button
                         size="sm"

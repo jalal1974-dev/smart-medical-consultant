@@ -280,6 +280,13 @@ export async function incrementVideoViews(id: number) {
   }
 }
 
+export async function updateVideo(id: number, data: Partial<InsertVideo>) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(videos).set(data).where(eq(videos.id, id));
+}
+
 export async function deleteVideo(id: number) {
   const db = await getDb();
   if (!db) return;
@@ -320,6 +327,13 @@ export async function incrementPodcastViews(id: number) {
   if (podcast) {
     await db.update(podcasts).set({ views: podcast.views + 1 }).where(eq(podcasts.id, id));
   }
+}
+
+export async function updatePodcast(id: number, data: Partial<InsertPodcast>) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(podcasts).set(data).where(eq(podcasts.id, id));
 }
 
 export async function deletePodcast(id: number) {
