@@ -8,6 +8,46 @@ import { getLoginUrl } from "@/const";
 import { Calendar, DollarSign, FileText, Play, Headphones, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { SatisfactionSurvey } from "@/components/SatisfactionSurvey";
+import { useState } from "react";
+
+function CompletedConsultationSurvey({ consultationId, language }: { consultationId: number; language: "en" | "ar" }) {
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveySubmitted, setSurveySubmitted] = useState(false);
+  const { data: existingSurvey } = trpc.survey.getBySurvey.useQuery({ consultationId });
+
+  if (existingSurvey || surveySubmitted) {
+    return (
+      <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+        <p className="text-sm font-medium text-green-700 dark:text-green-300">
+          {language === "ar" ? "شكراً لك على تقييمك!" : "Thank you for your feedback!"}
+        </p>
+      </div>
+    );
+  }
+
+  if (!showSurvey) {
+    return (
+      <div className="mt-4">
+        <Button onClick={() => setShowSurvey(true)} variant="outline" className="w-full">
+          {language === "ar" ? "قيّم تجربتك" : "Rate Your Experience"}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <SatisfactionSurvey
+        consultationId={consultationId}
+        onComplete={() => {
+          setSurveySubmitted(true);
+          setShowSurvey(false);
+        }}
+      />
+    </div>
+  );
+}
 
 function ContinueWatchingSection({ language }: { language: "en" | "ar" }) {
   const { data: continueWatching, isLoading } = trpc.media.getContinueWatching.useQuery();
@@ -365,6 +405,10 @@ export default function Dashboard() {
                         </Badge>
                       )}
                     </div>
+                  )}
+                  {/* Show satisfaction survey for completed consultations */}
+                  {consultation.status === 'completed' && (
+                    <CompletedConsultationSurvey consultationId={consultation.id} language={language} />
                   )}
                 </CardContent>
               </Card>

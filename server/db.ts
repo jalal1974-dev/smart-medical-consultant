@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -660,4 +660,71 @@ export async function updateConsultation(
     ...data,
     updatedAt: new Date() 
   }).where(eq(consultations.id, id));
+}
+
+/**
+ * Satisfaction Survey Functions
+ */
+export async function createSatisfactionSurvey(data: typeof satisfactionSurveys.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(satisfactionSurveys).values(data);
+  return (result as any).insertId;
+}
+
+export async function getSatisfactionSurveyByConsultation(consultationId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [survey] = await db
+    .select()
+    .from(satisfactionSurveys)
+    .where(eq(satisfactionSurveys.consultationId, consultationId));
+  
+  return survey || null;
+}
+
+export async function getAllSatisfactionSurveys() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(satisfactionSurveys).orderBy(desc(satisfactionSurveys.createdAt));
+}
+
+export async function getSatisfactionSurveyStats() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const surveys = await db.select().from(satisfactionSurveys);
+  
+  if (surveys.length === 0) {
+    return {
+      totalSurveys: 0,
+      averageOverallRating: 0,
+      averageAiQualityRating: 0,
+      averageSpecialistRating: 0,
+      averageResponseTimeRating: 0,
+      recommendationRate: 0,
+    };
+  }
+
+  const total = surveys.length;
+  const sum = (arr: (number | null)[]) => arr.filter(n => n !== null).reduce((a, b) => a! + b!, 0) || 0;
+  const count = (arr: (number | null)[]) => arr.filter(n => n !== null).length;
+
+  return {
+    totalSurveys: total,
+    averageOverallRating: sum(surveys.map(s => s.overallRating)) / total,
+    averageAiQualityRating: count(surveys.map(s => s.aiQualityRating)) > 0 
+      ? sum(surveys.map(s => s.aiQualityRating)) / count(surveys.map(s => s.aiQualityRating))
+      : 0,
+    averageSpecialistRating: count(surveys.map(s => s.specialistRating)) > 0
+      ? sum(surveys.map(s => s.specialistRating)) / count(surveys.map(s => s.specialistRating))
+      : 0,
+    averageResponseTimeRating: count(surveys.map(s => s.responseTimeRating)) > 0
+      ? sum(surveys.map(s => s.responseTimeRating)) / count(surveys.map(s => s.responseTimeRating))
+      : 0,
+    recommendationRate: (surveys.filter(s => s.wouldRecommend).length / total) * 100,
+  };
 }

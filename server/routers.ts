@@ -649,6 +649,68 @@ export const appRouter = router({
       return await db.getContinueWatching(ctx.user.id);
     }),
   }),
+
+  // Satisfaction Survey routes
+  survey: router({
+    submit: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        overallRating: z.number().min(1).max(5),
+        aiQualityRating: z.number().min(1).max(5).optional(),
+        specialistRating: z.number().min(1).max(5).optional(),
+        responseTimeRating: z.number().min(1).max(5).optional(),
+        feedback: z.string().optional(),
+        wouldRecommend: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify the consultation belongs to the user
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation || consultation.userId !== ctx.user.id) {
+          throw new Error("Consultation not found or unauthorized");
+        }
+
+        // Check if survey already exists
+        const existing = await db.getSatisfactionSurveyByConsultation(input.consultationId);
+        if (existing) {
+          throw new Error("Survey already submitted for this consultation");
+        }
+
+        const surveyId = await db.createSatisfactionSurvey({
+          consultationId: input.consultationId,
+          userId: ctx.user.id,
+          overallRating: input.overallRating,
+          aiQualityRating: input.aiQualityRating,
+          specialistRating: input.specialistRating,
+          responseTimeRating: input.responseTimeRating,
+          feedback: input.feedback,
+          wouldRecommend: input.wouldRecommend,
+        });
+
+        return { success: true, surveyId };
+      }),
+
+    getBySurvey: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSatisfactionSurveyByConsultation(input.consultationId);
+      }),
+
+    getStats: protectedProcedure.query(async ({ ctx }) => {
+      // Only allow admins to view stats
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized");
+      }
+      return await db.getSatisfactionSurveyStats();
+    }),
+
+    getAll: protectedProcedure.query(async ({ ctx }) => {
+      // Only allow admins to view all surveys
+      if (ctx.user.role !== "admin") {
+        throw new Error("Unauthorized");
+      }
+      return await db.getAllSatisfactionSurveys();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

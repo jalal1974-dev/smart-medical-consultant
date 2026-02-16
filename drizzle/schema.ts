@@ -168,3 +168,27 @@ export const watchHistory = mysqlTable("watch_history", {
 
 export type WatchHistory = typeof watchHistory.$inferSelect;
 export type InsertWatchHistory = typeof watchHistory.$inferInsert;
+
+/**
+ * Satisfaction surveys table - patient feedback on completed consultations
+ */
+export const satisfactionSurveys = mysqlTable("satisfaction_surveys", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull().unique(),
+  userId: int("user_id").notNull(),
+  
+  // Ratings (1-5 scale)
+  overallRating: int("overall_rating").notNull(), // Overall satisfaction
+  aiQualityRating: int("ai_quality_rating"), // Quality of AI analysis
+  specialistRating: int("specialist_rating"), // Specialist review quality
+  responseTimeRating: int("response_time_rating"), // Speed of service
+  
+  // Feedback
+  feedback: text("feedback"), // Open-ended comments
+  wouldRecommend: boolean("would_recommend"), // Would recommend to others
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SatisfactionSurvey = typeof satisfactionSurveys.$inferSelect;
+export type InsertSatisfactionSurvey = typeof satisfactionSurveys.$inferInsert;

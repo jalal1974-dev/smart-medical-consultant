@@ -9,6 +9,115 @@ import { Loader2, TrendingUp, Users, Clock, CheckCircle, MessageSquare, DollarSi
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { translations } from "@shared/i18n";
 import { Header } from "@/components/Header";
+import { Star } from "lucide-react";
+
+function SurveyStats({ language }: { language: "en" | "ar" }) {
+  const { data: stats, isLoading } = trpc.survey.getStats.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        {language === "ar" ? "لا توجد بيانات تقييم" : "No survey data available"}
+      </div>
+    );
+  }
+
+  const RatingDisplay = ({ label, value }: { label: string; value: number | null }) => (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-2">
+        <div className="flex">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={`w-5 h-5 ${
+                value && star <= Math.round(value)
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-gray-300"
+              }`}
+            />
+          ))}
+        </div>
+        <span className="text-2xl font-bold">
+          {value ? value.toFixed(1) : "N/A"}
+        </span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <RatingDisplay
+          label={language === "ar" ? "التقييم العام" : "Overall Rating"}
+          value={stats.averageOverallRating}
+        />
+        <RatingDisplay
+          label={language === "ar" ? "جودة الذكاء الاصطناعي" : "AI Quality"}
+          value={stats.averageAiQualityRating}
+        />
+        <RatingDisplay
+          label={language === "ar" ? "جودة الأخصائي" : "Specialist Quality"}
+          value={stats.averageSpecialistRating}
+        />
+        <RatingDisplay
+          label={language === "ar" ? "سرعة الاستجابة" : "Response Time"}
+          value={stats.averageResponseTimeRating}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">
+              {language === "ar" ? "إجمالي الاستطلاعات" : "Total Surveys"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{stats.totalSurveys}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">
+              {language === "ar" ? "يوصون بالخدمة" : "Would Recommend"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">
+              {stats.recommendationRate ? `${stats.recommendationRate.toFixed(0)}%` : "N/A"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">
+              {language === "ar" ? "متوسط التقييم" : "Average Rating"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+              <p className="text-3xl font-bold">
+                {stats.averageOverallRating > 0 ? stats.averageOverallRating.toFixed(1) : "N/A"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { user, loading } = useAuth();
@@ -332,6 +441,22 @@ export default function Analytics() {
                     {language === "ar" ? "لا توجد بيانات إيرادات متاحة" : "No revenue data available"}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Satisfaction Survey Statistics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  {language === "ar" ? "إحصائيات رضا المرضى" : "Patient Satisfaction"}
+                </CardTitle>
+                <CardDescription>
+                  {language === "ar" ? "تقييمات وملاحظات المرضى" : "Patient ratings and feedback"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <SurveyStats language={language} />
               </CardContent>
             </Card>
           </div>

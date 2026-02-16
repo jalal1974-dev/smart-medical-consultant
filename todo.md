@@ -225,3 +225,12 @@
 - [x] Implement priority-based sorting in admin consultation list (critical > urgent > routine)
 - [x] Add visual indicators (colors/icons) for different priority levels
 - [x] Test priority system end-to-end
+
+## Patient Satisfaction Survey System
+- [x] Add satisfaction_surveys table to database schema
+- [x] Create backend API to submit survey responses
+- [x] Create backend API to retrieve survey results for analytics
+- [x] Add survey prompt to patient dashboard when consultation is completed
+- [x] Create survey modal/form UI with rating and feedback fields
+- [x] Display survey results in admin analytics dashboard
+- [x] Test survey submission and results display

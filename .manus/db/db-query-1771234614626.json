@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE satisfaction_surveys (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  consultation_id INT NOT NULL UNIQUE,\n  user_id INT NOT NULL,\n  overall_rating INT NOT NULL,\n  ai_quality_rating INT,\n  specialist_rating INT,\n  response_time_rating INT,\n  feedback TEXT,\n  would_recommend BOOLEAN,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_consultation (consultation_id),\n  INDEX idx_user (user_id)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute CREATE TABLE satisfaction_surveys (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  consultation_id INT NOT NULL UNIQUE,\n  user_id INT NOT NULL,\n  overall_rating INT NOT NULL,\n  ai_quality_rating INT,\n  specialist_rating INT,\n  response_time_rating INT,\n  feedback TEXT,\n  would_recommend BOOLEAN,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_consultation (consultation_id),\n  INDEX idx_user (user_id)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1684
+}
