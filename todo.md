@@ -265,3 +265,10 @@
 - [x] Admin can approve/reject generated reports, infographics, and slide decks
 - [x] Only approved materials are sent to patients
 - [x] Store generated materials in database with approval status
+
+## Visual Material Improvements
+- [x] Replace broken infographic generation with Manus slides API
+- [x] Replace broken slide deck generation with nano banana pro
+- [x] Ensure proper Arabic text rendering in visual materials
+- [x] Generate professional medical infographics using slides system
+- [x] Generate educational slide decks with proper formatting

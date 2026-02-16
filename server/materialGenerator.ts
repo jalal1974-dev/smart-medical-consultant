@@ -1,5 +1,6 @@
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
+import { generateSlides, generateMedicalInfographic } from "./_core/slidesGeneration";
 import { nanoid } from "nanoid";
 
 interface ConsultationData {
@@ -227,7 +228,7 @@ async function generatePDFReport(
 }
 
 /**
- * Generate infographic image
+ * Generate infographic image using Manus Slides API
  */
 async function generateInfographic(
   data: ConsultationData,
@@ -235,49 +236,93 @@ async function generateInfographic(
 ): Promise<string> {
   const { patientName, symptoms, preferredLanguage } = data;
 
-  // Generate infographic prompt
-  const prompt = preferredLanguage === "ar"
-    ? `إنشاء إنفوجرافيك طبي احترافي يلخص الحالة الطبية التالية:
+  // Extract key recommendations from analysis
+  const recommendations = extractRecommendations(analysisText, preferredLanguage);
+  
+  // Extract diagnosis from analysis
+  const diagnosis = extractDiagnosis(analysisText, preferredLanguage);
 
-المريض: ${patientName}
-الأعراض: ${symptoms}
+  try {
+    // Generate infographic using Manus Slides API
+    const result = await generateMedicalInfographic(
+      patientName,
+      symptoms,
+      diagnosis,
+      recommendations,
+      preferredLanguage
+    );
 
-يجب أن يتضمن الإنفوجرافيك:
-- ملخص الأعراض بأيقونات واضحة
-- التشخيصات المحتملة
-- الفحوصات الموصى بها
-- نصائح العلاج الأساسية
-
-التصميم يجب أن يكون:
-- احترافي وطبي
-- ألوان هادئة (أزرق، أخضر، أبيض)
-- سهل القراءة والفهم
-- يحتوي على أيقونات طبية واضحة`
-    : `Create a professional medical infographic summarizing the following medical case:
-
-Patient: ${patientName}
-Symptoms: ${symptoms}
-
-The infographic should include:
-- Summary of symptoms with clear icons
-- Potential diagnoses
-- Recommended tests
-- Key treatment advice
-
-Design should be:
-- Professional and medical
-- Calm colors (blue, green, white)
-- Easy to read and understand
-- Contains clear medical icons`;
-
-  // Note: This would use an image generation API
-  // For now, return a placeholder
-  const placeholderUrl = "https://via.placeholder.com/800x1200/4299e1/ffffff?text=Medical+Infographic";
-  return placeholderUrl;
+    return result.downloadUrl;
+  } catch (error) {
+    console.error("Failed to generate infographic:", error);
+    // Fallback to placeholder
+    return "https://via.placeholder.com/800x1200/4299e1/ffffff?text=Medical+Infographic";
+  }
 }
 
 /**
- * Generate slide deck presentation
+ * Extract diagnosis from analysis text
+ */
+function extractDiagnosis(analysisText: string, language: "en" | "ar"): string {
+  const lines = analysisText.split("\n");
+  const diagnosisKeyword = language === "ar" ? "التشخيص" : "diagnos";
+  
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].toLowerCase().includes(diagnosisKeyword.toLowerCase())) {
+      // Return the next few lines as diagnosis
+      return lines.slice(i, i + 3).join(" ").substring(0, 200);
+    }
+  }
+  
+  return language === "ar" 
+    ? "يتطلب تقييم طبي شامل"
+    : "Requires comprehensive medical evaluation";
+}
+
+/**
+ * Extract recommendations from analysis text
+ */
+function extractRecommendations(analysisText: string, language: "en" | "ar"): string[] {
+  const lines = analysisText.split("\n");
+  const recommendations: string[] = [];
+  const recommendKeyword = language === "ar" ? "التوصيات" : "recommend";
+  
+  let inRecommendations = false;
+  for (const line of lines) {
+    if (line.toLowerCase().includes(recommendKeyword.toLowerCase())) {
+      inRecommendations = true;
+      continue;
+    }
+    
+    if (inRecommendations && line.trim()) {
+      const cleaned = line.replace(/^[-*\d.]+\s*/, "").trim();
+      if (cleaned.length > 10) {
+        recommendations.push(cleaned);
+      }
+      if (recommendations.length >= 5) break;
+    }
+  }
+  
+  // Fallback recommendations
+  if (recommendations.length === 0) {
+    return language === "ar"
+      ? [
+          "مراجعة طبيب مختص",
+          "إجراء الفحوصات اللازمة",
+          "اتباع خطة العلاج"
+        ]
+      : [
+          "Consult with a specialist",
+          "Complete necessary tests",
+          "Follow treatment plan"
+        ];
+  }
+  
+  return recommendations;
+}
+
+/**
+ * Generate slide deck presentation using Manus Slides API
  */
 async function generateSlideDeck(
   data: ConsultationData,
@@ -285,109 +330,75 @@ async function generateSlideDeck(
 ): Promise<string> {
   const { patientName, symptoms, medicalHistory, preferredLanguage, consultationId } = data;
 
-  // Generate slide deck content in markdown format
-  const slidesMarkdown = preferredLanguage === "ar" ? `
-# مستشارك الطبي الذكي
-## تقرير التحليل الطبي
+  const isArabic = preferredLanguage === "ar";
+  const title = isArabic ? "مستشارك الطبي الذكي - تقرير التحليل الطبي" : "Smart Medical Consultant - Medical Analysis Report";
 
-رقم الاستشارة: ${consultationId}
+  // Extract recommendations
+  const recommendations = extractRecommendations(analysisText, preferredLanguage);
+  const diagnosis = extractDiagnosis(analysisText, preferredLanguage);
 
----
+  // Prepare slides content
+  const slides = [];
 
-# معلومات المريض
+  // Slide 1: Patient Info
+  slides.push({
+    title: isArabic ? "معلومات المريض" : "Patient Information",
+    content: isArabic
+      ? `**الاسم:** ${patientName}\n\n**التاريخ:** ${new Date().toLocaleDateString('ar-EG')}\n\n**رقم الاستشارة:** ${consultationId}`
+      : `**Name:** ${patientName}\n\n**Date:** ${new Date().toLocaleDateString('en-US')}\n\n**Consultation ID:** ${consultationId}`,
+  });
 
-- **الاسم:** ${patientName}
-- **التاريخ:** ${new Date().toLocaleDateString('ar-EG')}
+  // Slide 2: Symptoms
+  slides.push({
+    title: isArabic ? "الأعراض المسجلة" : "Reported Symptoms",
+    content: symptoms,
+  });
 
----
+  // Slide 3: Medical History (if exists)
+  if (medicalHistory) {
+    slides.push({
+      title: isArabic ? "التاريخ الطبي" : "Medical History",
+      content: medicalHistory,
+    });
+  }
 
-# الأعراض المسجلة
+  // Slide 4: Diagnosis
+  slides.push({
+    title: isArabic ? "التشخيص المحتمل" : "Potential Diagnosis",
+    content: diagnosis,
+  });
 
-${symptoms}
+  // Slide 5: Recommendations
+  slides.push({
+    title: isArabic ? "التوصيات" : "Recommendations",
+    content: recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n\n"),
+  });
 
----
+  // Slide 6: Important Notice
+  slides.push({
+    title: isArabic ? "تنبيه مهم" : "Important Notice",
+    content: isArabic
+      ? "هذا التحليل تم إنشاؤه بواسطة الذكاء الاصطناعي\n\nيجب مراجعته من قبل طبيب مختص قبل اتخاذ أي قرارات علاجية"
+      : "This analysis was generated by AI\n\nMust be reviewed by a qualified medical professional before making any treatment decisions",
+  });
 
-${medicalHistory ? `# التاريخ الطبي\n\n${medicalHistory}\n\n---\n\n` : ''}
+  try {
+    // Generate slides using Manus Slides API
+    const result = await generateSlides({
+      title,
+      slides,
+      theme: "medical",
+      language: preferredLanguage,
+    });
 
-# التحليل الطبي
-
-${analysisText.substring(0, 500)}...
-
----
-
-# التوصيات
-
-- مراجعة طبيب مختص
-- إجراء الفحوصات الموصى بها
-- اتباع خطة العلاج المقترحة
-
----
-
-# تنبيه مهم
-
-**هذا التحليل تم إنشاؤه بواسطة الذكاء الاصطناعي**
-
-يجب مراجعته من قبل طبيب مختص قبل اتخاذ أي قرارات علاجية
-
----
-
-# شكراً لاستخدامكم مستشارك الطبي الذكي
-
-للمزيد من المعلومات، يرجى التواصل مع فريقنا الطبي
-  ` : `
-# Smart Medical Consultant
-## Medical Analysis Report
-
-Consultation ID: ${consultationId}
-
----
-
-# Patient Information
-
-- **Name:** ${patientName}
-- **Date:** ${new Date().toLocaleDateString('en-US')}
-
----
-
-# Reported Symptoms
-
-${symptoms}
-
----
-
-${medicalHistory ? `# Medical History\n\n${medicalHistory}\n\n---\n\n` : ''}
-
-# Medical Analysis
-
-${analysisText.substring(0, 500)}...
-
----
-
-# Recommendations
-
-- Consult with a qualified physician
-- Complete recommended tests
-- Follow suggested treatment plan
-
----
-
-# Important Notice
-
-**This analysis was generated by AI**
-
-Must be reviewed by a qualified medical professional before making any treatment decisions
-
----
-
-# Thank You for Using Smart Medical Consultant
-
-For more information, please contact our medical team
-  `;
-
-  // Upload slides markdown
-  const slidesBuffer = Buffer.from(slidesMarkdown, 'utf-8');
-  const fileName = `consultation-slides-${consultationId}-${nanoid(8)}.md`;
-  
-  const { url } = await storagePut(fileName, slidesBuffer, 'text/markdown');
-  return url;
+    return result.downloadUrl;
+  } catch (error) {
+    console.error("Failed to generate slide deck:", error);
+    // Fallback: save as markdown
+    const slidesMarkdown = `# ${title}\n\n${slides.map(s => `## ${s.title}\n\n${s.content}\n\n---\n`).join("\n")}`;
+    const slidesBuffer = Buffer.from(slidesMarkdown, 'utf-8');
+    const fileName = `consultation-slides-${consultationId}-${nanoid(8)}.md`;
+    const { url } = await storagePut(fileName, slidesBuffer, 'text/markdown');
+    return url;
+  }
 }
