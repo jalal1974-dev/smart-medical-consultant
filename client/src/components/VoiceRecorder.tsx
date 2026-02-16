@@ -16,6 +16,7 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
   const chunksRef = useRef<Blob[]>([]);
 
   const transcribeMutation = trpc.voiceTranscription.transcribe.useMutation();
+  const uploadMutation = trpc.upload.file.useMutation();
 
   const startRecording = async () => {
     try {
@@ -48,34 +49,36 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
           // Upload audio to S3 first
           const reader = new FileReader();
           reader.onloadend = async () => {
-            const base64Audio = reader.result as string;
-            const base64Data = base64Audio.split(',')[1];
+            try {
+              const base64Audio = reader.result as string;
+              const base64Data = base64Audio.split(',')[1];
 
-            // Upload to S3
-            const uploadResult = await fetch('/api/trpc/upload.uploadFile', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+              // Upload to S3 using tRPC
+              const uploadResult = await uploadMutation.mutateAsync({
                 fileName: `voice-${Date.now()}.webm`,
                 fileData: base64Data,
-                contentType: 'audio/webm',
-                category: 'voice_recording',
-              }),
-            });
+                fileType: 'audio/webm',
+                category: 'other',
+              });
 
-            const uploadData = await uploadResult.json();
-            const audioUrl = uploadData.result.data.url;
+              // Transcribe the audio
+              const result = await transcribeMutation.mutateAsync({
+                audioUrl: uploadResult.url,
+                language,
+              });
 
-            // Transcribe the audio
-            const result = await transcribeMutation.mutateAsync({
-              audioUrl,
-              language,
-            });
-
-            onTranscriptionComplete(result.text);
-            toast.success(language === "ar" 
-              ? "تم تحويل الصوت إلى نص بنجاح"
-              : "Voice transcribed successfully");
+              onTranscriptionComplete(result.text);
+              toast.success(language === "ar" 
+                ? "تم تحويل الصوت إلى نص بنجاح"
+                : "Voice transcribed successfully");
+            } catch (error: any) {
+              console.error("Upload or transcription error:", error);
+              toast.error(error.message || (language === "ar" 
+                ? "فشل تحويل الصوت إلى نص"
+                : "Failed to transcribe voice"));
+            } finally {
+              setIsProcessing(false);
+            }
           };
 
           reader.readAsDataURL(audioBlob);

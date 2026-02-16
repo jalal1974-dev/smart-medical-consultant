@@ -400,6 +400,90 @@ export default function AdminPanel() {
                     <p className="text-sm text-muted-foreground">
                       Created: {format(new Date(consultation.createdAt), "PPP")}
                     </p>
+                    
+                    {/* Generated Materials */}
+                    {consultation.status === "specialist_review" && (
+                      <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
+                        <h4 className="font-semibold text-sm">Generated Materials for Review</h4>
+                        
+                        {consultation.aiReportUrl && (
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-sm">📄 Medical Report</span>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {consultation.aiInfographicUrl && (
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-sm">📊 Infographic</span>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {consultation.aiSlideDeckUrl && (
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-sm">📽️ Slide Deck</span>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {consultation.specialistApprovalStatus === "pending_review" && (
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="flex-1"
+                              onClick={() => {
+                                updateConsultationStatus.mutate({
+                                  id: consultation.id,
+                                  status: "completed",
+                                });
+                              }}
+                            >
+                              ✓ Approve All
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={() => {
+                                const reason = prompt("Rejection reason:");
+                                if (reason) {
+                                  // TODO: Add rejection mutation
+                                  toast.info("Rejection functionality coming soon");
+                                }
+                              }}
+                            >
+                              ✗ Reject
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {consultation.specialistApprovalStatus && (
+                          <Badge variant={consultation.specialistApprovalStatus === "approved" ? "default" : "secondary"}>
+                            {consultation.specialistApprovalStatus}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Select

@@ -254,3 +254,14 @@
 ## Content Cleanup
 - [x] Remove test videos from database
 - [x] Verify only actual published videos are displayed on home page
+
+## Bug Fixes & New Features
+- [x] Fix voice recording not working in consultation form
+- [x] Debug voice recording upload and transcription flow
+- [x] Generate comprehensive medical report with diagnosis and treatment recommendations
+- [x] Generate visual infographic summarizing the medical case
+- [x] Generate educational slide deck presentation
+- [x] Create admin review workflow for generated materials
+- [x] Admin can approve/reject generated reports, infographics, and slide decks
+- [x] Only approved materials are sent to patients
+- [x] Store generated materials in database with approval status
