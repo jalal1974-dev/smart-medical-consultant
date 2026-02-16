@@ -1,0 +1,101 @@
+{
+  "query": "SELECT id, titleEn, titleAr, duration, views FROM videos ORDER BY id DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT id, titleEn, titleAr, duration, views FROM videos ORDER BY id DESC;",
+  "rows": [
+    {
+      "id": "60003",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "60002",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "60001",
+      "titleEn": "complte collapse after 72 h without sleeping",
+      "titleAr": "ماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟",
+      "duration": "NULL",
+      "views": "0"
+    },
+    {
+      "id": "30003",
+      "titleEn": "steady energy",
+      "titleAr": "طاقه مستمره",
+      "duration": "NULL",
+      "views": "0"
+    },
+    {
+      "id": "30002",
+      "titleEn": "brokly fights cancer",
+      "titleAr": "هل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟",
+      "duration": "NULL",
+      "views": "0"
+    },
+    {
+      "id": "30001",
+      "titleEn": "DOCTORS AND AI DIAGNOSIS",
+      "titleAr": "هل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.",
+      "duration": "NULL",
+      "views": "0"
+    },
+    {
+      "id": "7",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "1"
+    },
+    {
+      "id": "6",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "5",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "4",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "3",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "2",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "duration": "300",
+      "views": "0"
+    },
+    {
+      "id": "1",
+      "titleEn": "hirsutisim in female",
+      "titleAr": "الشعر الزائد",
+      "duration": "NULL",
+      "views": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitleEn\ttitleAr\tduration\tviews\n60003\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n60002\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n60001\tcomplte collapse after 72 h without sleeping\tماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟\tNULL\t0\n30003\tsteady energy\tطاقه مستمره\tNULL\t0\n30002\tbrokly fights cancer\tهل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟\tNULL\t0\n30001\tDOCTORS AND AI DIAGNOSIS\tهل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.\tNULL\t0\n7\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t1\n6\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n5\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n4\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n3\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n2\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t300\t0\n1\thirsutisim in female\tالشعر الزائد\tNULL\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1490
+}

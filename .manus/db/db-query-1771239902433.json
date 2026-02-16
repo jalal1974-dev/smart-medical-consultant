@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, titleEn, titleAr, views FROM podcasts ORDER BY id DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT id, titleEn, titleAr, views FROM podcasts ORDER BY id DESC;",
+  "rows": [
+    {
+      "id": "30002",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "30001",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "6",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "5",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "4",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "3",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "2",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    },
+    {
+      "id": "1",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "views": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitleEn\ttitleAr\tviews\n30002\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n30001\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n6\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n5\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n4\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n3\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n2\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n1\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

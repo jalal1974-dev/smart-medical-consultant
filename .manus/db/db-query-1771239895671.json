@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, titleEn, titleAr, views FROM videos ORDER BY id DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT id, titleEn, titleAr, views FROM videos ORDER BY id DESC;",
+  "rows": [
+    {
+      "id": "60001",
+      "titleEn": "complte collapse after 72 h without sleeping",
+      "titleAr": "ماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟",
+      "views": "0"
+    },
+    {
+      "id": "30003",
+      "titleEn": "steady energy",
+      "titleAr": "طاقه مستمره",
+      "views": "0"
+    },
+    {
+      "id": "30002",
+      "titleEn": "brokly fights cancer",
+      "titleAr": "هل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟",
+      "views": "0"
+    },
+    {
+      "id": "30001",
+      "titleEn": "DOCTORS AND AI DIAGNOSIS",
+      "titleAr": "هل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.",
+      "views": "0"
+    },
+    {
+      "id": "1",
+      "titleEn": "hirsutisim in female",
+      "titleAr": "الشعر الزائد",
+      "views": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitleEn\ttitleAr\tviews\n60001\tcomplte collapse after 72 h without sleeping\tماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟\t0\n30003\tsteady energy\tطاقه مستمره\t0\n30002\tbrokly fights cancer\tهل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟\t0\n30001\tDOCTORS AND AI DIAGNOSIS\tهل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.\t0\n1\thirsutisim in female\tالشعر الزائد\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

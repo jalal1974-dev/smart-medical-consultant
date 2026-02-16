@@ -250,3 +250,7 @@
 - [x] Implement voice recording for main complaint field
 - [x] Add automatic voice-to-text transcription for recorded complaints
 - [x] Add visual feedback for voice recording (recording indicator, waveform)
+
+## Content Cleanup
+- [x] Remove test videos from database
+- [x] Verify only actual published videos are displayed on home page
