@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link } from "wouter";
 import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { getThumbnailUrl } from "@/lib/videoUtils";
 import { SEO, OrganizationSchema, MedicalServiceSchema, WebsiteSchema } from "@/components/SEO";
 
 export default function Home() {
@@ -146,11 +147,14 @@ export default function Home() {
                   <Card className="overflow-hidden hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full">
                     <div className="relative aspect-video bg-gradient-to-br from-primary/20 to-primary/5">
                       {video.thumbnailUrl ? (
-                        <img
-                          src={video.thumbnailUrl}
-                          alt={language === "en" ? video.titleEn : video.titleAr}
-                          className="w-full h-full object-cover"
-                        />
+                      <img
+                        src={getThumbnailUrl(video.videoUrl, video.thumbnailUrl)}
+                        alt={language === "en" ? video.titleEn : video.titleAr}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-video.jpg';
+                        }}
+                      />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Play className="w-16 h-16 text-primary" />

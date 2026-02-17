@@ -8,6 +8,8 @@ import { Play, Clock, Eye, Search, X, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { VideoPlayer, VideoPlayerRef } from "@/components/VideoPlayer";
+import { getThumbnailUrl } from "@/lib/videoUtils";
 
 export default function Videos() {
   const { t, language } = useLanguage();
@@ -22,7 +24,7 @@ export default function Videos() {
     title: string;
     description: string;
   } | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<VideoPlayerRef>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleVideoClick = (id: number, url: string, titleEn: string, titleAr: string, descEn: string, descAr: string) => {
@@ -148,11 +150,15 @@ export default function Videos() {
               >
                 <div className="relative aspect-video bg-muted">
                   {video.thumbnailUrl ? (
-                    <img
-                      src={video.thumbnailUrl}
-                      alt={language === "en" ? video.titleEn : video.titleAr}
-                      className="w-full h-full object-cover"
-                    />
+                  <img
+                    src={getThumbnailUrl(video.videoUrl, video.thumbnailUrl)}
+                    alt={language === "en" ? video.titleEn : video.titleAr}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to placeholder if thumbnail fails to load
+                      e.currentTarget.src = '/placeholder-video.jpg';
+                    }}
+                  />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Play className="w-16 h-16 text-muted-foreground" />
@@ -201,10 +207,9 @@ export default function Videos() {
             <div className="space-y-4">
               <div className="aspect-video bg-black rounded-lg overflow-hidden">
                 {selectedVideo && (
-                  <video
+                  <VideoPlayer
                     ref={videoRef}
-                    src={selectedVideo.url}
-                    controls
+                    url={selectedVideo.url}
                     autoPlay
                     className="w-full h-full"
                     onPlay={() => {
@@ -252,12 +257,7 @@ export default function Videos() {
                         });
                       }
                     }}
-                  >
-                    {language === "en" 
-                      ? "Your browser does not support the video tag."
-                      : "متصفحك لا يدعم تشغيل الفيديو."
-                    }
-                  </video>
+                  />
                 )}
               </div>
               <p className="text-muted-foreground">{selectedVideo?.description}</p>

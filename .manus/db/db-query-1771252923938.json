@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, titleEn, titleAr, videoUrl, thumbnailUrl, duration, views FROM videos LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT id, titleEn, titleAr, videoUrl, thumbnailUrl, duration, views FROM videos LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "titleEn": "hirsutisim in female",
+      "titleAr": "الشعر الزائد",
+      "videoUrl": "https://youtu.be/hfc5Z6RD6R0",
+      "thumbnailUrl": "NULL",
+      "duration": "NULL",
+      "views": "2"
+    },
+    {
+      "id": "30001",
+      "titleEn": "DOCTORS AND AI DIAGNOSIS",
+      "titleAr": "هل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.",
+      "videoUrl": "https://youtu.be/_t7HjIPnTJA",
+      "thumbnailUrl": "https://i9.ytimg.com/vi/_t7HjIPnTJA/maxresdefault.jpg?v=697ffc91&sqp=CKiYy8wG&rs=AOn4CLAtccvPOoSdhtS6oApJCDaouzL7Cw",
+      "duration": "NULL",
+      "views": "1"
+    },
+    {
+      "id": "30002",
+      "titleEn": "brokly fights cancer",
+      "titleAr": "هل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟",
+      "videoUrl": "https://youtu.be/Qoe3Yjm6x40",
+      "thumbnailUrl": "https://i9.ytimg.com/vi_webp/Qoe3Yjm6x40/maxresdefault.webp?v=698d2bfa&sqp=CKyfy8wG&rs=AOn4CLABYdulyUj3DMToNI2duFKTvzUwyA",
+      "duration": "NULL",
+      "views": "2"
+    },
+    {
+      "id": "30003",
+      "titleEn": "steady energy",
+      "titleAr": "طاقه مستمره",
+      "videoUrl": "https://youtu.be/JL3vE8nId9Y",
+      "thumbnailUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310419663029224872/jSnYmp6WUaKPak95AQvbBu/consultations/1/other/2DMcFw7hTk3_LB9D9nx9c.png",
+      "duration": "NULL",
+      "views": "1"
+    },
+    {
+      "id": "60001",
+      "titleEn": "complte collapse after 72 h without sleeping",
+      "titleAr": "ماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟",
+      "videoUrl": "https://youtu.be/6lxPwl0ydXk",
+      "thumbnailUrl": "https://d2xsxph8kpxj0f.cloudfront.net/310419663029224872/jSnYmp6WUaKPak95AQvbBu/consultations/1/other/K8Qjf_9DVsf-xowKka3RR.PNG",
+      "duration": "NULL",
+      "views": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitleEn\ttitleAr\tvideoUrl\tthumbnailUrl\tduration\tviews\n1\thirsutisim in female\tالشعر الزائد\thttps://youtu.be/hfc5Z6RD6R0\tNULL\tNULL\t2\n30001\tDOCTORS AND AI DIAGNOSIS\tهل الذكاء الاصطناعي بدّه يستبدل الطبيب؟ فيديو سريع يوضح الفرق بين الخبرة البشرية والـAI في الطب.\thttps://youtu.be/_t7HjIPnTJA\thttps://i9.ytimg.com/vi/_t7HjIPnTJA/maxresdefault.jpg?v=697ffc91&sqp=CKiYy8wG&rs=AOn4CLAtccvPOoSdhtS6oApJCDaouzL7Cw\tNULL\t1\n30002\tbrokly fights cancer\tهل يمكن للبروكلي أن يساعد في الوقاية من السرطان؟\thttps://youtu.be/Qoe3Yjm6x40\thttps://i9.ytimg.com/vi_webp/Qoe3Yjm6x40/maxresdefault.webp?v=698d2bfa&sqp=CKyfy8wG&rs=AOn4CLABYdulyUj3DMToNI2duFKTvzUwyA\tNULL\t2\n30003\tsteady energy\tطاقه مستمره\thttps://youtu.be/JL3vE8nId9Y\thttps://d2xsxph8kpxj0f.cloudfront.net/310419663029224872/jSnYmp6WUaKPak95AQvbBu/consultations/1/other/2DMcFw7hTk3_LB9D9nx9c.png\tNULL\t1\n60001\tcomplte collapse after 72 h without sleeping\tماذا يحدث لجسم الإنسان بعد 72 ساعة بدون نوم؟\thttps://youtu.be/6lxPwl0ydXk\thttps://d2xsxph8kpxj0f.cloudfront.net/310419663029224872/jSnYmp6WUaKPak95AQvbBu/consultations/1/other/K8Qjf_9DVsf-xowKka3RR.PNG\tNULL\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1549
+}
