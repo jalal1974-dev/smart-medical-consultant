@@ -288,3 +288,14 @@
 - [x] Fix missing video thumbnails
 - [x] Ensure video URLs are accessible and properly formatted
 - [x] Test video player controls and functionality
+
+## Complete Consultation Automation System
+- [x] Generate mind map of research topics from patient symptoms/diagnosis
+- [x] Create research_topics database table
+- [x] Deep research system that investigates specific medical topics
+- [ ] Admin interface to view mind map and trigger deep research on topics
+- [ ] Automatic regeneration of report/infographic/slides after research
+- [ ] Use proper Manus slides rendering for infographics (Arabic support)
+- [ ] Use proper Manus slides rendering for slide decks (visual quality)
+- [ ] Admin approval workflow after all materials are generated
+- [ ] Store slides version IDs in database for export/download

@@ -192,3 +192,30 @@ export const satisfactionSurveys = mysqlTable("satisfaction_surveys", {
 
 export type SatisfactionSurvey = typeof satisfactionSurveys.$inferSelect;
 export type InsertSatisfactionSurvey = typeof satisfactionSurveys.$inferInsert;
+
+/**
+ * Research topics table - stores mind map topics for deep research
+ */
+export const researchTopics = mysqlTable("research_topics", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull(),
+  
+  // Topic information
+  topicId: varchar("topic_id", { length: 100 }).notNull(), // Unique ID from mind map
+  parentTopicId: varchar("parent_topic_id", { length: 100 }), // For hierarchical structure
+  label: varchar("label", { length: 500 }).notNull(), // Topic name
+  description: text("description"), // What to research
+  
+  // Research status
+  researchPriority: mysqlEnum("research_priority", ["high", "medium", "low"]).default("medium").notNull(),
+  researched: boolean("researched").default(false).notNull(),
+  researchContent: text("research_content"), // Deep research results
+  researchedAt: timestamp("researched_at"),
+  researchedBy: int("researched_by"), // Admin user ID who triggered research
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ResearchTopic = typeof researchTopics.$inferSelect;
+export type InsertResearchTopic = typeof researchTopics.$inferInsert;
