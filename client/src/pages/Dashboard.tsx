@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText, Play, Headphones, Clock } from "lucide-react";
+import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { SatisfactionSurvey } from "@/components/SatisfactionSurvey";
+import { ConsultationTimeline } from "@/components/ConsultationTimeline";
 import { useState } from "react";
 
 function CompletedConsultationSurvey({ consultationId, language }: { consultationId: number; language: "en" | "ar" }) {
@@ -366,29 +367,48 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
+                  {/* Consultation Timeline */}
+                  <div className="mt-4">
+                    <ConsultationTimeline
+                      consultationStatus={consultation.status}
+                      createdAt={new Date(consultation.createdAt)}
+                      language={language}
+                    />
+                  </div>
                   {consultation.aiAnalysis && (
                     <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <p className="text-sm font-medium mb-2">AI Analysis</p>
+                      <p className="text-sm font-medium mb-2">{language === "ar" ? "التحليل الطبي" : "Medical Analysis"}</p>
                       <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         {consultation.aiReportUrl && (
-                          <Button size="sm" variant="outline" asChild>
+                          <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
-                              Download PDF Report
-                            </a>
-                          </Button>
-                        )}
-                        {consultation.aiVideoUrl && (
-                          <Button size="sm" variant="outline" asChild>
-                            <a href={consultation.aiVideoUrl} target="_blank" rel="noopener noreferrer">
-                              Watch Video Explanation
+                              <Download className="w-4 h-4 mr-2" />
+                              {language === "ar" ? "التقرير الطبي" : "Medical Report"}
                             </a>
                           </Button>
                         )}
                         {consultation.aiInfographicUrl && (
-                          <Button size="sm" variant="outline" asChild>
+                          <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                              View Infographic
+                              <FileText className="w-4 h-4 mr-2" />
+                              {language === "ar" ? "الإنفوجرافيك" : "Infographic"}
+                            </a>
+                          </Button>
+                        )}
+                        {consultation.aiSlideDeckUrl && (
+                          <Button size="sm" variant="outline" asChild className="justify-start">
+                            <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
+                              <Presentation className="w-4 h-4 mr-2" />
+                              {language === "ar" ? "العرض التقديمي" : "Slide Deck"}
+                            </a>
+                          </Button>
+                        )}
+                        {consultation.aiMindMapUrl && (
+                          <Button size="sm" variant="outline" asChild className="justify-start">
+                            <a href={consultation.aiMindMapUrl} target="_blank" rel="noopener noreferrer">
+                              <Map className="w-4 h-4 mr-2" />
+                              {language === "ar" ? "الخريطة الذهنية" : "Mind Map"}
                             </a>
                           </Button>
                         )}

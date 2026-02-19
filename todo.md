@@ -309,3 +309,15 @@
 - [x] Display research results in expandable panels
 - [x] Add visual indicators for researched vs pending topics
 - [ ] Implement automatic material regeneration after research completion
+
+## Patient Dashboard Enhancement
+- [x] Create backend routes for patient consultation history
+- [x] Add route to fetch patient's approved materials
+- [x] Build patient dashboard UI with consultation timeline
+- [x] Add status indicators (submitted, processing, review, completed)
+- [x] Implement download buttons for approved reports
+- [x] Implement download buttons for approved infographics
+- [x] Implement download buttons for approved slide decks
+- [x] Add satisfaction survey prompts for completed consultations
+- [x] Show real-time status updates with progress indicators
+- [x] Add empty state for patients with no consultations
