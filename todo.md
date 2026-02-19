@@ -299,3 +299,13 @@
 - [ ] Use proper Manus slides rendering for slide decks (visual quality)
 - [ ] Admin approval workflow after all materials are generated
 - [ ] Store slides version IDs in database for export/download
+
+## Interactive Mind Map Visualization
+- [x] Add backend tRPC routes for mind map generation and retrieval
+- [x] Add backend route for triggering deep research on topics
+- [x] Create MindMapVisualization React component with interactive nodes
+- [x] Integrate mind map into Admin Panel consultation review
+- [x] Add click handlers for topic exploration and research triggers
+- [x] Display research results in expandable panels
+- [x] Add visual indicators for researched vs pending topics
+- [ ] Implement automatic material regeneration after research completion

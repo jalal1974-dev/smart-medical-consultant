@@ -728,3 +728,100 @@ export async function getSatisfactionSurveyStats() {
     recommendationRate: (surveys.filter(s => s.wouldRecommend).length / total) * 100,
   };
 }
+
+// ============================================================================
+// Research Topics Functions
+// ============================================================================
+
+export async function getResearchTopics(consultationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { researchTopics } = await import("../drizzle/schema");
+  return await db
+    .select()
+    .from(researchTopics)
+    .where(eq(researchTopics.consultationId, consultationId))
+    .orderBy(researchTopics.createdAt);
+}
+
+export async function saveResearchTopics(consultationId: number, nodes: any[]) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { researchTopics } = await import("../drizzle/schema");
+
+  // Flatten the hierarchical structure and save all nodes
+  const flattenNodes = (nodes: any[], parentId: string | null = null): any[] => {
+    const result: any[] = [];
+    for (const node of nodes) {
+      result.push({
+        consultationId,
+        topicId: node.id,
+        parentTopicId: parentId,
+        label: node.label,
+        description: node.description,
+        researchPriority: node.researchPriority,
+        researched: node.researched || false,
+      });
+
+      if (node.children && node.children.length > 0) {
+        result.push(...flattenNodes(node.children, node.id));
+      }
+    }
+    return result;
+  };
+
+  const flatNodes = flattenNodes(nodes);
+  
+  // Delete existing topics for this consultation
+  await db.delete(researchTopics).where(eq(researchTopics.consultationId, consultationId));
+  
+  // Insert new topics
+  if (flatNodes.length > 0) {
+    await db.insert(researchTopics).values(flatNodes);
+  }
+}
+
+export async function getResearchTopicById(consultationId: number, topicId: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { researchTopics } = await import("../drizzle/schema");
+  const [topic] = await db
+    .select()
+    .from(researchTopics)
+    .where(
+      and(
+        eq(researchTopics.consultationId, consultationId),
+        eq(researchTopics.topicId, topicId)
+      )
+    );
+
+  return topic || null;
+}
+
+export async function updateResearchTopic(
+  consultationId: number,
+  topicId: string,
+  updates: {
+    researched?: boolean;
+    researchContent?: string;
+    researchedBy?: number;
+    researchedAt?: Date;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { researchTopics } = await import("../drizzle/schema");
+  await db
+    .update(researchTopics)
+    .set(updates)
+    .where(
+      and(
+        eq(researchTopics.consultationId, consultationId),
+        eq(researchTopics.topicId, topicId)
+      )
+    );
+}

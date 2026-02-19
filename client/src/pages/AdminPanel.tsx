@@ -13,8 +13,9 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2 } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from "lucide-react";
 import { format } from "date-fns";
+import { MindMapVisualization } from "@/components/MindMapVisualization";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -400,6 +401,13 @@ export default function AdminPanel() {
                     <p className="text-sm text-muted-foreground">
                       Created: {format(new Date(consultation.createdAt), "PPP")}
                     </p>
+                    
+                    {/* Mind Map for Research */}
+                    {(consultation.status === "ai_processing" || consultation.status === "specialist_review") && (
+                      <div className="mt-4">
+                        <MindMapVisualization consultationId={consultation.id} />
+                      </div>
+                    )}
                     
                     {/* Generated Materials */}
                     {consultation.status === "specialist_review" && (

@@ -738,6 +738,87 @@ export const appRouter = router({
         }
       }),
   }),
+
+  // Mind Map and Research routes
+  research: router({
+    // Generate or retrieve mind map for a consultation
+    getMindMap: adminProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getResearchTopics(input.consultationId);
+      }),
+
+    // Generate new mind map for consultation
+    generateMindMap: adminProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        // Import mind map generator
+        const { generateResearchMindMap } = await import('./mindMapGenerator');
+        
+        const mindMapData = await generateResearchMindMap(
+          consultation.symptoms,
+          consultation.medicalHistory || undefined,
+          consultation.aiAnalysis || "Pending analysis",
+          consultation.preferredLanguage
+        );
+
+        // Store mind map topics in database
+        await db.saveResearchTopics(input.consultationId, mindMapData.nodes);
+
+        return { success: true, mindMap: mindMapData };
+      }),
+
+    // Trigger deep research on a specific topic
+    performDeepResearch: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        topicId: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        const topic = await db.getResearchTopicById(input.consultationId, input.topicId);
+        if (!topic) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Research topic not found' });
+        }
+
+        // Perform deep research
+        const { performDeepResearch } = await import('./mindMapGenerator');
+        const researchContent = await performDeepResearch(
+          topic.label,
+          `Symptoms: ${consultation.symptoms}\nInitial Analysis: ${consultation.aiAnalysis || 'Pending'}`,
+          consultation.preferredLanguage
+        );
+
+        // Update topic with research results
+        await db.updateResearchTopic(input.consultationId, input.topicId, {
+          researched: true,
+          researchContent,
+          researchedBy: ctx.user.id,
+          researchedAt: new Date(),
+        });
+
+        return { success: true, researchContent };
+      }),
+
+    // Get research results for a topic
+    getResearchResults: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        topicId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return await db.getResearchTopicById(input.consultationId, input.topicId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
