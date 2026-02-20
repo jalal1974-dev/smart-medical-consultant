@@ -321,3 +321,13 @@
 - [x] Add satisfaction survey prompts for completed consultations
 - [x] Show real-time status updates with progress indicators
 - [x] Add empty state for patients with no consultations
+
+## Manus Slides API Integration
+- [ ] Replace placeholder infographic generation with real Manus Slides API
+- [ ] Replace placeholder slide deck generation with real Manus Slides API
+- [ ] Store slides version IDs in database for proper export/download
+- [ ] Ensure proper Arabic text rendering in generated slides
+- [ ] Update material generator to use slide_initialize and slide_edit tools
+- [ ] Test infographic generation with real consultation data
+- [ ] Test slide deck generation with real consultation data
+- [ ] Verify slides can be exported and downloaded by patients

@@ -60,8 +60,10 @@ export const consultations = mysqlTable("consultations", {
   aiReportUrl: varchar("aiReportUrl", { length: 500 }), // PDF report URL
   aiVideoUrl: varchar("aiVideoUrl", { length: 500 }), // Video explanation URL
   aiAudioUrl: varchar("aiAudioUrl", { length: 500 }), // Audio summary URL
-  aiInfographicUrl: varchar("aiInfographicUrl", { length: 500 }), // Infographic URL
-  aiSlideDeckUrl: varchar("aiSlideDeckUrl", { length: 500 }), // Slide presentation URL
+  aiInfographicUrl: varchar("aiInfographicUrl", { length: 500 }), // Infographic URL (manus-slides://)
+  aiInfographicContent: text("aiInfographicContent"), // JSON content for infographic generation
+  aiSlideDeckUrl: varchar("aiSlideDeckUrl", { length: 500 }), // Slide presentation URL (manus-slides://)
+  aiSlideDeckContent: text("aiSlideDeckContent"), // JSON content for slide deck generation
   aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
   aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts
   aiLastProcessedAt: timestamp("aiLastProcessedAt"), // Last AI processing timestamp
