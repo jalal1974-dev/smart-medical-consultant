@@ -825,3 +825,83 @@ export async function updateResearchTopic(
       )
     );
 }
+
+// ============================================================================
+// Slide Generation Requests
+// ============================================================================
+
+export async function createSlideGenerationRequest(data: {
+  consultationId: number;
+  requestedBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { slideGenerationRequests } = await import("../drizzle/schema");
+  const [request] = await db
+    .insert(slideGenerationRequests)
+    .values({
+      consultationId: data.consultationId,
+      requestedBy: data.requestedBy,
+      status: "pending",
+    })
+    .$returningId();
+
+  return { id: request.id };
+}
+
+export async function getPendingSlideRequests() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { slideGenerationRequests, consultations } = await import("../drizzle/schema");
+  return await db
+    .select({
+      id: slideGenerationRequests.id,
+      consultationId: slideGenerationRequests.consultationId,
+      requestedBy: slideGenerationRequests.requestedBy,
+      requestedAt: slideGenerationRequests.requestedAt,
+      status: slideGenerationRequests.status,
+      patientName: consultations.patientName,
+      symptoms: consultations.symptoms,
+    })
+    .from(slideGenerationRequests)
+    .leftJoin(consultations, eq(slideGenerationRequests.consultationId, consultations.id))
+    .where(eq(slideGenerationRequests.status, "pending"))
+    .orderBy(slideGenerationRequests.requestedAt);
+}
+
+export async function getSlideRequestByConsultation(consultationId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { slideGenerationRequests } = await import("../drizzle/schema");
+  const [request] = await db
+    .select()
+    .from(slideGenerationRequests)
+    .where(eq(slideGenerationRequests.consultationId, consultationId))
+    .orderBy(desc(slideGenerationRequests.requestedAt))
+    .limit(1);
+
+  return request || null;
+}
+
+export async function updateSlideGenerationRequest(
+  requestId: number,
+  updates: {
+    status?: "pending" | "processing" | "completed" | "failed";
+    infographicSlidesUrl?: string;
+    slideDeckSlidesUrl?: string;
+    errorMessage?: string;
+    completedAt?: Date;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  const { slideGenerationRequests } = await import("../drizzle/schema");
+  await db
+    .update(slideGenerationRequests)
+    .set(updates)
+    .where(eq(slideGenerationRequests.id, requestId));
+}

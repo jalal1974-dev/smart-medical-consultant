@@ -331,3 +331,12 @@
 - [ ] Test infographic generation with real consultation data
 - [ ] Test slide deck generation with real consultation data
 - [ ] Verify slides can be exported and downloaded by patients
+
+## Manual Agent-Triggered Slide Generation
+- [x] Add database table for slide generation requests
+- [x] Add backend tRPC route to create slide generation request
+- [x] Add "Request Slide Generation" button in Admin Panel
+- [x] Create agent helper documentation to process pending requests
+- [x] Add notification system to alert agent of pending requests (via notifyOwner)
+- [x] Display request status in Admin Panel (pending/processing/completed)
+- [x] Show generated slides URLs after agent completes generation

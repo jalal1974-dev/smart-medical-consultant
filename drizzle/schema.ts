@@ -221,3 +221,33 @@ export const researchTopics = mysqlTable("research_topics", {
 
 export type ResearchTopic = typeof researchTopics.$inferSelect;
 export type InsertResearchTopic = typeof researchTopics.$inferInsert;
+
+/**
+ * Slide generation requests table - tracks requests for agent to generate Manus slides
+ */
+export const slideGenerationRequests = mysqlTable("slide_generation_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull(),
+  
+  // Request information
+  requestedBy: int("requested_by").notNull(), // Admin user ID who requested
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  
+  // Generation status
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  
+  // Generated slides URLs (stored after agent completes generation)
+  infographicSlidesUrl: varchar("infographic_slides_url", { length: 500 }), // manus-slides:// URL
+  slideDeckSlidesUrl: varchar("slide_deck_slides_url", { length: 500 }), // manus-slides:// URL
+  
+  // Error information if generation fails
+  errorMessage: text("error_message"),
+  
+  // Completion timestamp
+  completedAt: timestamp("completed_at"),
+  
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SlideGenerationRequest = typeof slideGenerationRequests.$inferSelect;
+export type InsertSlideGenerationRequest = typeof slideGenerationRequests.$inferInsert;

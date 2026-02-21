@@ -819,6 +819,62 @@ export const appRouter = router({
         return await db.getResearchTopicById(input.consultationId, input.topicId);
       }),
   }),
+
+  // Slide generation request routes
+  slideGeneration: router({
+    // Request slide generation for a consultation
+    requestGeneration: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        // Check if slide content is prepared
+        if (!consultation.aiInfographicContent || !consultation.aiSlideDeckContent) {
+          throw new TRPCError({ 
+            code: 'PRECONDITION_FAILED', 
+            message: 'Slide content not yet prepared. Please wait for AI processing to complete.' 
+          });
+        }
+
+        // Create slide generation request
+        const { createSlideGenerationRequest } = await import('./db');
+        const request = await createSlideGenerationRequest({
+          consultationId: input.consultationId,
+          requestedBy: ctx.user.id,
+        });
+
+        // Notify owner that slides need to be generated
+        const { notifyOwner } = await import('./_core/notification');
+        await notifyOwner({
+          title: 'Slide Generation Requested',
+          content: `Admin has requested slide generation for consultation #${input.consultationId}. Please generate slides using the agent.`,
+        });
+
+        return { success: true, requestId: request.id };
+      }),
+
+    // Get pending slide generation requests
+    getPendingRequests: adminProcedure
+      .query(async () => {
+        const { getPendingSlideRequests } = await import('./db');
+        return await getPendingSlideRequests();
+      }),
+
+    // Get request status
+    getRequestStatus: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const { getSlideRequestByConsultation } = await import('./db');
+        return await getSlideRequestByConsultation(input.consultationId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

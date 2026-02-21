@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from "lucide-react";
 import { format } from "date-fns";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
+import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -427,7 +428,7 @@ export default function AdminPanel() {
                           </div>
                         )}
                         
-                        {consultation.aiInfographicUrl && (
+                        {consultation.aiInfographicUrl ? (
                           <div className="flex items-center justify-between p-2 bg-background rounded">
                             <span className="text-sm">📊 Infographic</span>
                             <div className="flex gap-2">
@@ -438,9 +439,14 @@ export default function AdminPanel() {
                               </Button>
                             </div>
                           </div>
+                        ) : (
+                          <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                            <span className="text-sm">📊 Infographic (Content Prepared)</span>
+                            <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
+                          </div>
                         )}
                         
-                        {consultation.aiSlideDeckUrl && (
+                        {consultation.aiSlideDeckUrl ? (
                           <div className="flex items-center justify-between p-2 bg-background rounded">
                             <span className="text-sm">📽️ Slide Deck</span>
                             <div className="flex gap-2">
@@ -450,6 +456,11 @@ export default function AdminPanel() {
                                 </a>
                               </Button>
                             </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                            <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
+                            <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
                           </div>
                         )}
                         
