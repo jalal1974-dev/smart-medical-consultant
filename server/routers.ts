@@ -806,6 +806,10 @@ export const appRouter = router({
           researchedAt: new Date(),
         });
 
+        // Trigger automatic material regeneration
+        const { regenerateMaterialsAfterResearch } = await import('./materialRegenerationService');
+        await regenerateMaterialsAfterResearch(input.consultationId);
+
         return { success: true, researchContent };
       }),
 

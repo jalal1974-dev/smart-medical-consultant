@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -904,4 +904,45 @@ export async function updateSlideGenerationRequest(
     .update(slideGenerationRequests)
     .set(updates)
     .where(eq(slideGenerationRequests.id, requestId));
+}
+
+// ==================== Material Regeneration Functions ====================
+
+export async function regenerateConsultationMaterials(
+  consultationId: number,
+  updates: {
+    aiReportUrl?: string;
+    aiInfographicContent?: string;
+    aiSlideDeckContent?: string;
+    aiMindMapUrl?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(consultations)
+    .set({
+      ...updates,
+      materialsRegeneratedAt: new Date(),
+      materialsRegeneratedCount: sql`${consultations.materialsRegeneratedCount} + 1`,
+    })
+    .where(eq(consultations.id, consultationId));
+}
+
+export async function getAllResearchedTopics(consultationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const topics = await db
+    .select()
+    .from(researchTopics)
+    .where(
+      and(
+        eq(researchTopics.consultationId, consultationId),
+        eq(researchTopics.researched, true)
+      )
+    );
+
+  return topics;
 }

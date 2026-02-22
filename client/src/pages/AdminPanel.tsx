@@ -403,6 +403,19 @@ export default function AdminPanel() {
                       Created: {format(new Date(consultation.createdAt), "PPP")}
                     </p>
                     
+                    {/* Material Regeneration Indicator */}
+                    {consultation.materialsRegeneratedAt && (
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 mt-2">
+                        <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                          🔄 Materials Regenerated
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(consultation.materialsRegeneratedAt), "PPp")} 
+                          ({consultation.materialsRegeneratedCount || 1}x)
+                        </span>
+                      </div>
+                    )}
+                    
                     {/* Mind Map for Research */}
                     {(consultation.status === "ai_processing" || consultation.status === "specialist_review") && (
                       <div className="mt-4">

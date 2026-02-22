@@ -340,3 +340,13 @@
 - [x] Add notification system to alert agent of pending requests (via notifyOwner)
 - [x] Display request status in Admin Panel (pending/processing/completed)
 - [x] Show generated slides URLs after agent completes generation
+
+## Automatic Material Regeneration After Deep Research
+- [x] Analyze existing deep research workflow and completion logic
+- [x] Add trigger in deep research completion to regenerate materials
+- [x] Update material generation to incorporate research findings from database
+- [x] Add database field to track material regeneration (version/timestamp)
+- [x] Add UI indicator in Admin Panel showing materials were regenerated
+- [x] Add UI indicator in Patient Dashboard showing updated materials
+- [x] Test complete workflow: deep research → automatic regeneration → updated materials
+- [x] Write vitest tests for material regeneration logic

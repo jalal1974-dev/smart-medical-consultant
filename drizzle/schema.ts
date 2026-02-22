@@ -67,6 +67,8 @@ export const consultations = mysqlTable("consultations", {
   aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
   aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts
   aiLastProcessedAt: timestamp("aiLastProcessedAt"), // Last AI processing timestamp
+  materialsRegeneratedAt: timestamp("materialsRegeneratedAt"), // Last material regeneration timestamp
+  materialsRegeneratedCount: int("materialsRegeneratedCount").default(0).notNull(), // Number of times materials were regenerated
   
   // Specialist review and approval workflow
   specialistApprovalStatus: mysqlEnum("specialistApprovalStatus", [
