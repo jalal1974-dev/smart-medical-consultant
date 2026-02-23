@@ -350,3 +350,14 @@
 - [x] Add UI indicator in Patient Dashboard showing updated materials
 - [x] Test complete workflow: deep research → automatic regeneration → updated materials
 - [x] Write vitest tests for material regeneration logic
+
+## Bug Fixes - Admin Panel
+- [x] Investigate why consultations section is empty in admin panel
+- [x] Fix database migration or query issues causing empty consultations
+- [x] Verify consultations display correctly after fix
+
+## UI Improvements - Research and Materials
+- [x] Make deep research reports collapsible/minimizable in mind map
+- [x] Redesign visual infographic for better clarity and understanding
+- [x] Add visual elements (icons, colors, layout) to slide deck content
+- [x] Test all improvements in both admin panel and patient dashboard

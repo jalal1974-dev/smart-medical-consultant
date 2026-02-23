@@ -31,6 +31,7 @@ interface MindMapVisualizationProps {
 export function MindMapVisualization({ consultationId }: MindMapVisualizationProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [collapsedResearch, setCollapsedResearch] = useState<Set<string>>(new Set());
 
   const { data: topics, isLoading, refetch } = trpc.research.getMindMap.useQuery(
     { consultationId },
@@ -177,15 +178,40 @@ export function MindMapVisualization({ consultationId }: MindMapVisualizationPro
                 <p className="text-sm text-gray-600 mb-3">{node.description}</p>
               )}
 
-              {/* Research Content */}
+              {/* Research Content - Collapsible */}
               {node.researched && node.researchContent && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3">
-                  <h5 className="font-medium text-sm text-emerald-900 mb-2">
-                    Research Findings:
-                  </h5>
-                  <p className="text-sm text-emerald-800 whitespace-pre-wrap">
-                    {node.researchContent}
-                  </p>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg mb-3">
+                  <button
+                    onClick={() => {
+                      setCollapsedResearch((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(node.id)) {
+                          next.delete(node.id);
+                        } else {
+                          next.add(node.id);
+                        }
+                        return next;
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-3 hover:bg-emerald-100 transition-colors"
+                  >
+                    <h5 className="font-medium text-sm text-emerald-900 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Research Findings
+                    </h5>
+                    {collapsedResearch.has(node.id) ? (
+                      <ChevronRight className="h-4 w-4 text-emerald-700" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-emerald-700" />
+                    )}
+                  </button>
+                  {!collapsedResearch.has(node.id) && (
+                    <div className="px-3 pb-3">
+                      <p className="text-sm text-emerald-800 whitespace-pre-wrap">
+                        {node.researchContent}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
