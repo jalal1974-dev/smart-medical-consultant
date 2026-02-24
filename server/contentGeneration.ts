@@ -123,14 +123,29 @@ async function generateInfographic(
   language: "en" | "ar"
 ): Promise<string | null> {
   try {
-    const prompt = `Create a clean, professional medical infographic showing:
+    let prompt: string;
+    
+    if (language === 'ar') {
+      // Arabic-only prompt
+      prompt = `أنشئ إنفوجرافيك طبي احترافي ونظيف يحتوي على:
+- المريض: ${patientName}
+- مستوى الأولوية: ${analysisResult.urgencyLevel}
+- النتائج الرئيسية: ${analysisResult.keyFindings?.slice(0, 3).join("، ")}
+- التوصيات الرئيسية: ${analysisResult.recommendations?.slice(0, 3).join("، ")}
+
+الأسلوب: إنفوجرافيك طبي حديث مع أيقونات، أقسام واضحة، نظام ألوان احترافي (أزرق وأخضر)، تصميم سهل القراءة.
+اللغة: جميع النصوص يجب أن تكون بالعربية فقط، بدون أي كلمات إنجليزية.`;
+    } else {
+      // English-only prompt  
+      prompt = `Create a clean, professional medical infographic showing:
 - Patient: ${patientName}
 - Urgency: ${analysisResult.urgencyLevel}
 - Key Findings: ${analysisResult.keyFindings?.slice(0, 3).join(", ")}
 - Top Recommendations: ${analysisResult.recommendations?.slice(0, 3).join(", ")}
 
 Style: Modern medical infographic with icons, clear sections, professional color scheme (blues and greens), easy to read layout.
-Language: ${language === 'ar' ? 'Arabic text' : 'English text'}`;
+Language: All text must be in English only, no Arabic words.`;
+    }
 
     const result = await generateImage({ prompt });
     

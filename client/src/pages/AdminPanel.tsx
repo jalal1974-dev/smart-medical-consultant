@@ -441,41 +441,58 @@ export default function AdminPanel() {
                           </div>
                         )}
                         
-                        {consultation.aiInfographicUrl ? (
-                          <div className="flex items-center justify-between p-2 bg-background rounded">
-                            <span className="text-sm">📊 Infographic</span>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                                  View
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                            <span className="text-sm">📊 Infographic (Content Prepared)</span>
-                            <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
-                          </div>
-                        )}
+                        {(() => {
+                          // Infographic is always an image (not JSON), so show View button when available
+                          if (consultation.aiInfographicUrl) {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-background rounded">
+                                <span className="text-sm">📈 Infographic</span>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                                      View
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                                <span className="text-sm">📈 Infographic (Content Prepared)</span>
+                                <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
+                              </div>
+                            );
+                          }
+                        })()}
                         
-                        {consultation.aiSlideDeckUrl ? (
-                          <div className="flex items-center justify-between p-2 bg-background rounded">
-                            <span className="text-sm">📽️ Slide Deck</span>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
-                                  View
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                            <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
-                            <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
-                          </div>
-                        )}
+                        {(() => {
+                          // Check if slide deck is a JSON file (content structure) or actual slides
+                          const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
+                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          
+                          if (hasGeneratedSlides) {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-background rounded">
+                                <span className="text-sm">📽️ Slide Deck</span>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">
+                                      View
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                                <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
+                                <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
+                              </div>
+                            );
+                          }
+                        })()}
                         
                         {consultation.specialistApprovalStatus === "pending_review" && (
                           <div className="flex gap-2 mt-3">

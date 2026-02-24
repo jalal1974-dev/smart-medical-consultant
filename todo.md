@@ -361,3 +361,9 @@
 - [x] Redesign visual infographic for better clarity and understanding
 - [x] Add visual elements (icons, colors, layout) to slide deck content
 - [x] Test all improvements in both admin panel and patient dashboard
+
+## Bug Fixes - Content Display
+- [x] Fix Arabic text mixing with English in infographic generation
+- [x] Replace raw JSON display with proper slide deck content preview
+- [x] Ensure all generated content is purely in selected language (no mixing)
+- [x] Test Arabic and English content generation separately
