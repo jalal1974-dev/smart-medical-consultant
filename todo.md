@@ -367,3 +367,13 @@
 - [x] Replace raw JSON display with proper slide deck content preview
 - [x] Ensure all generated content is purely in selected language (no mixing)
 - [x] Test Arabic and English content generation separately
+
+## Regenerate Infographic Feature
+- [x] Add backend tRPC route for manual infographic regeneration
+- [x] Create RegenerateInfographicButton component with loading states
+- [x] Integrate button into AdminPanel infographic section
+- [x] Add confirmation dialog before regeneration
+- [x] Update infographic URL in database after regeneration
+- [x] Add toast notifications for success/error states
+- [x] Test complete regeneration workflow
+- [x] Write vitest tests for regeneration logic

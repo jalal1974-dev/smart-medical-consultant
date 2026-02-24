@@ -448,6 +448,53 @@ export const appRouter = router({
       return await db.getAllUsers();
     }),
 
+    // Regenerate infographic for a consultation
+    regenerateInfographic: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        if (!consultation.aiAnalysis) {
+          throw new TRPCError({ 
+            code: 'PRECONDITION_FAILED', 
+            message: 'AI analysis not available. Cannot regenerate infographic.' 
+          });
+        }
+
+        // Import generateInfographic function
+        const { regenerateInfographicForConsultation } = await import('./contentGeneration');
+        
+        // Regenerate infographic
+        const newInfographicUrl = await regenerateInfographicForConsultation(
+          consultation.id,
+          consultation.aiAnalysis,
+          consultation.patientName,
+          consultation.preferredLanguage as "en" | "ar"
+        );
+
+        if (!newInfographicUrl) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: 'Failed to regenerate infographic' 
+          });
+        }
+
+        // Update consultation with new infographic URL
+        await db.updateConsultation(input.consultationId, {
+          aiInfographicUrl: newInfographicUrl,
+        });
+
+        return { 
+          success: true, 
+          infographicUrl: newInfographicUrl 
+        };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({

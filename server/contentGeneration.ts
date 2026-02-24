@@ -173,6 +173,41 @@ Language: All text must be in English only, no Arabic words.`;
 }
 
 /**
+ * Regenerate infographic for a consultation (exported for manual regeneration)
+ */
+export async function regenerateInfographicForConsultation(
+  consultationId: number,
+  aiAnalysis: string,
+  patientName: string,
+  language: "en" | "ar"
+): Promise<string | null> {
+  try {
+    console.log(`[Infographic Regeneration] Starting for consultation #${consultationId}`);
+    
+    // Parse AI analysis to extract key information
+    const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
+    
+    // Generate new infographic
+    const infographicUrl = await generateInfographic(
+      analysisResult,
+      patientName,
+      language
+    );
+    
+    if (!infographicUrl) {
+      console.error(`[Infographic Regeneration] Failed for consultation #${consultationId}`);
+      return null;
+    }
+    
+    console.log(`[Infographic Regeneration] Success for consultation #${consultationId}`);
+    return infographicUrl;
+  } catch (error) {
+    console.error(`[Infographic Regeneration] Error for consultation #${consultationId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Generate audio summary using text-to-speech
  */
 async function generateAudioSummary(

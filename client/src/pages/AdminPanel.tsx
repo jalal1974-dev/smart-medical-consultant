@@ -17,6 +17,7 @@ import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from 
 import { format } from "date-fns";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
+import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -453,6 +454,7 @@ export default function AdminPanel() {
                                       View
                                     </a>
                                   </Button>
+                                  <RegenerateInfographicButton consultationId={consultation.id} />
                                 </div>
                               </div>
                             );
