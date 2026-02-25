@@ -377,3 +377,13 @@
 - [x] Add toast notifications for success/error states
 - [x] Test complete regeneration workflow
 - [x] Write vitest tests for regeneration logic
+
+## Custom Regeneration Prompts
+- [x] Update backend tRPC route to accept optional customPrompt parameter
+- [x] Modify regenerateInfographicForConsultation to accept and use custom instructions
+- [x] Update generateInfographic function to incorporate custom prompt into AI generation
+- [x] Add Textarea field to RegenerateInfographicButton dialog
+- [x] Pass custom prompt from frontend to backend mutation
+- [x] Add placeholder text and helper text for custom prompt field
+- [x] Test custom prompt with various instructions (emphasize findings, larger fonts, specific colors)
+- [x] Write vitest tests for custom prompt functionality

@@ -120,7 +120,8 @@ async function generatePDFReport(
 async function generateInfographic(
   analysisResult: MedicalAnalysisResult,
   patientName: string,
-  language: "en" | "ar"
+  language: "en" | "ar",
+  customPrompt?: string
 ): Promise<string | null> {
   try {
     let prompt: string;
@@ -134,7 +135,9 @@ async function generateInfographic(
 - التوصيات الرئيسية: ${analysisResult.recommendations?.slice(0, 3).join("، ")}
 
 الأسلوب: إنفوجرافيك طبي حديث مع أيقونات، أقسام واضحة، نظام ألوان احترافي (أزرق وأخضر)، تصميم سهل القراءة.
-اللغة: جميع النصوص يجب أن تكون بالعربية فقط، بدون أي كلمات إنجليزية.`;
+اللغة: جميع النصوص يجب أن تكون بالعربية فقط، بدون أي كلمات إنجليزية.${
+        customPrompt ? `\n\nتعليمات إضافية من المسؤول: ${customPrompt}` : ''
+      }`;
     } else {
       // English-only prompt  
       prompt = `Create a clean, professional medical infographic showing:
@@ -144,7 +147,9 @@ async function generateInfographic(
 - Top Recommendations: ${analysisResult.recommendations?.slice(0, 3).join(", ")}
 
 Style: Modern medical infographic with icons, clear sections, professional color scheme (blues and greens), easy to read layout.
-Language: All text must be in English only, no Arabic words.`;
+Language: All text must be in English only, no Arabic words.${
+        customPrompt ? `\n\nAdditional instructions from admin: ${customPrompt}` : ''
+      }`;
     }
 
     const result = await generateImage({ prompt });
@@ -179,7 +184,8 @@ export async function regenerateInfographicForConsultation(
   consultationId: number,
   aiAnalysis: string,
   patientName: string,
-  language: "en" | "ar"
+  language: "en" | "ar",
+  customPrompt?: string
 ): Promise<string | null> {
   try {
     console.log(`[Infographic Regeneration] Starting for consultation #${consultationId}`);
@@ -191,7 +197,8 @@ export async function regenerateInfographicForConsultation(
     const infographicUrl = await generateInfographic(
       analysisResult,
       patientName,
-      language
+      language,
+      customPrompt
     );
     
     if (!infographicUrl) {

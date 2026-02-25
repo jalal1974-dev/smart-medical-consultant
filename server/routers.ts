@@ -452,6 +452,7 @@ export const appRouter = router({
     regenerateInfographic: adminProcedure
       .input(z.object({
         consultationId: z.number(),
+        customPrompt: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
@@ -474,7 +475,8 @@ export const appRouter = router({
           consultation.id,
           consultation.aiAnalysis,
           consultation.patientName,
-          consultation.preferredLanguage as "en" | "ar"
+          consultation.preferredLanguage as "en" | "ar",
+          input.customPrompt
         );
 
         if (!newInfographicUrl) {

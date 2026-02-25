@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2, RefreshCw } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +23,7 @@ interface RegenerateInfographicButtonProps {
 
 export function RegenerateInfographicButton({ consultationId }: RegenerateInfographicButtonProps) {
   const utils = trpc.useUtils();
+  const [customPrompt, setCustomPrompt] = useState("");
   
   const regenerate = trpc.admin.regenerateInfographic.useMutation({
     onSuccess: () => {
@@ -60,10 +64,27 @@ export function RegenerateInfographicButton({ consultationId }: RegenerateInfogr
             This process may take 10-30 seconds.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="customPrompt">Custom Instructions (Optional)</Label>
+          <Textarea
+            id="customPrompt"
+            placeholder="e.g., 'Emphasize cardiac findings', 'Use larger fonts', 'Add more visual icons', 'Focus on key recommendations'"
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            Provide specific instructions to guide the AI in generating the infographic.
+          </p>
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={() => regenerate.mutate({ consultationId })}
+            onClick={() => regenerate.mutate({ 
+              consultationId, 
+              customPrompt: customPrompt.trim() || undefined 
+            })}
           >
             Regenerate
           </AlertDialogAction>
