@@ -17,6 +17,18 @@
     <meta name="language" content="English, Arabic" />
     <meta name="revisit-after" content="7 days" />
     
+    <!-- Geographic Meta Tags -->
+    <meta name="geo.region" content="SA" />
+    <meta name="geo.placename" content="Saudi Arabia" />
+    <meta name="geo.position" content="24.7136;46.6753" />
+    <meta name="ICBM" content="24.7136, 46.6753" />
+    <meta name="DC.title" content="Smart Medical Consultant - AI Medical Analysis" />
+    
+    <!-- Multilingual / Alternate Language Tags -->
+    <link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/" />
+    <link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/?lang=ar" />
+    <link rel="alternate" hreflang="x-default" href="https://smartmedcon-jsnymp6w.manus.space/" />
+    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://smartmedcon-jsnymp6w.manus.space/" />
@@ -38,7 +50,99 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="https://smartmedcon-jsnymp6w.manus.space/" />    
+    <link rel="canonical" href="https://smartmedcon-jsnymp6w.manus.space/" />
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "MedicalBusiness",
+      "@id": "https://smartmedcon-jsnymp6w.manus.space/#organization",
+      "name": "Smart Medical Consultant",
+      "alternateName": "مستشارك الطبي الذكي",
+      "url": "https://smartmedcon-jsnymp6w.manus.space/",
+      "logo": "https://smartmedcon-jsnymp6w.manus.space/logo.png",
+      "description": "AI-powered medical consultation platform providing comprehensive analysis, reports, and specialist review in English and Arabic.",
+      "medicalSpecialty": [
+        "GeneralPractice",
+        "InternalMedicine",
+        "Cardiology",
+        "Neurology"
+      ],
+      "availableLanguage": ["en", "ar"],
+      "areaServed": {
+        "@type": "Country",
+        "name": "Saudi Arabia"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "24.7136",
+        "longitude": "46.6753"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "SA",
+        "addressRegion": "Riyadh"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["en", "ar"]
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://smartmedcon-jsnymp6w.manus.space/consultations?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://smartmedcon-jsnymp6w.manus.space/#website",
+      "url": "https://smartmedcon-jsnymp6w.manus.space/",
+      "name": "Smart Medical Consultant",
+      "description": "AI-Powered Medical Analysis and Consultation Platform",
+      "inLanguage": ["en", "ar"],
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://smartmedcon-jsnymp6w.manus.space/consultations?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://smartmedcon-jsnymp6w.manus.space/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Consultations",
+          "item": "https://smartmedcon-jsnymp6w.manus.space/consultations"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Dashboard",
+          "item": "https://smartmedcon-jsnymp6w.manus.space/dashboard"
+        }
+      ]
+    }
+    </script>    
     <!-- THIS IS THE START OF A COMMENT BLOCK, BLOCK TO BE DELETED: Google Fonts here, example:
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

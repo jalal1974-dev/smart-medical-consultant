@@ -387,3 +387,21 @@
 - [x] Add placeholder text and helper text for custom prompt field
 - [x] Test custom prompt with various instructions (emphasize findings, larger fonts, specific colors)
 - [x] Write vitest tests for custom prompt functionality
+
+## SEO and GEO Optimization
+- [x] Add comprehensive meta tags (description, keywords, author, viewport)
+- [x] Implement Open Graph tags for social media sharing (Facebook, LinkedIn)
+- [x] Add Twitter Card meta tags for Twitter sharing
+- [x] Create JSON-LD structured data for Organization and MedicalBusiness
+- [x] Add JSON-LD for WebSite with search action
+- [x] Implement JSON-LD for BreadcrumbList navigation
+- [x] Create sitemap.xml for search engine crawling
+- [x] Add robots.txt with crawl directives
+- [x] Add geographic meta tags (geo.region, geo.placename, geo.position)
+- [x] Implement hreflang tags for multilingual SEO (English/Arabic)
+- [x] Optimize page titles and descriptions for each route
+- [x] Add canonical URLs to prevent duplicate content
+- [x] Implement language-specific meta tags
+- [x] Add favicon and app icons for better branding
+- [x] Test SEO implementation with validation tools
+- [x] Write vitest tests for SEO meta tag generation

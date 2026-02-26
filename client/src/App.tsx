@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
@@ -16,8 +16,34 @@ import AIConsultationReview from "./pages/AIConsultationReview";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
 import PatientProfile from "./pages/PatientProfile";
 import Analytics from "./pages/Analytics";
+import { useEffect } from "react";
+import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
 function Router() {
+  const [location] = useLocation();
+  
+  // Update SEO on route change
+  useEffect(() => {
+    const path = location.split('?')[0]; // Remove query params
+    updateCanonicalURL(path);
+    
+    // Map routes to SEO page keys
+    const routeToPageMap: Record<string, string> = {
+      '/': 'home',
+      '/videos': 'videos',
+      '/podcasts': 'podcasts',
+      '/consultations': 'consultations',
+      '/dashboard': 'dashboard',
+      '/analytics': 'analytics',
+      '/admin': 'admin'
+    };
+    
+    const pageKey = routeToPageMap[path];
+    if (pageKey) {
+      updatePageSEO(pageKey as any);
+    }
+  }, [location]);
+  
   return (
     <>
       <Header />

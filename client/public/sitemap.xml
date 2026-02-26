@@ -2,46 +2,74 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
-  <!-- Home Page -->
+  <!-- Homepage -->
   <url>
     <loc>https://smartmedcon-jsnymp6w.manus.space/</loc>
-    <lastmod>2026-02-16</lastmod>
+    <lastmod>2026-02-25</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/" />
-    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/?lang=ar" />
   </url>
   
   <!-- Consultations Page -->
   <url>
     <loc>https://smartmedcon-jsnymp6w.manus.space/consultations</loc>
-    <lastmod>2026-02-16</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-02-25</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/consultations" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/consultations?lang=ar" />
   </url>
   
   <!-- Videos Page -->
   <url>
     <loc>https://smartmedcon-jsnymp6w.manus.space/videos</loc>
-    <lastmod>2026-02-16</lastmod>
+    <lastmod>2026-02-25</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/videos" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/videos?lang=ar" />
   </url>
   
   <!-- Podcasts Page -->
   <url>
     <loc>https://smartmedcon-jsnymp6w.manus.space/podcasts</loc>
-    <lastmod>2026-02-16</lastmod>
+    <lastmod>2026-02-25</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/podcasts" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/podcasts?lang=ar" />
   </url>
   
   <!-- Dashboard Page -->
   <url>
     <loc>https://smartmedcon-jsnymp6w.manus.space/dashboard</loc>
-    <lastmod>2026-02-16</lastmod>
-    <changefreq>monthly</changefreq>
+    <lastmod>2026-02-25</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/dashboard" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/dashboard?lang=ar" />
+  </url>
+  
+  <!-- Analytics Page -->
+  <url>
+    <loc>https://smartmedcon-jsnymp6w.manus.space/analytics</loc>
+    <lastmod>2026-02-25</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/analytics" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/analytics?lang=ar" />
+  </url>
+  
+  <!-- Admin Panel Page -->
+  <url>
+    <loc>https://smartmedcon-jsnymp6w.manus.space/admin</loc>
+    <lastmod>2026-02-25</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://smartmedcon-jsnymp6w.manus.space/admin" />
+    <xhtml:link rel="alternate" hreflang="ar" href="https://smartmedcon-jsnymp6w.manus.space/admin?lang=ar" />
   </url>
   
 </urlset>

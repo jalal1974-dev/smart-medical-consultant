@@ -1,13 +1,40 @@
 # robots.txt for Smart Medical Consultant
+# AI-Powered Medical Consultation Platform
 
+# Allow all search engines to crawl public pages
 User-agent: *
 Allow: /
+Allow: /videos
+Allow: /podcasts
+Allow: /consultations
 Disallow: /admin
 Disallow: /dashboard
+Disallow: /analytics
 Disallow: /api/
+Disallow: /*?*utm_*
+Disallow: /*?*session*
 
 # Sitemap location
 Sitemap: https://smartmedcon-jsnymp6w.manus.space/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1
+
+# Specific directives for major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+
+# Block AI training bots (optional - uncomment if desired)
+# User-agent: GPTBot
+# Disallow: /
+# User-agent: ChatGPT-User
+# Disallow: /
