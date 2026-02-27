@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { Header } from "./components/Header";
+import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Videos from "./pages/Videos";
 import Podcasts from "./pages/Podcasts";
@@ -47,7 +48,9 @@ function Router() {
   return (
     <>
       <Header />
-      <Switch>
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-1">
+          <Switch>
         <Route path={"/"} component={Home} />
         <Route path={"/videos"} component={Videos} />
         <Route path={"/podcasts"} component={Podcasts} />
@@ -60,7 +63,10 @@ function Router() {
         <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
-      </Switch>
+          </Switch>
+        </main>
+        <Footer />
+      </div>
     </>
   );
 }

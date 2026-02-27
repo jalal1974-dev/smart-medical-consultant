@@ -414,3 +414,14 @@
 - [x] Create comprehensive GSC integration guide
 - [x] Test verification file accessibility
 - [x] Document monitoring and analytics setup
+
+## Google Business Profile (Local SEO)
+- [x] Create GBP setup guide with step-by-step instructions
+- [x] Prepare business information template (name, address, phone, hours)
+- [x] Document category selection for medical consultation service
+- [x] Create optimization guide for posts, photos, and reviews
+- [x] Add LocalBusiness schema markup to website
+- [x] Create GBP post templates for regular updates
+- [x] Document review management strategy
+- [x] Add GBP link to website footer
+- [x] Test local business schema with Google Rich Results Test

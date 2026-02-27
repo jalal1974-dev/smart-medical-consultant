@@ -91,7 +91,54 @@
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "customer support",
-        "availableLanguage": ["en", "ar"]
+        "availableLanguage": ["en", "ar"],
+        "hoursAvailable": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ],
+          "opens": "00:00",
+          "closes": "23:59"
+        }
+      },
+      "priceRange": "FREE - SAR",
+      "currenciesAccepted": "SAR",
+      "paymentAccepted": "Cash, Credit Card, Bank Transfer",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Medical Consultation Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "AI-Powered Medical Analysis",
+              "description": "Comprehensive AI analysis of medical reports, lab results, and symptoms"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Specialist Consultation Review",
+              "description": "Certified medical specialists review AI analysis and provide expert recommendations"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Telemedicine Consultations",
+              "description": "Remote medical consultations via online platform with bilingual support"
+            }
+          }
+        ]
       },
       "potentialAction": {
         "@type": "SearchAction",
