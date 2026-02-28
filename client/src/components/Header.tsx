@@ -31,6 +31,7 @@ export function Header() {
 
   const navItems = [
     { path: "/", label: t("home") },
+    { path: "/blog", label: language === "ar" ? "المدونة" : "Blog" },
     { path: "/videos", label: t("videos") },
     { path: "/podcasts", label: t("podcasts") },
     { path: "/consultations", label: t("consultations") },
@@ -43,6 +44,7 @@ export function Header() {
   if (user?.role === "admin") {
     navItems.push({ path: "/analytics", label: language === "ar" ? "التحليلات" : "Analytics" });
     navItems.push({ path: "/admin", label: t("admin") });
+    navItems.push({ path: "/admin/blog", label: language === "ar" ? "إدارة المدونة" : "Blog Mgmt" });
   }
 
   return (

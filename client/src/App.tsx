@@ -17,6 +17,9 @@ import AIConsultationReview from "./pages/AIConsultationReview";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
 import PatientProfile from "./pages/PatientProfile";
 import Analytics from "./pages/Analytics";
+import Blog from "./pages/Blog";
+import BlogArticle from "./pages/BlogArticle";
+import BlogManagement from "./pages/BlogManagement";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -36,7 +39,8 @@ function Router() {
       '/consultations': 'consultations',
       '/dashboard': 'dashboard',
       '/analytics': 'analytics',
-      '/admin': 'admin'
+      '/admin': 'admin',
+      '/blog': 'blog'
     };
     
     const pageKey = routeToPageMap[path];
@@ -61,6 +65,9 @@ function Router() {
         <Route path={"/admin"} component={AdminPanel} />
         <Route path={"/admin/ai-review"} component={AIConsultationReview} />
         <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
+        <Route path="/blog" component={Blog} />
+        <Route path="/blog/:slug" component={BlogArticle} />
+        <Route path="/admin/blog" component={BlogManagement} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>

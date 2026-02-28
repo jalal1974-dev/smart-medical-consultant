@@ -425,3 +425,25 @@
 - [x] Document review management strategy
 - [x] Add GBP link to website footer
 - [x] Test local business schema with Google Rich Results Test
+
+## Medical Blog System
+- [x] Create blog_posts and blog_categories database tables
+- [x] Add backend tRPC routes for blog CRUD operations
+- [ ] Create blog listing page with search and filtering
+- [ ] Create individual blog article page with SEO optimization
+- [ ] Add admin interface for creating/editing blog posts
+- [ ] Implement rich text editor for blog content
+- [ ] Add category management in admin panel
+- [ ] Create SEO-optimized blog articles (5-10 initial articles)
+- [ ] Add blog to main navigation menu
+- [ ] Implement blog article schema markup for rich snippets
+- [ ] Add social sharing buttons to blog articles
+- [ ] Create related articles section
+- [ ] Add reading time estimation
+- [ ] Implement article search functionality
+- [ ] Write vitest tests for blog API
+
+## Bug Fix - React Hook Error
+- [x] Fix "Cannot read properties of null (reading 'useState')" caused by duplicate React from streamdown
+- [x] Add React deduplication to vite.config.ts
+- [x] Verify app loads without hook errors

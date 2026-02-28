@@ -928,6 +928,142 @@ export const appRouter = router({
         return await getSlideRequestByConsultation(input.consultationId);
       }),
   }),
+
+  // Blog routes
+  blog: router({
+    // Public routes
+    getAllCategories: publicProcedure
+      .query(async () => {
+        const { getAllBlogCategories } = await import('./db');
+        return await getAllBlogCategories();
+      }),
+
+    getAllPublishedPosts: publicProcedure
+      .input(z.object({
+        categoryId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { getAllPublishedBlogPosts } = await import('./db');
+        return await getAllPublishedBlogPosts(input?.categoryId);
+      }),
+
+    getPostBySlug: publicProcedure
+      .input(z.object({
+        slug: z.string(),
+        language: z.enum(['en', 'ar']),
+      }))
+      .query(async ({ input }) => {
+        const { getBlogPostBySlug, incrementBlogPostViews } = await import('./db');
+        const post = await getBlogPostBySlug(input.slug, input.language);
+        
+        if (post) {
+          // Increment view count
+          await incrementBlogPostViews(post.id);
+        }
+        
+        return post;
+      }),
+
+    searchPosts: publicProcedure
+      .input(z.object({
+        query: z.string(),
+        language: z.enum(['en', 'ar']),
+      }))
+      .query(async ({ input }) => {
+        const { searchBlogPosts } = await import('./db');
+        return await searchBlogPosts(input.query, input.language);
+      }),
+
+    // Admin routes
+    getAllPosts: adminProcedure
+      .query(async () => {
+        const { getAllBlogPosts } = await import('./db');
+        return await getAllBlogPosts(true); // Include unpublished
+      }),
+
+    createCategory: adminProcedure
+      .input(z.object({
+        nameEn: z.string(),
+        nameAr: z.string(),
+        slugEn: z.string(),
+        slugAr: z.string(),
+        descriptionEn: z.string().optional(),
+        descriptionAr: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { createBlogCategory } = await import('./db');
+        const id = await createBlogCategory(input);
+        return { success: true, id };
+      }),
+
+    createPost: adminProcedure
+      .input(z.object({
+        categoryId: z.number(),
+        titleEn: z.string(),
+        titleAr: z.string(),
+        slugEn: z.string(),
+        slugAr: z.string(),
+        excerptEn: z.string(),
+        excerptAr: z.string(),
+        contentEn: z.string(),
+        contentAr: z.string(),
+        metaDescriptionEn: z.string().optional(),
+        metaDescriptionAr: z.string().optional(),
+        metaKeywordsEn: z.string().optional(),
+        metaKeywordsAr: z.string().optional(),
+        featuredImage: z.string().optional(),
+        featuredImageAlt: z.string().optional(),
+        published: z.boolean().default(false),
+        readingTimeMinutes: z.number().default(5),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { createBlogPost } = await import('./db');
+        const id = await createBlogPost({
+          ...input,
+          authorId: ctx.user.id,
+          publishedAt: input.published ? new Date() : null,
+        });
+        return { success: true, id };
+      }),
+
+    updatePost: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        categoryId: z.number().optional(),
+        titleEn: z.string().optional(),
+        titleAr: z.string().optional(),
+        slugEn: z.string().optional(),
+        slugAr: z.string().optional(),
+        excerptEn: z.string().optional(),
+        excerptAr: z.string().optional(),
+        contentEn: z.string().optional(),
+        contentAr: z.string().optional(),
+        metaDescriptionEn: z.string().optional(),
+        metaDescriptionAr: z.string().optional(),
+        metaKeywordsEn: z.string().optional(),
+        metaKeywordsAr: z.string().optional(),
+        featuredImage: z.string().optional(),
+        featuredImageAlt: z.string().optional(),
+        published: z.boolean().optional(),
+        readingTimeMinutes: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateBlogPost } = await import('./db');
+        const { id, ...updates } = input;
+        
+        // If publishing for the first time, set publishedAt
+        if (updates.published) {
+          const { getBlogPostById } = await import('./db');
+          const post = await getBlogPostById(id);
+          if (post && !post.publishedAt) {
+            (updates as any).publishedAt = new Date();
+          }
+        }
+        
+        await updateBlogPost(id, updates);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

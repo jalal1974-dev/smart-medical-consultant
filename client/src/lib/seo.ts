@@ -158,3 +158,78 @@ export function updateCanonicalURL(path: string) {
   }
   canonical.setAttribute('href', getCanonicalURL(path));
 }
+
+/**
+ * Update SEO for dynamic content (e.g., blog articles)
+ */
+export function updateSEO(options: {
+  title: string;
+  description: string;
+  keywords?: string | null;
+  image?: string | null;
+  type?: "website" | "article";
+}) {
+  // Update title
+  document.title = options.title + " - Smart Medical Consultant";
+  
+  // Update meta description
+  let metaDescription = document.querySelector('meta[name="description"]');
+  if (!metaDescription) {
+    metaDescription = document.createElement('meta');
+    metaDescription.setAttribute('name', 'description');
+    document.head.appendChild(metaDescription);
+  }
+  metaDescription.setAttribute('content', options.description);
+  
+  // Update keywords if provided
+  if (options.keywords) {
+    let metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKeywords);
+    }
+    metaKeywords.setAttribute('content', options.keywords);
+  }
+  
+  // Update Open Graph tags
+  let ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) {
+    ogTitle.setAttribute('content', options.title);
+  }
+  
+  let ogDescription = document.querySelector('meta[property="og:description"]');
+  if (ogDescription) {
+    ogDescription.setAttribute('content', options.description);
+  }
+  
+  let ogType = document.querySelector('meta[property="og:type"]');
+  if (ogType) {
+    ogType.setAttribute('content', options.type || "article");
+  }
+  
+  if (options.image) {
+    let ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) {
+      ogImage.setAttribute('content', options.image);
+    }
+  }
+  
+  // Update Twitter Card tags
+  let twitterTitle = document.querySelector('meta[name="twitter:title"]');
+  if (twitterTitle) {
+    twitterTitle.setAttribute('content', options.title);
+  }
+  
+  let twitterDescription = document.querySelector('meta[name="twitter:description"]');
+  if (twitterDescription) {
+    twitterDescription.setAttribute('content', options.description);
+  }
+  
+  if (options.image) {
+    let twitterImage = document.querySelector('meta[name="twitter:image"]');
+    if (twitterImage) {
+      twitterImage.setAttribute('content', options.image);
+    }
+  }
+}

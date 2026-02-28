@@ -253,3 +253,64 @@ export const slideGenerationRequests = mysqlTable("slide_generation_requests", {
 
 export type SlideGenerationRequest = typeof slideGenerationRequests.$inferSelect;
 export type InsertSlideGenerationRequest = typeof slideGenerationRequests.$inferInsert;
+
+/**
+ * Blog categories table - organizes blog posts by medical topics
+ */
+export const blogCategories = mysqlTable("blog_categories", {
+  id: int("id").autoincrement().primaryKey(),
+  nameEn: varchar("name_en", { length: 255 }).notNull(),
+  nameAr: varchar("name_ar", { length: 255 }).notNull(),
+  slugEn: varchar("slug_en", { length: 255 }).notNull().unique(),
+  slugAr: varchar("slug_ar", { length: 255 }).notNull().unique(),
+  descriptionEn: text("description_en"),
+  descriptionAr: text("description_ar"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BlogCategory = typeof blogCategories.$inferSelect;
+export type InsertBlogCategory = typeof blogCategories.$inferInsert;
+
+/**
+ * Blog posts table - SEO-optimized medical articles
+ */
+export const blogPosts = mysqlTable("blog_posts", {
+  id: int("id").autoincrement().primaryKey(),
+  categoryId: int("category_id").notNull(),
+  authorId: int("author_id").notNull(), // User ID of author (admin)
+  
+  // Content in both languages
+  titleEn: varchar("title_en", { length: 500 }).notNull(),
+  titleAr: varchar("title_ar", { length: 500 }).notNull(),
+  slugEn: varchar("slug_en", { length: 500 }).notNull().unique(),
+  slugAr: varchar("slug_ar", { length: 500 }).notNull().unique(),
+  excerptEn: text("excerpt_en").notNull(), // Short summary for listings
+  excerptAr: text("excerpt_ar").notNull(),
+  contentEn: text("content_en").notNull(), // Full article content (Markdown)
+  contentAr: text("content_ar").notNull(),
+  
+  // SEO fields
+  metaDescriptionEn: varchar("meta_description_en", { length: 500 }),
+  metaDescriptionAr: varchar("meta_description_ar", { length: 500 }),
+  metaKeywordsEn: text("meta_keywords_en"), // Comma-separated keywords
+  metaKeywordsAr: text("meta_keywords_ar"),
+  
+  // Featured image
+  featuredImage: varchar("featured_image", { length: 500 }),
+  featuredImageAlt: varchar("featured_image_alt", { length: 255 }),
+  
+  // Publishing
+  published: boolean("published").default(false).notNull(),
+  publishedAt: timestamp("published_at"),
+  
+  // Engagement metrics
+  views: int("views").default(0).notNull(),
+  readingTimeMinutes: int("reading_time_minutes").default(5).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type InsertBlogPost = typeof blogPosts.$inferInsert;

@@ -1,6 +1,6 @@
-import { eq, desc, and, sql, gte, lte, inArray } from "drizzle-orm";
+import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -945,4 +945,146 @@ export async function getAllResearchedTopics(consultationId: number) {
     );
 
   return topics;
+}
+
+// ===== Blog Functions =====
+
+export async function getAllBlogCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(blogCategories).orderBy(blogCategories.nameEn);
+}
+
+export async function getBlogCategoryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const [category] = await db
+    .select()
+    .from(blogCategories)
+    .where(eq(blogCategories.id, id))
+    .limit(1);
+  
+  return category || null;
+}
+
+export async function createBlogCategory(data: InsertBlogCategory) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const [result] = await db.insert(blogCategories).values(data);
+  return result.insertId;
+}
+
+export async function getAllPublishedBlogPosts(categoryId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (categoryId) {
+    return await db
+      .select()
+      .from(blogPosts)
+      .where(and(eq(blogPosts.published, true), eq(blogPosts.categoryId, categoryId)))
+      .orderBy(desc(blogPosts.publishedAt));
+  }
+  
+  return await db
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.published, true))
+    .orderBy(desc(blogPosts.publishedAt));
+}
+
+export async function getAllBlogPosts(includeUnpublished = false) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (includeUnpublished) {
+    return await db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
+  }
+  
+  return await db
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.published, true))
+    .orderBy(desc(blogPosts.createdAt));
+}
+
+export async function getBlogPostBySlug(slug: string, language: 'en' | 'ar') {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const slugField = language === 'ar' ? blogPosts.slugAr : blogPosts.slugEn;
+  
+  const [post] = await db
+    .select()
+    .from(blogPosts)
+    .where(eq(slugField, slug))
+    .limit(1);
+  
+  return post || null;
+}
+
+export async function getBlogPostById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const [post] = await db
+    .select()
+    .from(blogPosts)
+    .where(eq(blogPosts.id, id))
+    .limit(1);
+  
+  return post || null;
+}
+
+export async function createBlogPost(data: InsertBlogPost) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const [result] = await db.insert(blogPosts).values(data);
+  return result.insertId;
+}
+
+export async function updateBlogPost(id: number, data: Partial<InsertBlogPost>) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db
+    .update(blogPosts)
+    .set(data)
+    .where(eq(blogPosts.id, id));
+}
+
+export async function incrementBlogPostViews(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db
+    .update(blogPosts)
+    .set({ views: sql`${blogPosts.views} + 1` })
+    .where(eq(blogPosts.id, id));
+}
+
+export async function searchBlogPosts(searchQuery: string, language: 'en' | 'ar') {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const titleField = language === 'ar' ? blogPosts.titleAr : blogPosts.titleEn;
+  const contentField = language === 'ar' ? blogPosts.contentAr : blogPosts.contentEn;
+  
+  return await db
+    .select()
+    .from(blogPosts)
+    .where(
+      and(
+        eq(blogPosts.published, true),
+        or(
+          like(titleField, `%${searchQuery}%`),
+          like(contentField, `%${searchQuery}%`)
+        )
+      )
+    )
+    .orderBy(desc(blogPosts.publishedAt));
 }
