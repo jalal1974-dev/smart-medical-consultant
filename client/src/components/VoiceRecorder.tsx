@@ -21,7 +21,20 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+
+      // Detect best supported MIME type
+      const mimeType = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        'audio/mp4',
+      ].find(type => MediaRecorder.isTypeSupported(type)) || '';
+
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -32,14 +45,21 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        
+        // Use the actual MIME type from the recorder
+        const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+        // Normalize to a clean MIME type (strip codec params)
+        const cleanMimeType = actualMimeType.split(';')[0] || 'audio/webm';
+        const ext = cleanMimeType.includes('ogg') ? 'ogg' : cleanMimeType.includes('mp4') ? 'mp4' : 'webm';
+
+        const audioBlob = new Blob(chunksRef.current, { type: cleanMimeType });
+
         // Check file size (16MB limit)
         const fileSizeMB = audioBlob.size / (1024 * 1024);
         if (fileSizeMB > 16) {
-          toast.error(language === "ar" 
+          toast.error(language === "ar"
             ? "حجم التسجيل كبير جداً. الحد الأقصى 16 ميجابايت"
             : "Recording is too large. Maximum 16MB");
+          stream.getTracks().forEach(track => track.stop());
           return;
         }
 
@@ -53,12 +73,12 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
               const base64Audio = reader.result as string;
               const base64Data = base64Audio.split(',')[1];
 
-              // Upload to S3 using tRPC
+              // Upload to S3 using tRPC with 'audio' category
               const uploadResult = await uploadMutation.mutateAsync({
-                fileName: `voice-${Date.now()}.webm`,
+                fileName: `voice-${Date.now()}.${ext}`,
                 fileData: base64Data,
-                fileType: 'audio/webm',
-                category: 'other',
+                fileType: cleanMimeType,
+                category: 'audio',
               });
 
               // Transcribe the audio
@@ -68,26 +88,32 @@ export function VoiceRecorder({ onTranscriptionComplete, language }: VoiceRecord
               });
 
               onTranscriptionComplete(result.text);
-              toast.success(language === "ar" 
+              toast.success(language === "ar"
                 ? "تم تحويل الصوت إلى نص بنجاح"
                 : "Voice transcribed successfully");
             } catch (error: any) {
               console.error("Upload or transcription error:", error);
-              toast.error(error.message || (language === "ar" 
-                ? "فشل تحويل الصوت إلى نص"
-                : "Failed to transcribe voice"));
+              toast.error(
+                (error?.data?.message || error?.message) ||
+                (language === "ar" ? "فشل تحويل الصوت إلى نص" : "Failed to transcribe voice")
+              );
             } finally {
               setIsProcessing(false);
             }
           };
 
+          reader.onerror = () => {
+            toast.error(language === "ar" ? "فشل قراءة ملف الصوت" : "Failed to read audio file");
+            setIsProcessing(false);
+          };
+
           reader.readAsDataURL(audioBlob);
         } catch (error: any) {
           console.error("Transcription error:", error);
-          toast.error(error.message || (language === "ar" 
-            ? "فشل تحويل الصوت إلى نص"
-            : "Failed to transcribe voice"));
-        } finally {
+          toast.error(
+            (error?.data?.message || error?.message) ||
+            (language === "ar" ? "فشل تحويل الصوت إلى نص" : "Failed to transcribe voice")
+          );
           setIsProcessing(false);
         }
 

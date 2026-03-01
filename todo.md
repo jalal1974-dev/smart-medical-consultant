@@ -447,3 +447,12 @@
 - [x] Fix "Cannot read properties of null (reading 'useState')" caused by duplicate React from streamdown
 - [x] Add React deduplication to vite.config.ts
 - [x] Verify app loads without hook errors
+
+## Bug Fix - Voice Recording in Consultation Form
+- [x] Diagnose voice recording error in consultation form (upload route rejected audio/webm MIME type)
+- [x] Add audio MIME types to allowed file types in upload route
+- [x] Add 'audio' category to upload route enum
+- [x] Fix MediaRecorder to auto-detect best supported MIME type
+- [x] Normalize MIME type by stripping codec params before upload
+- [x] Fix error message extraction for better user feedback
+- [x] Write vitest tests for voice recording fix (15 passing)

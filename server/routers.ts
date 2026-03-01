@@ -39,7 +39,7 @@ export const appRouter = router({
         fileName: z.string(),
         fileType: z.string(),
         fileData: z.string(), // base64 encoded file data
-        category: z.enum(['medical_report', 'lab_result', 'xray', 'other']),
+        category: z.enum(['medical_report', 'lab_result', 'xray', 'other', 'audio']),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
@@ -52,24 +52,33 @@ export const appRouter = router({
             'image/gif',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            // Audio types for voice recording
+            'audio/webm',
+            'audio/mp3',
+            'audio/mpeg',
+            'audio/wav',
+            'audio/ogg',
+            'audio/m4a',
+            'audio/mp4',
           ];
 
           if (!allowedTypes.includes(input.fileType)) {
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: 'Invalid file type. Only PDF, images, and Word documents are allowed.',
+              message: 'Invalid file type. Only PDF, images, Word documents, and audio files are allowed.',
             });
           }
 
           // Convert base64 to buffer
           const fileBuffer = Buffer.from(input.fileData, 'base64');
 
-          // Validate file size (max 10MB)
-          const maxSize = 10 * 1024 * 1024; // 10MB
+          // Validate file size (16MB for audio, 10MB for others)
+          const isAudio = input.fileType.startsWith('audio/');
+          const maxSize = isAudio ? 16 * 1024 * 1024 : 10 * 1024 * 1024;
           if (fileBuffer.length > maxSize) {
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: 'File size exceeds 10MB limit.',
+              message: isAudio ? 'Audio file size exceeds 16MB limit.' : 'File size exceeds 10MB limit.',
             });
           }
 
