@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
@@ -11,6 +11,8 @@ import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { processConsultationWithAI, reprocessConsultationAfterRejection } from "./aiProcessingOrchestrator";
 import { transcribeAudio } from "./voiceTranscription";
+import bcrypt from "bcryptjs";
+import { sdk } from "./_core/sdk";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -30,6 +32,103 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+
+    // Local registration (step 1: create account, no payment yet)
+    register: publicProcedure
+      .input(z.object({
+        username: z.string().min(3, 'Username must be at least 3 characters').max(50).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores'),
+        email: z.string().email('Invalid email address'),
+        name: z.string().min(1, 'Full name is required').max(100),
+        password: z.string().min(8, 'Password must be at least 8 characters'),
+      }))
+      .mutation(async ({ input }) => {
+        // Check username uniqueness
+        const existingUsername = await db.getUserByUsername(input.username);
+        if (existingUsername) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Username already taken' });
+        }
+        // Check email uniqueness
+        const existingEmail = await db.getUserByEmail(input.email);
+        if (existingEmail) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Email already registered' });
+        }
+        // Hash password with bcrypt (12 rounds for strong security)
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        // Create user (0 consultations until payment)
+        const userId = await db.createLocalUser({
+          username: input.username,
+          email: input.email,
+          name: input.name,
+          passwordHash,
+        });
+        return { success: true, userId };
+      }),
+
+    // Local login with username/password
+    loginLocal: publicProcedure
+      .input(z.object({
+        username: z.string(),
+        password: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await db.getUserByUsername(input.username);
+        if (!user || !user.password_hash) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid username or password' });
+        }
+        const isValid = await bcrypt.compare(input.password, user.password_hash);
+        if (!isValid) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid username or password' });
+        }
+        // Create session cookie
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || '',
+          expiresInMs: ONE_YEAR_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true };
+      }),
+
+    // Confirm PayPal payment and grant 10 consultations
+    confirmPaypalPayment: publicProcedure
+      .input(z.object({
+        userId: z.number(),
+        paypalOrderId: z.string(),
+        paypalPayerId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check payment not already processed
+        const existing = await db.getRegistrationPaymentByOrderId(input.paypalOrderId);
+        if (existing && existing.status === 'completed') {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Payment already processed' });
+        }
+        // Record payment
+        if (!existing) {
+          await db.createRegistrationPayment({
+            userId: input.userId,
+            paypalOrderId: input.paypalOrderId,
+            amount: 1.00,
+            currency: 'USD',
+            status: 'completed',
+            consultationsGranted: 10,
+          });
+        } else {
+          await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
+        }
+        // Grant 10 consultations to the user
+        await db.grantConsultationsAfterPayment(input.userId, 10);
+        // Auto-login: create session for the new user
+        const user = await db.getUserById(input.userId);
+        if (user) {
+          const sessionToken = await sdk.createSessionToken(user.openId, {
+            name: user.name || '',
+            expiresInMs: ONE_YEAR_MS,
+          });
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        }
+        return { success: true, consultationsGranted: 10 };
+      }),
   }),
 
   // File upload route

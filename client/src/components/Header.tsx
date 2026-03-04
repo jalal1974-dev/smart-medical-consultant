@@ -119,9 +119,14 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" asChild>
-              <a href={getLoginUrl()}>{t("signIn")}</a>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/login">{language === "ar" ? "تسجيل الدخول" : "Sign In"}</Link>
+              </Button>
+              <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Link href="/register">{language === "ar" ? "إنشاء حساب" : "Register"}</Link>
+              </Button>
+            </div>
           )}
         </div>
 
@@ -175,9 +180,14 @@ export function Header() {
                   </Button>
                 </div>
               ) : (
-                <Button size="sm" asChild>
-                  <a href={getLoginUrl()}>{t("signIn")}</a>
-                </Button>
+                <div className="flex flex-col gap-2 w-full">
+                  <Button size="sm" variant="outline" asChild className="w-full">
+                    <Link href="/login">{language === "ar" ? "تسجيل الدخول" : "Sign In"}</Link>
+                  </Button>
+                  <Button size="sm" asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Link href="/register">{language === "ar" ? "إنشاء حساب ($1)" : "Register ($1)"}</Link>
+                  </Button>
+                </div>
               )}
             </div>
           </nav>

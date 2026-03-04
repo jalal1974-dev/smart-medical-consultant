@@ -20,6 +20,8 @@ import Analytics from "./pages/Analytics";
 import Blog from "./pages/Blog";
 import BlogArticle from "./pages/BlogArticle";
 import BlogManagement from "./pages/BlogManagement";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -68,6 +70,8 @@ function Router() {
         <Route path="/blog" component={Blog} />
         <Route path="/blog/:slug" component={BlogArticle} />
         <Route path="/admin/blog" component={BlogManagement} />
+        <Route path="/register" component={Register} />
+        <Route path="/login" component={Login} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>

@@ -456,3 +456,18 @@
 - [x] Normalize MIME type by stripping codec params before upload
 - [x] Fix error message extraction for better user feedback
 - [x] Write vitest tests for voice recording fix (15 passing)
+
+## Username/Password Registration with $1 PayPal Payment
+- [x] Add username, password_hash fields to users table
+- [x] Add registration_payments table to track $1 PayPal payments
+- [x] Build backend: register with bcrypt (12 rounds) password hashing
+- [x] Build backend: login with JWT session cookie
+- [x] Build backend: verifyPayPalPayment route to confirm payment and grant 10 consultations
+- [x] Build frontend: multi-step registration form (account info → upload report → pay $1)
+- [x] Build frontend: medical report upload step during registration
+- [x] Build frontend: PayPal SDK integration for $1 payment
+- [x] Build frontend: login page with username/password
+- [x] Integrate local auth alongside existing OAuth login
+- [x] Show "Register" and "Login" buttons on header for non-logged-in users
+- [x] Test complete registration → payment → consultation flow
+- [x] Write 14 vitest tests for auth and payment logic (all passing)

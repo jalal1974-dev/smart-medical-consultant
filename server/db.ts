@@ -1088,3 +1088,98 @@ export async function searchBlogPosts(searchQuery: string, language: 'en' | 'ar'
     )
     .orderBy(desc(blogPosts.publishedAt));
 }
+
+// ==================== Local Auth Functions ====================
+
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await (db as any).execute(
+    `SELECT * FROM users WHERE username = ? LIMIT 1`,
+    [username]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  return rows.length > 0 ? rows[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createLocalUser(data: {
+  username: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Generate a unique openId for local users
+  const openId = `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+  const result = await (db as any).execute(
+    `INSERT INTO users (openId, username, email, name, password_hash, auth_method, loginMethod, role, hasUsedFreeConsultation, subscription_type, consultations_remaining, lastSignedIn, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, 'local', 'local', 'user', 0, 'free', 0, NOW(), NOW(), NOW())`,
+    [openId, data.username, data.email, data.name, data.passwordHash]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  return (rows as any).insertId;
+}
+
+export async function grantConsultationsAfterPayment(userId: number, count: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await (db as any).execute(
+    `UPDATE users SET consultations_remaining = consultations_remaining + ?, hasUsedFreeConsultation = 1 WHERE id = ?`,
+    [count, userId]
+  );
+}
+
+export async function createRegistrationPayment(data: {
+  userId: number;
+  paypalOrderId: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  consultationsGranted: number;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await (db as any).execute(
+    `INSERT INTO registration_payments (user_id, paypal_order_id, amount, currency, status, consultations_granted)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [data.userId, data.paypalOrderId, data.amount, data.currency, data.status, data.consultationsGranted]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  return (rows as any).insertId;
+}
+
+export async function updateRegistrationPaymentStatus(paypalOrderId: string, status: 'completed' | 'failed', paypalPayerId?: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await (db as any).execute(
+    `UPDATE registration_payments SET status = ?, paypal_payer_id = ?, updated_at = NOW() WHERE paypal_order_id = ?`,
+    [status, paypalPayerId || null, paypalOrderId]
+  );
+}
+
+export async function getRegistrationPaymentByOrderId(paypalOrderId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await (db as any).execute(
+    `SELECT * FROM registration_payments WHERE paypal_order_id = ? LIMIT 1`,
+    [paypalOrderId]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  return rows.length > 0 ? rows[0] : undefined;
+}
