@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map } from "lucide-react";
+import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { SatisfactionSurvey } from "@/components/SatisfactionSurvey";
@@ -226,10 +227,15 @@ export default function Dashboard() {
     <div className="min-h-screen py-12">
       <div className="container max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">{t("dashboard")}</h1>
-          <p className="text-xl text-muted-foreground">
-            {user?.hasUsedFreeConsultation ? t("freeConsultationUsed") : t("freeConsultation")}
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">{t("dashboard")}</h1>
+              <p className="text-xl text-muted-foreground">
+                {user?.hasUsedFreeConsultation ? t("freeConsultationUsed") : t("freeConsultation")}
+              </p>
+            </div>
+            <ConsultationCounter language={language} />
+          </div>
         </div>
 
         {/* Continue Watching Section */}

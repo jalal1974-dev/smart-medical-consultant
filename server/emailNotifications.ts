@@ -320,3 +320,41 @@ ${teamLabel}
     return false;
   }
 }
+
+/**
+ * Send password reset email to user
+ * Uses the owner notification system as a relay since direct SMTP is not configured.
+ * The owner/admin receives the reset link and can forward it to the user.
+ * In production, replace with direct email sending (SendGrid, AWS SES, Nodemailer, etc.)
+ */
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  userName: string | null,
+  resetUrl: string
+): Promise<boolean> {
+  const displayName = userName || userEmail;
+
+  const title = `Password Reset Request - ${displayName}`;
+  const content = `
+A password reset was requested for the following account:
+
+User: ${displayName}
+Email: ${userEmail}
+
+Reset Link (expires in 1 hour):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${resetUrl}
+
+If this user did not request a password reset, no action is needed.
+
+Note: This link expires in 1 hour. After that, the user will need to request a new reset link.
+  `.trim();
+
+  try {
+    await notifyOwner({ title, content });
+    return true;
+  } catch (error) {
+    console.error("Failed to send password reset email:", error);
+    return false;
+  }
+}

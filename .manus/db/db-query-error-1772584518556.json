@@ -1,0 +1,11 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS password_reset_tokens (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  user_id INT NOT NULL,\n  token VARCHAR(128) NOT NULL UNIQUE,\n  expires_at BIGINT NOT NULL,\n  used_at BIGINT NULL,\n  created_at BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP() * 1000),\n  INDEX idx_token (token),\n  INDEX idx_user_id (user_id)\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nCREATE TABLE IF NOT EXISTS password_reset_tokens (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  user_id INT NOT NULL,\n  token VARCHAR(128) NOT NULL UNIQUE,\n  expires_at BIGINT NOT NULL,\n  used_at BIGINT NULL,\n  created_at BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP() * 1000),\n  INDEX idx_token (token),\n  INDEX idx_user_id (user_id)\n);\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 2: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 7 column 57 near \"* 1000),",
+    "  INDEX idx_token (token),",
+    "  INDEX idx_user_id (user_id)",
+    ")\""
+  ]
+}

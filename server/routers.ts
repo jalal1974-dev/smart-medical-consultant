@@ -129,6 +129,63 @@ export const appRouter = router({
         }
         return { success: true, consultationsGranted: 10 };
       }),
+
+    // Request password reset - sends email with token
+    requestPasswordReset: publicProcedure
+      .input(z.object({
+        email: z.string().email('Invalid email address'),
+      }))
+      .mutation(async ({ input }) => {
+        // Always return success to prevent email enumeration attacks
+        const user = await db.getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          // User not found or uses OAuth only — still return success
+          return { success: true };
+        }
+
+        // Generate a cryptographically secure token
+        const crypto = await import('crypto');
+        const token = crypto.randomBytes(48).toString('hex');
+        const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour from now
+
+        // Store token in DB
+        await db.createPasswordResetToken(user.id, token, expiresAt);
+
+        // Send reset email
+        const { sendPasswordResetEmail } = await import('./emailNotifications');
+        const resetUrl = `https://smartmedcon-jsnymp6w.manus.space/reset-password?token=${token}`;
+        await sendPasswordResetEmail(user.email || input.email, user.name, resetUrl);
+
+        return { success: true };
+      }),
+
+    // Reset password using token
+    resetPassword: publicProcedure
+      .input(z.object({
+        token: z.string().min(1, 'Token is required'),
+        newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+      }))
+      .mutation(async ({ input }) => {
+        const resetToken = await db.getPasswordResetToken(input.token);
+        if (!resetToken) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired reset token' });
+        }
+        if (resetToken.usedAt) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'This reset link has already been used' });
+        }
+        if (Date.now() > resetToken.expiresAt) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'This reset link has expired. Please request a new one.' });
+        }
+
+        // Hash the new password
+        const passwordHash = await bcrypt.hash(input.newPassword, 12);
+
+        // Update user password and mark token as used
+        await db.updateUserPassword(resetToken.userId, passwordHash);
+        await db.markPasswordResetTokenUsed(input.token);
+
+        return { success: true };
+      }),
   }),
 
   // File upload route
@@ -1170,6 +1227,68 @@ export const appRouter = router({
         
         await updateBlogPost(id, updates);
         return { success: true };
+      }),
+  }),
+
+  // Subscription / consultation purchase routes
+  subscription: router({
+    // Get current user's consultation balance and subscription info
+    getStatus: protectedProcedure.query(async ({ ctx }) => {
+      const user = await db.getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      return {
+        consultationsRemaining: (user as any).consultations_remaining ?? ctx.user.consultationsRemaining ?? 0,
+        subscriptionType: (user as any).subscription_type ?? ctx.user.subscriptionType ?? 'free',
+        hasUsedFreeConsultation: Boolean((user as any).has_used_free_consultation ?? ctx.user.hasUsedFreeConsultation),
+      };
+    }),
+
+    // Purchase additional consultations via PayPal
+    purchaseConsultations: protectedProcedure
+      .input(z.object({
+        paypalOrderId: z.string(),
+        paypalPayerId: z.string().optional(),
+        plan: z.enum(['basic', 'standard', 'premium']), // 5, 15, 30 consultations
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const planDetails: Record<string, { consultations: number; amount: number }> = {
+          basic: { consultations: 5, amount: 5 },
+          standard: { consultations: 15, amount: 12 },
+          premium: { consultations: 30, amount: 20 },
+        };
+        const plan = planDetails[input.plan];
+
+        // Check for duplicate payment
+        const existing = await db.getRegistrationPaymentByOrderId(input.paypalOrderId);
+        if (existing && existing.status === 'completed') {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Payment already processed' });
+        }
+
+        // Record payment
+        if (!existing) {
+          await db.createRegistrationPayment({
+            userId: ctx.user.id,
+            paypalOrderId: input.paypalOrderId,
+            amount: plan.amount,
+            currency: 'USD',
+            status: 'completed',
+            consultationsGranted: plan.consultations,
+          });
+        } else {
+          await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
+        }
+
+        // Grant consultations
+        await db.grantConsultationsAfterPayment(ctx.user.id, plan.consultations);
+
+        // Notify owner
+        const { notifyOwner } = await import('./_core/notification');
+        await notifyOwner({
+          title: `New Consultation Purchase - ${ctx.user.name}`,
+          content: `User ${ctx.user.name} purchased the ${input.plan} plan (${plan.consultations} consultations for $${plan.amount}).`,
+        });
+
+        return { success: true, consultationsGranted: plan.consultations, amount: plan.amount };
       }),
   }),
 });

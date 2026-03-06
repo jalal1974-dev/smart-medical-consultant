@@ -471,3 +471,24 @@
 - [x] Show "Register" and "Login" buttons on header for non-logged-in users
 - [x] Test complete registration → payment → consultation flow
 - [x] Write 14 vitest tests for auth and payment logic (all passing)
+
+## Password Reset Flow
+- [x] Create password_reset_tokens table (token, userId, expiresAt, usedAt)
+- [x] Add requestPasswordReset backend route (generates token, sends email)
+- [x] Add resetPassword backend route (validates token, updates password)
+- [x] Build ForgotPassword page with email input form
+- [x] Build ResetPassword page with new password + confirm form
+- [x] Add "Forgot Password?" link to Login page
+- [x] Add /forgot-password and /reset-password routes to App.tsx
+- [x] Send password reset email via notification system
+- [x] Write vitest tests for token generation and validation
+
+## Consultation Counter & Subscription Upgrade
+- [x] Add subscription.getStatus tRPC route to fetch consultations remaining
+- [x] Add subscription.purchaseConsultations tRPC route with 3 plan tiers
+- [x] Create ConsultationCounter component with upgrade dialog
+- [x] Integrate ConsultationCounter into patient dashboard header
+- [x] Show low-balance warning (≤2 remaining) with amber indicator
+- [x] Show empty-balance alert (0 remaining) with red indicator
+- [x] PayPal payment integration for Basic ($5/5), Standard ($12/15), Premium ($20/30) plans
+- [x] Write vitest tests for subscription plan logic (12 passing)

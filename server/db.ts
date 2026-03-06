@@ -1107,8 +1107,30 @@ export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  // Use raw SQL to include password_hash which was added via direct SQL migration
+  const result = await (db as any).execute(
+    `SELECT * FROM users WHERE email = ? LIMIT 1`,
+    [email]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  if (!rows || rows.length === 0) return undefined;
+  const row = rows[0];
+  return {
+    id: row.id as number,
+    openId: row.open_id as string,
+    name: row.name as string | null,
+    email: row.email as string | null,
+    username: row.username as string | null,
+    passwordHash: row.password_hash as string | null,
+    loginMethod: row.login_method as string | null,
+    role: row.role as 'user' | 'admin',
+    consultationsRemaining: row.consultations_remaining as number,
+    hasUsedFreeConsultation: Boolean(row.has_used_free_consultation),
+    subscriptionType: row.subscription_type as string,
+    createdAt: row.created_at as Date,
+    updatedAt: row.updated_at as Date,
+    lastSignedIn: row.last_signed_in as Date,
+  };
 }
 
 export async function createLocalUser(data: {
@@ -1182,4 +1204,57 @@ export async function getRegistrationPaymentByOrderId(paypalOrderId: string) {
   );
   const rows = Array.isArray(result[0]) ? result[0] : result;
   return rows.length > 0 ? rows[0] : undefined;
+}
+
+// ─── Password Reset Token Helpers ───────────────────────────────────────────
+
+export async function createPasswordResetToken(userId: number, token: string, expiresAt: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await (db as any).execute(
+    `INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)`,
+    [userId, token, expiresAt]
+  );
+}
+
+export async function getPasswordResetToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await (db as any).execute(
+    `SELECT * FROM password_reset_tokens WHERE token = ? LIMIT 1`,
+    [token]
+  );
+  const rows = Array.isArray(result[0]) ? result[0] : result;
+  if (!rows || rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    id: row.id as number,
+    userId: row.user_id as number,
+    token: row.token as string,
+    expiresAt: Number(row.expires_at),
+    usedAt: row.used_at ? Number(row.used_at) : null,
+    createdAt: Number(row.created_at),
+  };
+}
+
+export async function markPasswordResetTokenUsed(token: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await (db as any).execute(
+    `UPDATE password_reset_tokens SET used_at = ? WHERE token = ?`,
+    [Date.now(), token]
+  );
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await (db as any).execute(
+    `UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?`,
+    [passwordHash, userId]
+  );
 }

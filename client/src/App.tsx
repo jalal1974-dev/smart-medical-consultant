@@ -22,6 +22,8 @@ import BlogArticle from "./pages/BlogArticle";
 import BlogManagement from "./pages/BlogManagement";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -72,6 +74,8 @@ function Router() {
         <Route path="/admin/blog" component={BlogManagement} />
         <Route path="/register" component={Register} />
         <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>
