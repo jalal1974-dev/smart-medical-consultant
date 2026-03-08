@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1257,4 +1257,64 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
     `UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?`,
     [passwordHash, userId]
   );
+}
+
+// ==================== User Medical Records Functions ====================
+
+export async function getUserMedicalRecords(userId: number): Promise<UserMedicalRecord[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const records = await (db as any)
+    .select()
+    .from(userMedicalRecords)
+    .where(eq(userMedicalRecords.userId, userId))
+    .orderBy(desc(userMedicalRecords.createdAt));
+
+  return records;
+}
+
+export async function createUserMedicalRecord(data: {
+  userId: number;
+  fileName: string;
+  fileUrl: string;
+  fileKey: string;
+  fileType: string;
+  fileSize?: number;
+  category: 'medical_report' | 'lab_result' | 'xray' | 'prescription' | 'other';
+  notes?: string;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const result = await (db as any).execute(
+    `INSERT INTO user_medical_records (user_id, file_name, file_url, file_key, file_type, file_size, category, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [data.userId, data.fileName, data.fileUrl, data.fileKey, data.fileType, data.fileSize ?? null, data.category, data.notes ?? null]
+  );
+  return result[0].insertId;
+}
+
+export async function deleteUserMedicalRecord(id: number, userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const result = await (db as any).execute(
+    `DELETE FROM user_medical_records WHERE id = ? AND user_id = ?`,
+    [id, userId]
+  );
+  return result[0].affectedRows > 0;
+}
+
+export async function getUserMedicalRecordById(id: number): Promise<UserMedicalRecord | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const records = await (db as any)
+    .select()
+    .from(userMedicalRecords)
+    .where(eq(userMedicalRecords.id, id))
+    .limit(1);
+
+  return records[0] ?? null;
 }

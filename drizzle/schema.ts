@@ -314,3 +314,69 @@ export const blogPosts = mysqlTable("blog_posts", {
 
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = typeof blogPosts.$inferInsert;
+
+/**
+ * User medical records table - personal health file vault for each registered user
+ */
+export const userMedicalRecords = mysqlTable("user_medical_records", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  
+  // File information
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: varchar("file_url", { length: 500 }).notNull(), // S3 public URL
+  fileKey: varchar("file_key", { length: 500 }).notNull(), // S3 key for deletion
+  fileType: varchar("file_type", { length: 100 }).notNull(), // MIME type
+  fileSize: int("file_size"), // bytes
+  
+  // Categorization
+  category: mysqlEnum("category", [
+    "medical_report",
+    "lab_result",
+    "xray",
+    "prescription",
+    "other"
+  ]).default("other").notNull(),
+  
+  // Optional notes
+  notes: text("notes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserMedicalRecord = typeof userMedicalRecords.$inferSelect;
+export type InsertUserMedicalRecord = typeof userMedicalRecords.$inferInsert;
+
+/**
+ * Registration payments table - tracks $1 PayPal payments for user registration
+ */
+export const registrationPayments = mysqlTable("registration_payments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  paypalOrderId: varchar("paypal_order_id", { length: 255 }).notNull().unique(),
+  paypalPayerId: varchar("paypal_payer_id", { length: 255 }),
+  amount: int("amount").notNull(), // in cents
+  currency: varchar("currency", { length: 10 }).default("USD").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
+  consultationsGranted: int("consultations_granted").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RegistrationPayment = typeof registrationPayments.$inferSelect;
+export type InsertRegistrationPayment = typeof registrationPayments.$inferInsert;
+
+/**
+ * Password reset tokens table - secure one-time tokens for password recovery
+ */
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: int("expires_at").notNull(), // Unix timestamp ms
+  usedAt: int("used_at"), // Unix timestamp ms, null if not used
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;

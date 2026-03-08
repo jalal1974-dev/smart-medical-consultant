@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle, User, Mail, Lock, CreditCard, Upload, ArrowRight, ArrowLeft, Shield, Gift } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, User, Mail, Lock, CreditCard, Upload, ArrowRight, ArrowLeft, Shield, Gift, FolderHeart } from "lucide-react";
 
 type Step = "account" | "payment" | "upload" | "success";
 
@@ -446,9 +446,14 @@ export default function Register() {
                   <p className="text-slate-400">Powered Analysis</p>
                 </div>
               </div>
-              <Button onClick={() => navigate("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-5">
-                Go to My Dashboard
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => navigate("/my-profile")} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-5">
+                  <span className="flex items-center gap-2"><FolderHeart className="w-5 h-5" /> View My Medical Profile</span>
+                </Button>
+                <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
+                  Go to Dashboard
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

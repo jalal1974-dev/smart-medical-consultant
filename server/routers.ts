@@ -1291,6 +1291,105 @@ export const appRouter = router({
         return { success: true, consultationsGranted: plan.consultations, amount: plan.amount };
       }),
   }),
+
+  // Personal medical profile routes
+  profile: router({
+    // Get full profile: user info + stats + consultation summary
+    getProfile: protectedProcedure.query(async ({ ctx }) => {
+      const user = await db.getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+
+      const consultationsList = await db.getConsultationsByUserId(ctx.user.id);
+      const records = await db.getUserMedicalRecords(ctx.user.id);
+
+      const totalConsultations = consultationsList.length;
+      const completedConsultations = consultationsList.filter((c: any) => c.status === 'completed').length;
+      const pendingConsultations = consultationsList.filter((c: any) =>
+        ['submitted', 'ai_processing', 'specialist_review'].includes(c.status)
+      ).length;
+
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          loginMethod: (user as any).login_method ?? user.loginMethod ?? 'oauth',
+          subscriptionType: (user as any).subscription_type ?? user.subscriptionType ?? 'free',
+          consultationsRemaining: (user as any).consultations_remaining ?? user.consultationsRemaining ?? 0,
+          hasUsedFreeConsultation: Boolean((user as any).has_used_free_consultation ?? user.hasUsedFreeConsultation),
+          createdAt: user.createdAt,
+        },
+        stats: {
+          totalConsultations,
+          completedConsultations,
+          pendingConsultations,
+          totalRecords: records.length,
+        },
+        consultations: consultationsList,
+        records,
+      };
+    }),
+
+    // Get user's medical records
+    getRecords: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserMedicalRecords(ctx.user.id);
+    }),
+
+    // Upload a new medical record
+    uploadRecord: protectedProcedure
+      .input(z.object({
+        fileName: z.string(),
+        fileType: z.string(),
+        fileData: z.string(), // base64
+        category: z.enum(['medical_report', 'lab_result', 'xray', 'prescription', 'other']),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const allowedTypes = [
+          'application/pdf',
+          'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+        if (!allowedTypes.includes(input.fileType)) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid file type. Only PDF, images, and Word documents are allowed.' });
+        }
+
+        const fileBuffer = Buffer.from(input.fileData, 'base64');
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (fileBuffer.length > maxSize) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'File too large. Maximum size is 10MB.' });
+        }
+
+        const ext = input.fileName.split('.').pop() || 'bin';
+        const fileKey = `user-records/${ctx.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { url } = await storagePut(fileKey, fileBuffer, input.fileType);
+
+        const recordId = await db.createUserMedicalRecord({
+          userId: ctx.user.id,
+          fileName: input.fileName,
+          fileUrl: url,
+          fileKey,
+          fileType: input.fileType,
+          fileSize: fileBuffer.length,
+          category: input.category,
+          notes: input.notes,
+        });
+
+        return { success: true, recordId, fileUrl: url };
+      }),
+
+    // Delete a medical record
+    deleteRecord: protectedProcedure
+      .input(z.object({ recordId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const deleted = await db.deleteUserMedicalRecord(input.recordId, ctx.user.id);
+        if (!deleted) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Record not found or not authorized' });
+        }
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

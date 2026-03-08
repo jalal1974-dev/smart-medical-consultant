@@ -492,3 +492,19 @@
 - [x] Show empty-balance alert (0 remaining) with red indicator
 - [x] PayPal payment integration for Basic ($5/5), Standard ($12/15), Premium ($20/30) plans
 - [x] Write vitest tests for subscription plan logic (12 passing)
+
+## Personal Medical Profile Page
+- [x] Add user_medical_records table (userId, fileUrl, fileKey, fileName, fileType, category, uploadedAt)
+- [x] Add backend tRPC route: profile.getMyRecords - fetch user's uploaded medical records
+- [x] Add backend tRPC route: profile.uploadRecord - upload new medical record to S3
+- [x] Add backend tRPC route: profile.deleteRecord - delete a medical record
+- [x] Add backend tRPC route: profile.getProfile - get full user profile with stats
+- [x] Build MyProfile page with 4 sections: profile header, consultation balance, medical records, consultation history
+- [x] Profile header: name, email, member since, subscription type
+- [x] Consultation balance card: prominent display of X/10 free consultations remaining with progress bar
+- [x] Medical records section: grid of uploaded files with download/delete buttons
+- [x] Upload new record: drag-and-drop or click-to-upload with category selection
+- [x] Consultation history: full list of all consultations with status, materials, and timeline
+- [x] Add "My Medical Profile" link in header user dropdown menu
+- [x] Redirect to /my-profile after successful registration + payment
+- [x] 10 free consultations granted automatically on $1 registration payment

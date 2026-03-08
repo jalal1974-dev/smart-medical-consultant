@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "./LanguageToggle";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, FolderHeart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,6 +109,12 @@ export function Header() {
                   <Link href="/dashboard" className="cursor-pointer">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     {t("dashboard")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/my-profile" className="cursor-pointer">
+                    <FolderHeart className="mr-2 h-4 w-4" />
+                    {language === "ar" ? "ملفي الطبي" : "My Medical Profile"}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
