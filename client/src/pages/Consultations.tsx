@@ -14,6 +14,7 @@ import { Header } from "@/components/Header";
 import { useLocation } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { RecordPicker } from "@/components/RecordPicker";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -36,6 +37,8 @@ export default function Consultations() {
   const [labResults, setLabResults] = useState<string[]>([]);
   const [xrayImages, setXrayImages] = useState<string[]>([]);
   const [otherDocuments, setOtherDocuments] = useState<string[]>([]);
+  // Existing records from user's medical vault
+  const [attachedRecordIds, setAttachedRecordIds] = useState<number[]>([]);
 
   const handleSubmit = async (e: React.FormEvent, isFree: boolean) => {
     e.preventDefault();
@@ -53,6 +56,7 @@ export default function Consultations() {
         xrayImages,
         otherDocuments,
         isFree,
+        attachedRecordIds: attachedRecordIds.length > 0 ? attachedRecordIds : undefined,
       });
 
       toast.success(t("consultationBooked"));
@@ -316,6 +320,18 @@ export default function Consultations() {
                       ? "قم بتحميل التقارير الطبية، نتائج التحاليل، الأشعة، أو أي مستندات طبية أخرى"
                       : "Upload medical reports, lab results, X-rays, or any other medical documents"}
                   </p>
+
+                  {/* Attach from existing medical records */}
+                  <div className="p-3 rounded-lg border border-dashed border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/10">
+                    <p className="text-xs font-medium text-blue-700 dark:text-blue-400 mb-2">
+                      {language === "ar" ? "إرفاق من سجلاتك المحفوظة" : "Attach from your saved records"}
+                    </p>
+                    <RecordPicker
+                      selectedIds={attachedRecordIds}
+                      onChange={setAttachedRecordIds}
+                      language={language as "en" | "ar"}
+                    />
+                  </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     {/* Medical Reports */}

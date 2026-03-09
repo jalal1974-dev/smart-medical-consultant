@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1317,4 +1317,62 @@ export async function getUserMedicalRecordById(id: number): Promise<UserMedicalR
     .limit(1);
 
   return records[0] ?? null;
+}
+
+// ==================== Consultation Attached Records Functions ====================
+
+export async function attachRecordsToConsultation(consultationId: number, recordIds: number[]): Promise<void> {
+  const db = await getDb();
+  if (!db || recordIds.length === 0) return;
+
+  // Insert each record link (ignore duplicates)
+  for (const recordId of recordIds) {
+    await (db as any).execute(
+      `INSERT IGNORE INTO consultation_attached_records (consultation_id, record_id) VALUES (?, ?)`,
+      [consultationId, recordId]
+    );
+  }
+}
+
+export async function getAttachedRecordsForConsultation(consultationId: number): Promise<(ConsultationAttachedRecord & { fileName: string; fileUrl: string; fileType: string; category: string })[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await (db as any).execute(
+    `SELECT car.id, car.consultation_id, car.record_id, car.createdAt,
+            umr.file_name AS fileName, umr.file_url AS fileUrl,
+            umr.file_type AS fileType, umr.category
+     FROM consultation_attached_records car
+     JOIN user_medical_records umr ON umr.id = car.record_id
+     WHERE car.consultation_id = ?
+     ORDER BY car.createdAt ASC`,
+    [consultationId]
+  );
+
+  return rows[0] ?? [];
+}
+
+export async function getAttachedRecordsForConsultations(consultationIds: number[]): Promise<Record<number, { id: number; fileName: string; fileUrl: string; fileType: string; category: string }[]>> {
+  const db = await getDb();
+  if (!db || consultationIds.length === 0) return {};
+
+  const placeholders = consultationIds.map(() => '?').join(',');
+  const rows = await (db as any).execute(
+    `SELECT car.consultation_id, car.record_id,
+            umr.file_name AS fileName, umr.file_url AS fileUrl,
+            umr.file_type AS fileType, umr.category
+     FROM consultation_attached_records car
+     JOIN user_medical_records umr ON umr.id = car.record_id
+     WHERE car.consultation_id IN (${placeholders})
+     ORDER BY car.createdAt ASC`,
+    consultationIds
+  );
+
+  const result: Record<number, { id: number; fileName: string; fileUrl: string; fileType: string; category: string }[]> = {};
+  for (const row of (rows[0] ?? [])) {
+    const cid = row.consultation_id;
+    if (!result[cid]) result[cid] = [];
+    result[cid].push({ id: row.record_id, fileName: row.fileName, fileUrl: row.fileUrl, fileType: row.fileType, category: row.category });
+  }
+  return result;
 }

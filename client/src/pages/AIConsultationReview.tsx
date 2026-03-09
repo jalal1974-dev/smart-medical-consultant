@@ -8,8 +8,57 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
+
+// ─── Attached Records sub-component for admin ───────────────────────────────
+const ADMIN_RECORD_ICONS: Record<string, React.ReactNode> = {
+  medical_report: <FileText className="w-3.5 h-3.5 text-blue-500" />,
+  lab_result: <FlaskConical className="w-3.5 h-3.5 text-purple-500" />,
+  xray: <Image className="w-3.5 h-3.5 text-teal-500" />,
+  other: <File className="w-3.5 h-3.5 text-gray-500" />,
+};
+
+function AttachedRecordsAdminCard({ consultationId, language }: { consultationId: number; language: string }) {
+  const isAr = language === "ar";
+  const { data: attached, isLoading } = trpc.consultation.getAttachedRecords.useQuery(
+    { consultationId },
+    { enabled: !!consultationId }
+  );
+
+  if (isLoading || !attached || attached.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Paperclip className="w-4 h-4 text-blue-500" />
+          {isAr ? "سجلات من ملف المريض" : "Records from Patient Vault"}
+          <span className="text-xs font-normal text-muted-foreground">({attached.length})</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-2">
+          {attached.map((rec: any) => (
+            <a
+              key={rec.id}
+              href={rec.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2.5 border rounded-lg hover:bg-accent transition-colors"
+            >
+              {ADMIN_RECORD_ICONS[rec.category] ?? <File className="w-3.5 h-3.5" />}
+              <div className="min-w-0">
+                <p className="text-xs font-medium truncate">{rec.fileName}</p>
+                <p className="text-xs text-muted-foreground capitalize">{rec.category.replace('_', ' ')}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AIConsultationReview() {
   const { t, language } = useLanguage();
@@ -281,6 +330,9 @@ export default function AIConsultationReview() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Attached Records from Patient Vault */}
+                <AttachedRecordsAdminCard consultationId={selected.id} language={language} />
 
                 {/* AI Analysis */}
                 <Card>

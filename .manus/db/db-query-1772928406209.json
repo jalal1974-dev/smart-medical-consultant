@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `consultation_attached_records` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `consultation_id` int NOT NULL,\n  `record_id` int NOT NULL,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `consultation_attached_records_id` PRIMARY KEY(`id`),\n  INDEX `idx_consultation_id` (`consultation_id`),\n  INDEX `idx_record_id` (`record_id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute CREATE TABLE IF NOT EXISTS `consultation_attached_records` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `consultation_id` int NOT NULL,\n  `record_id` int NOT NULL,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `consultation_attached_records_id` PRIMARY KEY(`id`),\n  INDEX `idx_consultation_id` (`consultation_id`),\n  INDEX `idx_record_id` (`record_id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1694
+}

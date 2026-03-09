@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   User, FileText, Upload, Trash2, Download, Calendar, Zap, CheckCircle,
-  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye
+  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye, Paperclip, File, FlaskConical, Image
 } from "lucide-react";
 import { format } from "date-fns";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
@@ -84,6 +84,48 @@ const CATEGORY_LABELS: Record<string, { en: string; ar: string }> = {
   prescription: { en: "Prescription", ar: "وصفة طبية" },
   other: { en: "Other", ar: "أخرى" },
 };
+
+// ─── Attached Records sub-component ────────────────────────────────────────
+const RECORD_ICONS: Record<string, React.ReactNode> = {
+  medical_report: <FileText className="w-3 h-3 text-blue-500" />,
+  lab_result: <FlaskConical className="w-3 h-3 text-purple-500" />,
+  xray: <Image className="w-3 h-3 text-teal-500" />,
+  other: <File className="w-3 h-3 text-gray-500" />,
+};
+
+function AttachedRecordsSection({ consultationId, language }: { consultationId: number; language: Lang }) {
+  const isAr = language === "ar";
+  const { data: attached, isLoading } = trpc.consultation.getAttachedRecords.useQuery(
+    { consultationId },
+    { enabled: !!consultationId }
+  );
+
+  if (isLoading) return null;
+  if (!attached || attached.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+        <Paperclip className="w-3 h-3" />
+        {isAr ? "السجلات الطبية المرفقة" : "Attached Medical Records"}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {attached.map((rec: any) => (
+          <a
+            key={rec.id}
+            href={rec.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-slate-200 dark:border-slate-700 rounded-full text-xs text-slate-700 dark:text-slate-300 transition-colors max-w-[180px]"
+          >
+            {RECORD_ICONS[rec.category] ?? <File className="w-3 h-3" />}
+            <span className="truncate">{rec.fileName}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode }> = {
   submitted: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", icon: <Clock className="w-3 h-3" /> },
@@ -454,6 +496,9 @@ export default function MyProfile() {
                             <p className="text-xs text-muted-foreground">{c.specialistNotes}</p>
                           </div>
                         )}
+
+                        {/* Attached Records from Vault */}
+                        <AttachedRecordsSection consultationId={c.id} language={language as "en" | "ar"} />
                       </CardContent>
                     </Card>
                   );

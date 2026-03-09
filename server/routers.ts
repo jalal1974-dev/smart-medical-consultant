@@ -277,6 +277,7 @@ export const appRouter = router({
         preferredLanguage: z.enum(["en", "ar"]),
         priority: z.enum(["routine", "urgent", "critical"]).optional().default("routine"),
         isFree: z.boolean(),
+        attachedRecordIds: z.array(z.number()).optional(), // IDs of existing user_medical_records to attach
       }))
       .mutation(async ({ ctx, input }) => {
         const user = await db.getUserById(ctx.user.id);
@@ -340,6 +341,11 @@ export const appRouter = router({
           console.error(`Background AI processing failed for consultation #${consultationId}:`, error);
         });
 
+        // Attach existing medical records if provided
+        if (input.attachedRecordIds && input.attachedRecordIds.length > 0) {
+          await db.attachRecordsToConsultation(Number(consultationId), input.attachedRecordIds);
+        }
+
         return { success: true, consultationId: Number(consultationId) };
       }),
 
@@ -379,7 +385,19 @@ export const appRouter = router({
         };
       }),
 
-    // Get consultations by user ID (with questions)
+    // Get attached medical records for a consultation
+    getAttachedRecords: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (consultation.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        return db.getAttachedRecordsForConsultation(input.consultationId);
+      }),
+
+    // Get user's consultations
     getByUserId: protectedProcedure
       .input(z.number())
       .query(async ({ ctx, input }) => {

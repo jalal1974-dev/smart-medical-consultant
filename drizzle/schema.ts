@@ -380,3 +380,16 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+/**
+ * Consultation attached records - links existing user medical records to a consultation
+ */
+export const consultationAttachedRecords = mysqlTable("consultation_attached_records", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull(),
+  recordId: int("record_id").notNull(), // FK to user_medical_records.id
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ConsultationAttachedRecord = typeof consultationAttachedRecords.$inferSelect;
+export type InsertConsultationAttachedRecord = typeof consultationAttachedRecords.$inferInsert;

@@ -508,3 +508,16 @@
 - [x] Add "My Medical Profile" link in header user dropdown menu
 - [x] Redirect to /my-profile after successful registration + payment
 - [x] 10 free consultations granted automatically on $1 registration payment
+
+## Attach Existing Medical Records to Consultation
+- [x] Add consultation_attached_records join table (consultationId, recordId)
+- [x] Create DB migration for consultation_attached_records table
+- [x] Add db helper: attachRecordsToConsultation(consultationId, recordIds[])
+- [x] Add db helper: getAttachedRecordsForConsultation(consultationId)
+- [x] Update consultation creation tRPC route to accept attachedRecordIds[]
+- [x] Add consultation.getAttachedRecords tRPC query for patient and admin views
+- [x] Build RecordPicker component (dialog with checkboxes, category icons, file chips)
+- [x] Integrate RecordPicker into consultation form with "Attach from saved records" section
+- [x] Show selected records as removable chips/badges in the consultation form
+- [x] Show attached records in patient consultation history (MyProfile page) as clickable pills
+- [x] Show attached records in admin AIConsultationReview panel as a dedicated card
