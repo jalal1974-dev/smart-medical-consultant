@@ -521,3 +521,16 @@
 - [x] Show selected records as removable chips/badges in the consultation form
 - [x] Show attached records in patient consultation history (MyProfile page) as clickable pills
 - [x] Show attached records in admin AIConsultationReview panel as a dedicated card
+
+## Registration Plans & Consultation Quota Enforcement
+- [x] Add freeConsultationsUsed + freeConsultationsTotal columns to users table (DB migration)
+- [x] Add getUserFreeQuota() and incrementFreeConsultationsUsed() helpers in db.ts
+- [x] Update consultation.create backend: check quota, throw FREE_QUOTA_EXHAUSTED when 0 remain
+- [x] Update grantConsultationsAfterPayment to also increment freeConsultationsTotal for premium users
+- [x] getUserById now returns freeConsultationsUsed and freeConsultationsTotal fields
+- [x] Add two plan cards on home page (Free Plan $0 = 1 consult, Premium $1 = 10 consults)
+- [x] Add "Register for Free" and "Register for $1" CTA buttons linking to /register and /register?plan=premium
+- [x] Consultation form: green banner shows X/Y remaining when free quota available
+- [x] Consultation form: amber banner shows "all free used, $5 each" when quota exhausted
+- [x] Submit button shows green "Submit Free (N left)" or standard "Submit — $5" based on quota
+- [x] FREE_QUOTA_EXHAUSTED error shows a clear toast message to the user

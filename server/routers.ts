@@ -285,12 +285,19 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
         }
 
-        // Check if trying to use free consultation but already used
-        if (input.isFree && user.hasUsedFreeConsultation) {
-          throw new TRPCError({ 
-            code: 'BAD_REQUEST', 
-            message: 'Free consultation already used' 
-          });
+        // ── Quota check ──────────────────────────────────────────────────────
+        // Determine how many free consultations this user has left
+        const quota = await db.getUserFreeQuota(ctx.user.id);
+        const freeRemaining = quota.total - quota.used;
+
+        if (input.isFree) {
+          // User wants to use a free slot — make sure one is available
+          if (freeRemaining <= 0) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'FREE_QUOTA_EXHAUSTED', // frontend detects this code
+            });
+          }
         }
 
         const consultationId = await db.createConsultation({
@@ -312,9 +319,9 @@ export const appRouter = router({
           paymentStatus: input.isFree ? "completed" : "pending",
         });
 
-        // Mark free consultation as used
+        // Mark free consultation as used (increment counter)
         if (input.isFree) {
-          await db.markFreeConsultationUsed(ctx.user.id);
+          await db.incrementFreeConsultationsUsed(ctx.user.id);
         }
 
         // Send email receipt to patient

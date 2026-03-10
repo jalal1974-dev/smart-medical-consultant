@@ -111,6 +111,41 @@ export async function markFreeConsultationUsed(userId: number) {
   await db.update(users).set({ hasUsedFreeConsultation: true }).where(eq(users.id, userId));
 }
 
+/**
+ * Increment the free consultations used counter for a user.
+ * Returns the updated counts so the caller can decide if quota is exceeded.
+ */
+export async function incrementFreeConsultationsUsed(userId: number): Promise<{ used: number; total: number }> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Atomic increment via raw SQL
+  await db.execute(
+    sql`UPDATE users SET free_consultations_used = free_consultations_used + 1, hasUsedFreeConsultation = 1 WHERE id = ${userId}`
+  );
+
+  const rows = await db.execute(sql`SELECT free_consultations_used, free_consultations_total FROM users WHERE id = ${userId}`);
+  const row = (rows as any)[0]?.[0] ?? (rows as any)?.[0];
+  return {
+    used: Number(row?.free_consultations_used ?? 1),
+    total: Number(row?.free_consultations_total ?? 1),
+  };
+}
+
+/**
+ * Check whether a user still has free consultations remaining.
+ */
+export async function getUserFreeQuota(userId: number): Promise<{ used: number; total: number; hasRemaining: boolean }> {
+  const db = await getDb();
+  if (!db) return { used: 0, total: 1, hasRemaining: true };
+
+  const rows = await db.execute(sql`SELECT free_consultations_used, free_consultations_total FROM users WHERE id = ${userId}`);
+  const row = (rows as any)[0]?.[0] ?? (rows as any)?.[0];
+  const used = Number(row?.free_consultations_used ?? 0);
+  const total = Number(row?.free_consultations_total ?? 1);
+  return { used, total, hasRemaining: used < total };
+}
+
 // ==================== Consultation Functions ====================
 
 export async function createConsultation(data: InsertConsultation) {
@@ -1127,6 +1162,8 @@ export async function getUserByEmail(email: string) {
     consultationsRemaining: row.consultations_remaining as number,
     hasUsedFreeConsultation: Boolean(row.has_used_free_consultation),
     subscriptionType: row.subscription_type as string,
+    freeConsultationsUsed: (row.free_consultations_used as number) ?? 0,
+    freeConsultationsTotal: (row.free_consultations_total as number) ?? 1,
     createdAt: row.created_at as Date,
     updatedAt: row.updated_at as Date,
     lastSignedIn: row.last_signed_in as Date,
@@ -1158,9 +1195,13 @@ export async function grantConsultationsAfterPayment(userId: number, count: numb
   const db = await getDb();
   if (!db) return;
 
+  // Also update free_consultations_total so the quota system reflects the premium plan
   await (db as any).execute(
-    `UPDATE users SET consultations_remaining = consultations_remaining + ?, hasUsedFreeConsultation = 1 WHERE id = ?`,
-    [count, userId]
+    `UPDATE users SET consultations_remaining = consultations_remaining + ?,
+     free_consultations_total = free_consultations_total + ?,
+     subscription_type = 'pay_per_case'
+     WHERE id = ?`,
+    [count, count, userId]
   );
 }
 

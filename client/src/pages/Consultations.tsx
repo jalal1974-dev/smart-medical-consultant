@@ -40,6 +40,12 @@ export default function Consultations() {
   // Existing records from user's medical vault
   const [attachedRecordIds, setAttachedRecordIds] = useState<number[]>([]);
 
+  // Derive quota from user object (populated by auth.me)
+  const freeUsed = (user as any)?.freeConsultationsUsed ?? (user?.hasUsedFreeConsultation ? 1 : 0);
+  const freeTotal = (user as any)?.freeConsultationsTotal ?? 1;
+  const freeRemaining = Math.max(0, freeTotal - freeUsed);
+  const hasFreeLeft = freeRemaining > 0;
+
   const handleSubmit = async (e: React.FormEvent, isFree: boolean) => {
     e.preventDefault();
 
@@ -60,11 +66,19 @@ export default function Consultations() {
       });
 
       toast.success(t("consultationBooked"));
-      
-      // Redirect to payment confirmation page
       setLocation(`/payment-confirmation/${result.consultationId}`);
     } catch (error: any) {
-      toast.error(error.message || t("consultationError"));
+      const msg: string = error?.message ?? '';
+      if (msg.includes('FREE_QUOTA_EXHAUSTED')) {
+        toast.error(
+          language === 'ar'
+            ? 'لقد استنفدت استشاراتك المجانية. ستُحتسب هذه الاستشارة بـ 5$.'
+            : 'Your free consultations are used up. This consultation will cost $5.',
+          { duration: 5000 }
+        );
+      } else {
+        toast.error(error.message || t("consultationError"));
+      }
     }
   };
 
@@ -164,16 +178,29 @@ export default function Consultations() {
                   ? "قدم معلوماتك الطبية وسنقوم بتحليلها باستخدام الذكاء الاصطناعي تحت إشراف أطبائنا المتخصصين"
                   : "Submit your medical information and we'll analyze it using AI under the supervision of our medical specialists"}
               </CardDescription>
-              {!user?.hasUsedFreeConsultation && (
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    {t("freeConsultation")}
-                  </p>
-                </div>
+              {/* ── Free Consultation Balance Banner ── */}
+              {isAuthenticated && (
+                hasFreeLeft ? (
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      {language === 'ar'
+                        ? `لديك ${freeRemaining} من أصل ${freeTotal} استشارة مجانية متبقية — هذه الاستشارة مجانية!`
+                        : `You have ${freeRemaining} of ${freeTotal} free consultation${freeTotal > 1 ? 's' : ''} remaining — this one is free!`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      {language === 'ar'
+                        ? `لقد استنفدت جميع استشاراتك المجانية الـ${freeTotal}. ستُحتسب كل استشارة إضافية بـ 5$.`
+                        : `You have used all ${freeTotal} free consultation${freeTotal > 1 ? 's' : ''}. Each additional consultation costs $5.`}
+                    </p>
+                  </div>
+                )
               )}
             </CardHeader>
             <CardContent>
-              <form onSubmit={(e) => handleSubmit(e, !user?.hasUsedFreeConsultation)} className="space-y-6">
+              <form onSubmit={(e) => handleSubmit(e, hasFreeLeft)} className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg">
@@ -375,14 +402,18 @@ export default function Consultations() {
                 {/* Submit Buttons */}
                 <div className="space-y-4">
                   <div className="flex gap-4">
-                    {!user?.hasUsedFreeConsultation ? (
+                    {hasFreeLeft ? (
                       <Button
                         type="submit"
                         size="lg"
                         disabled={createMutation.isPending}
-                        className="flex-1"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                       >
-                        {createMutation.isPending ? t("loading") : t("bookFree")}
+                        {createMutation.isPending
+                          ? t("loading")
+                          : language === 'ar'
+                            ? `إرسال مجاناً (${freeRemaining} متبقية)`
+                            : `Submit Free (${freeRemaining} left)`}
                       </Button>
                     ) : (
                       <Button
@@ -392,7 +423,9 @@ export default function Consultations() {
                         onClick={(e) => handleSubmit(e as any, false)}
                         className="flex-1"
                       >
-                        {createMutation.isPending ? t("loading") : `${t("submit")} - $5`}
+                        {createMutation.isPending
+                          ? t("loading")
+                          : language === 'ar' ? 'إرسال بـ 5$' : 'Submit — $5'}
                       </Button>
                     )}
                   </div>

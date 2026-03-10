@@ -13,6 +13,8 @@ export const users = mysqlTable("users", {
   hasUsedFreeConsultation: boolean("hasUsedFreeConsultation").default(false).notNull(),
   subscriptionType: mysqlEnum("subscription_type", ["free", "pay_per_case", "monthly"]).default("free").notNull(),
   consultationsRemaining: int("consultations_remaining").default(1).notNull(),
+  freeConsultationsUsed: int("free_consultations_used").default(0).notNull(),   // how many free ones consumed
+  freeConsultationsTotal: int("free_consultations_total").default(1).notNull(), // 1 for free plan, 10 for $1 premium
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE users \n  ADD COLUMN IF NOT EXISTS `free_consultations_used` int NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `free_consultations_total` int NOT NULL DEFAULT 1;\n\n-- Backfill: users who already used their free consultation get used=1\nUPDATE users SET free_consultations_used = 1 WHERE hasUsedFreeConsultation = 1 AND free_consultations_used = 0;\n\n-- Backfill: users with $1 premium registration (consultations_remaining > 1) get total=10\nUPDATE users SET free_consultations_total = 10 WHERE consultations_remaining >= 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute ALTER TABLE users \n  ADD COLUMN IF NOT EXISTS `free_consultations_used` int NOT NULL DEFAULT 0,\n  ADD COLUMN IF NOT EXISTS `free_consultations_total` int NOT NULL DEFAULT 1;\n\n-- Backfill: users who already used their free consultation get used=1\nUPDATE users SET free_consultations_used = 1 WHERE hasUsedFreeConsultation = 1 AND free_consultations_used = 0;\n\n-- Backfill: users with $1 premium registration (consultations_remaining > 1) get total=10\nUPDATE users SET free_consultations_total = 10 WHERE consultations_remaining >= 10;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2326
+}
