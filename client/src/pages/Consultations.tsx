@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { Header } from "@/components/Header";
@@ -15,12 +15,24 @@ import { useLocation } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { RecordPicker } from "@/components/RecordPicker";
+import { CreditCard, Loader2 } from "lucide-react";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
   const { t, language } = useLanguage();
   const [, setLocation] = useLocation();
   const createMutation = trpc.consultation.create.useMutation();
+  const createDraftMutation = trpc.consultation.createDraft.useMutation();
+  const confirmPaymentMutation = trpc.consultation.confirmConsultationPayment.useMutation();
+  const utils = trpc.useUtils();
+
+  // PayPal state for paid consultations
+  const [paypalStep, setPaypalStep] = useState<'form' | 'paypal'>('form');
+  const [draftConsultationId, setDraftConsultationId] = useState<number | null>(null);
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const [paypalRendered, setPaypalRendered] = useState(false);
+  const paypalContainerRef = useRef<HTMLDivElement>(null);
+  const paypalButtonsRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
     patientName: "",
@@ -46,14 +58,101 @@ export default function Consultations() {
   const freeRemaining = Math.max(0, freeTotal - freeUsed);
   const hasFreeLeft = freeRemaining > 0;
 
+  // Load PayPal SDK when needed
+  useEffect(() => {
+    if (paypalStep !== 'paypal') return;
+    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+    if (!clientId) {
+      toast.error('PayPal is not configured. Please contact support.');
+      return;
+    }
+    if ((window as any).paypal) {
+      setPaypalLoaded(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+    script.async = true;
+    script.onload = () => setPaypalLoaded(true);
+    script.onerror = () => toast.error('Failed to load PayPal. Please refresh and try again.');
+    document.body.appendChild(script);
+  }, [paypalStep]);
+
+  // Render PayPal buttons once SDK is loaded and container is ready
+  useEffect(() => {
+    if (!paypalLoaded || paypalRendered || !paypalContainerRef.current || !draftConsultationId) return;
+    const wp = (window as any).paypal;
+    if (!wp) return;
+    setPaypalRendered(true);
+
+    paypalButtonsRef.current = wp.Buttons({
+      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 50 },
+      createOrder: (_data: any, actions: any) => {
+        return actions.order.create({
+          purchase_units: [{
+            amount: { value: '5.00', currency_code: 'USD' },
+            description: 'Smart Medical Consultant – Medical Consultation',
+            custom_id: String(draftConsultationId),
+          }],
+          application_context: { brand_name: 'Smart Medical Consultant', user_action: 'PAY_NOW' },
+        });
+      },
+      onApprove: async (data: any, actions: any) => {
+        try {
+          const order = await actions.order.capture();
+          await confirmPaymentMutation.mutateAsync({
+            consultationId: draftConsultationId!,
+            paypalOrderId: order.id,
+            paypalPayerId: order.payer?.payer_id,
+          });
+          await utils.auth.me.invalidate();
+          toast.success(language === 'ar' ? 'تم الدفع بنجاح! جاري معالجة استشارتك...' : 'Payment successful! Processing your consultation...');
+          setLocation(`/payment-confirmation/${draftConsultationId}`);
+        } catch (err: any) {
+          toast.error(err.message || 'Payment confirmation failed. Please contact support.');
+        }
+      },
+      onError: (err: any) => {
+        console.error('PayPal error:', err);
+        toast.error('Payment failed. Please try again.');
+      },
+      onCancel: () => {
+        toast.info(language === 'ar' ? 'تم إلغاء الدفع.' : 'Payment cancelled.');
+      },
+    });
+    paypalButtonsRef.current.render(paypalContainerRef.current);
+  }, [paypalLoaded, paypalRendered, draftConsultationId]);
+
   const handleSubmit = async (e: React.FormEvent, isFree: boolean) => {
     e.preventDefault();
 
     if (!isAuthenticated) {
-      toast.error(t("loginRequired"));
+      toast.error(t('loginRequired'));
       return;
     }
 
+    if (!isFree) {
+      // ── Paid path: save draft first, then show PayPal ──
+      try {
+        const result = await createDraftMutation.mutateAsync({
+          ...formData,
+          medicalReports,
+          labResults,
+          xrayImages,
+          otherDocuments,
+          attachedRecordIds: attachedRecordIds.length > 0 ? attachedRecordIds : undefined,
+        });
+        setDraftConsultationId(result.consultationId);
+        setPaypalStep('paypal');
+        // Scroll to top so PayPal buttons are visible
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error: any) {
+        toast.error(error.message || t('consultationError'));
+      }
+      return;
+    }
+
+    // ── Free path: submit directly ──
     try {
       const result = await createMutation.mutateAsync({
         ...formData,
@@ -61,11 +160,11 @@ export default function Consultations() {
         labResults,
         xrayImages,
         otherDocuments,
-        isFree,
+        isFree: true,
         attachedRecordIds: attachedRecordIds.length > 0 ? attachedRecordIds : undefined,
       });
 
-      toast.success(t("consultationBooked"));
+      toast.success(t('consultationBooked'));
       setLocation(`/payment-confirmation/${result.consultationId}`);
     } catch (error: any) {
       const msg: string = error?.message ?? '';
@@ -77,7 +176,7 @@ export default function Consultations() {
           { duration: 5000 }
         );
       } else {
-        toast.error(error.message || t("consultationError"));
+        toast.error(error.message || t('consultationError'));
       }
     }
   };
@@ -160,6 +259,78 @@ export default function Consultations() {
               </Button>
             </CardContent>
           </Card>
+        </main>
+      </div>
+    );
+  }
+
+  // ── PayPal checkout screen (shown after draft is saved) ──
+  if (paypalStep === 'paypal' && draftConsultationId) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 container py-8">
+          <div className="max-w-lg mx-auto">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle>
+                      {language === 'ar' ? 'إتمام الدفع' : 'Complete Payment'}
+                    </CardTitle>
+                    <CardDescription>
+                      {language === 'ar'
+                        ? `استشارة #${draftConsultationId} — 5$ فقط`
+                        : `Consultation #${draftConsultationId} — $5 only`}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Summary */}
+                <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{language === 'ar' ? 'اسم المريض' : 'Patient'}</span>
+                    <span className="font-medium">{formData.patientName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{language === 'ar' ? 'الخدمة' : 'Service'}</span>
+                    <span className="font-medium">{language === 'ar' ? 'استشارة طبية ذكية' : 'AI Medical Consultation'}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2 mt-2">
+                    <span className="font-semibold">{language === 'ar' ? 'المجموع' : 'Total'}</span>
+                    <span className="font-bold text-lg">$5.00</span>
+                  </div>
+                </div>
+
+                {/* PayPal button container */}
+                {!paypalLoaded ? (
+                  <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>{language === 'ar' ? 'جاري تحميل PayPal...' : 'Loading PayPal...'}</span>
+                  </div>
+                ) : (
+                  <div ref={paypalContainerRef} className="min-h-[60px]" />
+                )}
+
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={() => {
+                    setPaypalStep('form');
+                    setDraftConsultationId(null);
+                    setPaypalLoaded(false);
+                    setPaypalRendered(false);
+                  }}
+                >
+                  ← {language === 'ar' ? 'العودة لتعديل الاستشارة' : 'Back to edit consultation'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </main>
       </div>
     );

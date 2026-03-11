@@ -534,3 +534,14 @@
 - [x] Consultation form: amber banner shows "all free used, $5 each" when quota exhausted
 - [x] Submit button shows green "Submit Free (N left)" or standard "Submit — $5" based on quota
 - [x] FREE_QUOTA_EXHAUSTED error shows a clear toast message to the user
+
+## PayPal $5 Paid Consultation Checkout
+- [x] consultation.createDraft tRPC route: saves full form data with paymentStatus=pending
+- [x] consultation.confirmConsultationPayment tRPC route: marks payment completed, triggers AI
+- [x] PayPal SDK loaded dynamically when quota=0 and user submits form
+- [x] Draft saved first (createDraft), then PayPal checkout screen shown
+- [x] Checkout screen: order summary (patient name, service, $5 total) + PayPal buttons
+- [x] onApprove: captures order, calls confirmConsultationPayment, redirects to /payment-confirmation/:id
+- [x] Back button on checkout screen returns user to edit the form
+- [x] Receipt email + WhatsApp admin notification sent after payment confirmation
+- [x] Idempotent: re-confirming an already-paid consultation returns success without double-processing

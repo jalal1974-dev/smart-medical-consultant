@@ -482,6 +482,100 @@ export const appRouter = router({
 
         return { success: true };
       }),
+
+    // ── Step 1: Save form data as a draft (payment_pending) ──
+    // Called before PayPal checkout so we have a consultationId to reference.
+    createDraft: protectedProcedure
+      .input(z.object({
+        patientName: z.string().min(1),
+        patientEmail: z.string().email(),
+        patientPhone: z.string().optional(),
+        symptoms: z.string().min(10),
+        medicalHistory: z.string().optional(),
+        medicalReports: z.array(z.string()).optional(),
+        labResults: z.array(z.string()).optional(),
+        xrayImages: z.array(z.string()).optional(),
+        otherDocuments: z.array(z.string()).optional(),
+        preferredLanguage: z.enum(["en", "ar"]),
+        priority: z.enum(["routine", "urgent", "critical"]).optional().default("routine"),
+        attachedRecordIds: z.array(z.number()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Save as draft — paymentStatus=pending, status=submitted but isFree=false
+        const consultationId = await db.createConsultation({
+          userId: ctx.user.id,
+          patientName: input.patientName,
+          patientEmail: input.patientEmail,
+          patientPhone: input.patientPhone || null,
+          symptoms: input.symptoms,
+          medicalHistory: input.medicalHistory || null,
+          medicalReports: input.medicalReports ? JSON.stringify(input.medicalReports) : null,
+          labResults: input.labResults ? JSON.stringify(input.labResults) : null,
+          xrayImages: input.xrayImages ? JSON.stringify(input.xrayImages) : null,
+          otherDocuments: input.otherDocuments ? JSON.stringify(input.otherDocuments) : null,
+          preferredLanguage: input.preferredLanguage,
+          priority: input.priority || "routine",
+          status: 'submitted',
+          isFree: false,
+          amount: 5,
+          paymentStatus: 'pending', // will be updated after PayPal
+        });
+
+        // Attach existing medical records if provided
+        if (input.attachedRecordIds && input.attachedRecordIds.length > 0) {
+          await db.attachRecordsToConsultation(Number(consultationId), input.attachedRecordIds);
+        }
+
+        return { success: true, consultationId: Number(consultationId) };
+      }),
+
+    // ── Step 2: Confirm PayPal payment for a draft consultation ──
+    // Called after PayPal onApprove with the captured order ID.
+    confirmConsultationPayment: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        paypalOrderId: z.string(),
+        paypalPayerId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation || consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Consultation not found' });
+        }
+        if (consultation.paymentStatus === 'completed') {
+          // Idempotent — already confirmed
+          return { success: true, consultationId: input.consultationId };
+        }
+
+        // Mark payment as completed and store the PayPal order ID
+        await db.updateConsultationPayment(input.consultationId, 'completed', input.paypalOrderId);
+
+        // Trigger AI processing in the background
+        processConsultationWithAI(input.consultationId).catch(error => {
+          console.error(`Background AI processing failed for consultation #${input.consultationId}:`, error);
+        });
+
+        // Send receipt email
+        await sendConsultationReceipt({
+          consultationId: input.consultationId,
+          patientName: consultation.patientName,
+          patientEmail: consultation.patientEmail,
+          amount: 5,
+          isFree: false,
+          preferredLanguage: consultation.preferredLanguage as 'en' | 'ar',
+          createdAt: new Date(),
+          status: 'submitted',
+        });
+
+        // WhatsApp admin notification
+        await sendConsultationWhatsAppNotification({
+          patientName: consultation.patientName,
+          symptoms: consultation.symptoms,
+          consultationId: input.consultationId,
+        });
+
+        return { success: true, consultationId: input.consultationId };
+      }),
   }),
 
   // Admin routes for managing consultations and AI workflow
