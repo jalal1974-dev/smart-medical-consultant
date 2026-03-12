@@ -1417,3 +1417,48 @@ export async function getAttachedRecordsForConsultations(consultationIds: number
   }
   return result;
 }
+
+// ── Payment History ──────────────────────────────────────────────────────────
+export interface PaymentHistoryRow {
+  consultationId: number;
+  patientName: string;
+  symptoms: string;
+  amount: number;
+  paymentStatus: string;
+  paymentId: string | null;
+  isFree: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Fetch all completed-payment consultations for a user, ordered newest first.
+ * Includes both paid ($5) and free consultations so the user sees the full history.
+ */
+export async function getUserPaymentHistory(userId: number): Promise<PaymentHistoryRow[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select({
+      consultationId: consultations.id,
+      patientName: consultations.patientName,
+      symptoms: consultations.symptoms,
+      amount: consultations.amount,
+      paymentStatus: consultations.paymentStatus,
+      paymentId: consultations.paymentId,
+      isFree: consultations.isFree,
+      createdAt: consultations.createdAt,
+      updatedAt: consultations.updatedAt,
+    })
+    .from(consultations)
+    .where(
+      and(
+        eq(consultations.userId, userId),
+        eq(consultations.paymentStatus, 'completed')
+      )
+    )
+    .orderBy(desc(consultations.createdAt));
+
+  return rows as PaymentHistoryRow[];
+}

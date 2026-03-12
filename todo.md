@@ -545,3 +545,13 @@
 - [x] Back button on checkout screen returns user to edit the form
 - [x] Receipt email + WhatsApp admin notification sent after payment confirmation
 - [x] Idempotent: re-confirming an already-paid consultation returns success without double-processing
+
+## Payment History Tab on My Profile
+- [x] Add db helper: getUserPaymentHistory(userId) — fetch paid consultations with paymentId, amount, createdAt
+- [x] Add profile.getPaymentHistory tRPC route (protectedProcedure)
+- [x] Add "Payment History" tab to MyProfile page (3rd tab alongside Medical Records and Consultations)
+- [x] Payment table: columns — Date, Consultation #, Amount, PayPal Order ID, Status badge, View button
+- [x] Show empty state (CreditCard icon + message) when no paid consultations exist
+- [x] Show 3-column summary cards: Total Spent, Paid Consultations count, Free Consultations count
+- [x] Symptoms preview shown below consultation ID for quick identification
+- [x] Responsive: Amount hidden on mobile, PayPal Order ID hidden on tablet

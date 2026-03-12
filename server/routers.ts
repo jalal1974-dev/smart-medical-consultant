@@ -1508,6 +1508,24 @@ export const appRouter = router({
         }
         return { success: true };
       }),
+
+    // ── Payment History ──
+    // Returns all completed-payment consultations for the current user.
+    getPaymentHistory: protectedProcedure.query(async ({ ctx }) => {
+      const rows = await db.getUserPaymentHistory(ctx.user.id);
+      return rows.map(r => ({
+        consultationId: r.consultationId,
+        patientName: r.patientName,
+        // Truncate symptoms to a short preview
+        symptomsPreview: r.symptoms.length > 80 ? r.symptoms.slice(0, 80) + '…' : r.symptoms,
+        amount: r.amount,
+        paymentStatus: r.paymentStatus,
+        paymentId: r.paymentId,
+        isFree: r.isFree,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
+    }),
   }),
 });
 

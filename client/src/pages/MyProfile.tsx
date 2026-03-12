@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   User, FileText, Upload, Trash2, Download, Calendar, Zap, CheckCircle,
-  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye, Paperclip, File, FlaskConical, Image
+  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye, Paperclip, File, FlaskConical, Image, CreditCard
 } from "lucide-react";
 import { format } from "date-fns";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
@@ -73,6 +73,19 @@ const t = (key: string, lang: Lang): string => {
     free: { en: "Free", ar: "مجاني" },
     pay_per_case: { en: "Pay Per Case", ar: "دفع لكل حالة" },
     monthly: { en: "Monthly", ar: "شهري" },
+    paymentHistory: { en: "Payment History", ar: "سجل المدفوعات" },
+    noPayments: { en: "No payments yet.", ar: "لا توجد مدفوعات بعد." },
+    noPaymentsDesc: { en: "Your paid consultations will appear here.", ar: "ستظهر استشاراتك المدفوعة هنا." },
+    totalSpent: { en: "Total Spent", ar: "إجمالي المدفوع" },
+    paidConsultations: { en: "Paid Consultations", ar: "استشارات مدفوعة" },
+    freeConsultationLabel: { en: "Free Consultation", ar: "استشارة مجانية" },
+    date: { en: "Date", ar: "التاريخ" },
+    consultationId: { en: "Consultation #", ar: "استشارة #" },
+    amount: { en: "Amount", ar: "المبلغ" },
+    paypalOrderId: { en: "PayPal Order ID", ar: "رقم طلب PayPal" },
+    paymentStatus: { en: "Status", ar: "الحالة" },
+    paymentCompleted: { en: "Completed", ar: "مكتمل" },
+    viewConsultation: { en: "View", ar: "عرض" },
   };
   return dict[key]?.[lang] ?? key;
 };
@@ -141,6 +154,10 @@ export default function MyProfile() {
   const isAr = language === "ar";
 
   const { data: profile, isLoading, refetch } = trpc.profile.getProfile.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  const { data: paymentHistory = [] } = trpc.profile.getPaymentHistory.useQuery(undefined, {
     enabled: !!user,
   });
 
@@ -330,6 +347,13 @@ export default function MyProfile() {
                 <Badge variant="secondary" className="text-xs ml-1">{consultations.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              {t("paymentHistory", language)}
+              {paymentHistory.length > 0 && (
+                <Badge variant="secondary" className="text-xs ml-1">{paymentHistory.length}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* ── Medical Records Tab ─────────────────────────────── */}
@@ -503,6 +527,106 @@ export default function MyProfile() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── Payment History Tab ─────────────────────────────────────────── */}
+          <TabsContent value="payments">
+            {paymentHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+                <CreditCard className="w-14 h-14 text-muted-foreground/40" />
+                <p className="text-lg font-medium text-muted-foreground">{t("noPayments", language)}</p>
+                <p className="text-sm text-muted-foreground/70">{t("noPaymentsDesc", language)}</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary card */}
+                {(() => {
+                  const paidRows = paymentHistory.filter((p: any) => !p.isFree);
+                  const totalSpent = paidRows.reduce((sum: number, p: any) => sum + (p.amount ?? 0), 0);
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <Card className="border-green-200 dark:border-green-900">
+                        <CardContent className="pt-4 pb-3">
+                          <p className="text-2xl font-bold text-green-600">${totalSpent}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t("totalSpent", language)}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-4 pb-3">
+                          <p className="text-2xl font-bold">{paidRows.length}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t("paidConsultations", language)}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="hidden md:block">
+                        <CardContent className="pt-4 pb-3">
+                          <p className="text-2xl font-bold">{paymentHistory.length - paidRows.length}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t("freeConsultationLabel", language)}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })()}
+
+                {/* Payment table */}
+                <div className="rounded-lg border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/50 border-b">
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("date", language)}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("consultationId", language)}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">{t("amount", language)}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">{t("paypalOrderId", language)}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("paymentStatus", language)}</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentHistory.map((p: any, idx: number) => (
+                        <tr key={p.consultationId} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${idx % 2 === 0 ? '' : 'bg-muted/10'}`}>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                            {format(new Date(p.createdAt), "MMM d, yyyy")}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            #{p.consultationId}
+                            <p className="text-xs text-muted-foreground font-normal truncate max-w-[160px]">{p.symptomsPreview}</p>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            {p.isFree ? (
+                              <span className="text-green-600 font-medium">{t("freeConsultationLabel", language)}</span>
+                            ) : (
+                              <span className="font-semibold">${p.amount}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            {p.paymentId ? (
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono break-all">{p.paymentId}</code>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-0">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {t("paymentCompleted", language)}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs h-7"
+                              onClick={() => window.open(`/payment-confirmation/${p.consultationId}`, '_blank')}
+                            >
+                              {t("viewConsultation", language)}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </TabsContent>
