@@ -15,6 +15,8 @@ export const users = mysqlTable("users", {
   consultationsRemaining: int("consultations_remaining").default(1).notNull(),
   freeConsultationsUsed: int("free_consultations_used").default(0).notNull(),   // how many free ones consumed
   freeConsultationsTotal: int("free_consultations_total").default(1).notNull(), // 1 for free plan, 10 for $1 premium
+  avatarUrl: varchar("avatar_url", { length: 500 }),   // S3 URL for profile picture
+  bio: text("bio"),                                     // Short user bio (max 300 chars)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

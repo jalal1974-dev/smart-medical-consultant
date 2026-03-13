@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   User, FileText, Upload, Trash2, Download, Calendar, Zap, CheckCircle,
-  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye, Paperclip, File, FlaskConical, Image, CreditCard
+  Clock, AlertTriangle, Loader2, FolderOpen, Activity, Star, Eye, Paperclip, File, FlaskConical, Image, CreditCard,
+  Camera, Pencil, X, Check
 } from "lucide-react";
 import { format } from "date-fns";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
@@ -86,6 +87,16 @@ const t = (key: string, lang: Lang): string => {
     paymentStatus: { en: "Status", ar: "الحالة" },
     paymentCompleted: { en: "Completed", ar: "مكتمل" },
     viewConsultation: { en: "View", ar: "عرض" },
+    editProfile: { en: "Edit Profile", ar: "تعديل الملف الشخصي" },
+    bio: { en: "About Me", ar: "نبذة عني" },
+    bioPlaceholder: { en: "Write a short bio about yourself (max 300 characters)...", ar: "اكتب نبذة قصيرة عن نفسك (حد أقصى 300 حرف)..." },
+    bioEmpty: { en: "No bio added yet. Click Edit Profile to add one.", ar: "لم تتم إضافة نبذة بعد. انقر على تعديل الملف الشخصي لإضافتها." },
+    saveProfile: { en: "Save Changes", ar: "حفظ التغييرات" },
+    saving: { en: "Saving...", ar: "جاري الحفظ..." },
+    profileUpdated: { en: "Profile updated successfully!", ar: "تم تحديث الملف الشخصي بنجاح!" },
+    changePhoto: { en: "Change Photo", ar: "تغيير الصورة" },
+    uploadingPhoto: { en: "Uploading...", ar: "جاري الرفع..." },
+    photoUpdated: { en: "Profile photo updated!", ar: "تم تحديث صورة الملف الشخصي!" },
   };
   return dict[key]?.[lang] ?? key;
 };
@@ -160,6 +171,54 @@ export default function MyProfile() {
   const { data: paymentHistory = [] } = trpc.profile.getPaymentHistory.useQuery(undefined, {
     enabled: !!user,
   });
+
+  // ── Profile edit state ──
+  const [editOpen, setEditOpen] = useState(false);
+  const [bioValue, setBioValue] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const updateProfileMutation = trpc.profile.updateProfile.useMutation({
+    onSuccess: () => {
+      toast.success(t("profileUpdated", language));
+      setEditOpen(false);
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const uploadAvatarMutation = trpc.profile.uploadAvatar.useMutation({
+    onSuccess: () => {
+      toast.success(t("photoUpdated", language));
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPEG, PNG, WebP, or GIF images are allowed.");
+      return;
+    }
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1];
+      await uploadAvatarMutation.mutateAsync({ fileData: base64, fileType: file.type as any });
+      setIsUploadingAvatar(false);
+    };
+    reader.readAsDataURL(file);
+  }, [uploadAvatarMutation]);
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    await updateProfileMutation.mutateAsync({ bio: bioValue || null });
+    setIsSavingProfile(false);
+  };
 
   // Upload state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -261,16 +320,60 @@ export default function MyProfile() {
     <div className="min-h-screen py-10" dir={isAr ? "rtl" : "ltr"}>
       <div className="container max-w-6xl">
 
-        {/* ── Header ──────────────────────────────────────────────── */}
+        {/* ── Header ──────────────────────────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-              {(profileUser.name || "U").charAt(0).toUpperCase()}
+          <div className="flex items-start gap-5">
+            {/* Avatar with camera overlay */}
+            <div className="relative group flex-shrink-0">
+              {profileUser.avatarUrl ? (
+                <img
+                  src={profileUser.avatarUrl}
+                  alt={profileUser.name || "User"}
+                  className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-white dark:border-slate-700"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg border-2 border-white dark:border-slate-700">
+                  {(profileUser.name || "U").charAt(0).toUpperCase()}
+                </div>
+              )}
+              {/* Camera overlay button */}
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                title={t("changePhoto", language)}
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">{profileUser.name || "User"}</h1>
+
+            {/* Name, email, bio */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-3xl font-bold">{profileUser.name || "User"}</h1>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => { setBioValue(profileUser.bio || ""); setEditOpen(true); }}
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  {t("editProfile", language)}
+                </Button>
+              </div>
               <p className="text-muted-foreground text-sm">{profileUser.email}</p>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant="outline" className="text-xs">
                   {t(profileUser.subscriptionType || "free", language)}
                 </Badge>
@@ -278,12 +381,67 @@ export default function MyProfile() {
                   {t("memberSince", language)} {format(new Date(profileUser.createdAt), "MMM yyyy")}
                 </span>
               </div>
+              {/* Bio display */}
+              {profileUser.bio ? (
+                <p className="text-sm text-muted-foreground mt-2 max-w-md leading-relaxed">{profileUser.bio}</p>
+              ) : (
+                <button
+                  onClick={() => { setBioValue(""); setEditOpen(true); }}
+                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground mt-2 italic transition-colors"
+                >
+                  + {isAr ? "إضافة نبذة عنك" : "Add a short bio"}
+                </button>
+              )}
             </div>
           </div>
           <ConsultationCounter language={language} />
         </div>
 
-        {/* ── Stats Row ───────────────────────────────────────────── */}
+        {/* ── Edit Profile Dialog ─────────────────────────────────────────────────── */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("editProfile", language)}</DialogTitle>
+              <DialogDescription>
+                {isAr ? "أضف نبذة قصيرة تظهر على ملفك الشخصي" : "Add a short bio that appears on your profile"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label htmlFor="bio-input">{t("bio", language)}</Label>
+                <Textarea
+                  id="bio-input"
+                  value={bioValue}
+                  onChange={(e) => setBioValue(e.target.value.slice(0, 300))}
+                  placeholder={t("bioPlaceholder", language)}
+                  rows={4}
+                  className="mt-1.5 resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right mt-1">{bioValue.length}/300</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setEditOpen(false)} disabled={isSavingProfile}>
+                  <X className="w-4 h-4 mr-1" />
+                  {t("cancel", language)}
+                </Button>
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
+                  className="bg-cyan-600 hover:bg-cyan-700"
+                >
+                  {isSavingProfile ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-1" />
+                  )}
+                  {isSavingProfile ? t("saving", language) : t("saveProfile", language)}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Stats Row ──────────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {/* Consultation Balance — prominent card */}
           <Card className={`col-span-2 border-2 ${isEmpty ? "border-red-400 bg-red-50 dark:bg-red-950/20" : isLow ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20" : "border-blue-400 bg-blue-50 dark:bg-blue-950/20"}`}>

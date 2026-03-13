@@ -555,3 +555,19 @@
 - [x] Show 3-column summary cards: Total Spent, Paid Consultations count, Free Consultations count
 - [x] Symptoms preview shown below consultation ID for quick identification
 - [x] Responsive: Amount hidden on mobile, PayPal Order ID hidden on tablet
+
+## Profile Picture & Bio
+- [x] Add avatar_url and bio columns to users table (pnpm db:push)
+- [x] Add updateUserProfile(userId, {bio, avatarUrl}) helper to db.ts
+- [x] Add profile.updateProfile tRPC route (bio field, max 300 chars)
+- [x] Add profile.uploadAvatar tRPC route (base64 image → S3 → DB)
+- [x] Update getProfile to return avatarUrl and bio fields
+- [x] Replace static gradient avatar with clickable photo (hover shows camera icon)
+- [x] Hidden file input triggered by camera overlay click
+- [x] Uploading spinner shown on avatar while upload is in progress
+- [x] "Edit Profile" ghost button next to name opens bio dialog
+- [x] Bio dialog: Textarea with 300-char limit counter, Save/Cancel buttons
+- [x] Bio displayed below name/email in profile header
+- [x] "Add a short bio" italic placeholder shown when bio is empty
+- [x] Supports JPEG, PNG, WebP, GIF image formats
+- [x] Zero TypeScript errors after all changes

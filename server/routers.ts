@@ -1436,6 +1436,8 @@ export const appRouter = router({
           subscriptionType: (user as any).subscription_type ?? user.subscriptionType ?? 'free',
           consultationsRemaining: (user as any).consultations_remaining ?? user.consultationsRemaining ?? 0,
           hasUsedFreeConsultation: Boolean((user as any).has_used_free_consultation ?? user.hasUsedFreeConsultation),
+          avatarUrl: (user as any).avatar_url ?? user.avatarUrl ?? null,
+          bio: (user as any).bio ?? null,
           createdAt: user.createdAt,
         },
         stats: {
@@ -1507,6 +1509,40 @@ export const appRouter = router({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Record not found or not authorized' });
         }
         return { success: true };
+      }),
+
+    // ── Update Profile (bio + avatarUrl) ──
+    updateProfile: protectedProcedure
+      .input(z.object({
+        bio: z.string().max(300).nullable().optional(),
+        avatarUrl: z.string().url().nullable().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserProfile(ctx.user.id, {
+          bio: input.bio,
+          avatarUrl: input.avatarUrl,
+        });
+        return { success: true };
+      }),
+
+    // ── Upload Avatar (base64 → S3) ──
+    uploadAvatar: protectedProcedure
+      .input(z.object({
+        fileData: z.string(), // base64
+        fileType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const fileBuffer = Buffer.from(input.fileData, 'base64');
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (fileBuffer.length > maxSize) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Image too large. Maximum size is 5MB.' });
+        }
+        const ext = input.fileType.split('/')[1];
+        const fileKey = `avatars/user-${ctx.user.id}-${Date.now()}.${ext}`;
+        const { url } = await storagePut(fileKey, fileBuffer, input.fileType);
+        // Persist the new avatar URL to the user record
+        await db.updateUserProfile(ctx.user.id, { avatarUrl: url });
+        return { url };
       }),
 
     // ── Payment History ──

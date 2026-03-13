@@ -1462,3 +1462,30 @@ export async function getUserPaymentHistory(userId: number): Promise<PaymentHist
 
   return rows as PaymentHistoryRow[];
 }
+
+// ==================== Profile Update Functions ====================
+
+/**
+ * Update a user's bio and/or avatar URL.
+ */
+export async function updateUserProfile(
+  userId: number,
+  data: { bio?: string | null; avatarUrl?: string | null }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updateSet: Record<string, unknown> = {};
+  if (data.bio !== undefined) updateSet['bio'] = data.bio;
+  if (data.avatarUrl !== undefined) updateSet['avatar_url'] = data.avatarUrl;
+
+  if (Object.keys(updateSet).length === 0) return;
+
+  await db.execute(
+    sql`UPDATE users SET ${sql.raw(
+      Object.entries(updateSet)
+        .map(([k, v]) => `\`${k}\` = ${v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`}`)
+        .join(', ')
+    )} WHERE id = ${userId}`
+  );
+}
