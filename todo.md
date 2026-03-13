@@ -570,3 +570,13 @@
 - [x] Brand colors #06B6D4 and #10B981 hardcoded in BrandColors class in ultimate_server.py
 - [x] End-to-end test: PPTX 34676 bytes ✅ | SVG infographic 6312 bytes ✅
 - [x] Vitest: pythonApi.test.ts passes (health check + anthropic_configured=true)
+
+## OAuth Login Fix
+- [ ] Diagnose "state not found" error in OAuth callback
+- [ ] Fix root cause (state storage, cookie, or session issue)
+- [ ] Verify admin and new user login works end-to-end
+
+## OAuth Callback HTTP 500 Fix
+- [ ] Diagnose HTTP 500 crash in /api/oauth/callback on published site
+- [ ] Fix root cause (likely pythonServer.ts startup crash or db.upsertUser error)
+- [ ] Deploy fix as new checkpoint and publish

@@ -1,0 +1,109 @@
+{
+  "query": "SHOW TABLES; SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SHOW TABLES; SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "blog_categories"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "blog_posts"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "consultation_attached_records"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "consultation_questions"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "consultations"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "podcasts"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "registration_payments"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "research_topics"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "satisfaction_surveys"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "slide_generation_requests"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "user_medical_records"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "users"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "videos"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "watch_history"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "COLUMN_NAME"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "id"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "openId"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "name"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "email"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "loginMethod"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "role"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "createdAt"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "updatedAt"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "lastSignedIn"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "hasUsedFreeConsultation"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "subscription_type"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "consultations_remaining"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "username"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "password_hash"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "auth_method"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "free_consultations_used"
+    },
+    {
+      "Tables_in_jSnYmp6WUaKPak95AQvbBu": "free_consultations_total"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_jSnYmp6WUaKPak95AQvbBu\n__drizzle_migrations\nblog_categories\nblog_posts\nconsultation_attached_records\nconsultation_questions\nconsultations\npodcasts\nregistration_payments\nresearch_topics\nsatisfaction_surveys\nslide_generation_requests\nuser_medical_records\nusers\nvideos\nwatch_history\nCOLUMN_NAME\nid\nopenId\nname\nemail\nloginMethod\nrole\ncreatedAt\nupdatedAt\nlastSignedIn\nhasUsedFreeConsultation\nsubscription_type\nconsultations_remaining\nusername\npassword_hash\nauth_method\nfree_consultations_used\nfree_consultations_total\n",
+  "stderr": "",
+  "execution_time_ms": 1799
+}
