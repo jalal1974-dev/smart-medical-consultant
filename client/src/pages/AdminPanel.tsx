@@ -122,6 +122,19 @@ export default function AdminPanel() {
     onError: () => toast.error("Failed to update podcast"),
   });
 
+  const generatePptx = trpc.admin.generatePptx.useMutation({
+    onSuccess: () => {
+      toast.success("PPTX slide deck generated successfully!");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (error) => toast.error(`Failed to generate PPTX: ${error.message}`),
+  });
+
+  const { data: pythonApiStatus } = trpc.admin.checkPythonApi.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+    refetchInterval: 60_000, // re-check every 60s
+  });
+
   const resetMediaForm = () => {
     setEditingMedia(null);
     setMediaForm({
@@ -370,6 +383,24 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* Python API Status */}
+        <div className="mb-4 flex items-center gap-2 text-sm">
+          <span className="font-medium text-muted-foreground">AI Backend:</span>
+          {pythonApiStatus === undefined ? (
+            <span className="text-muted-foreground">Checking...</span>
+          ) : pythonApiStatus.healthy ? (
+            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
+              <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+              Online {pythonApiStatus.anthropicConfigured ? '· Anthropic ✓' : '· Anthropic ✗'}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+              <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
+              Offline {pythonApiStatus.error ? `(${pythonApiStatus.error})` : ''}
+            </span>
+          )}
+        </div>
+
         {/* Tabs */}
         <Tabs defaultValue="consultations" className="space-y-4">
           <TabsList>
@@ -469,11 +500,35 @@ export default function AdminPanel() {
                         })()}
                         
                         {(() => {
-                          // Check if slide deck is a JSON file (content structure) or actual slides
-                          const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
-                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          // Check if slide deck is a PPTX file (actual generated slides)
+                          const hasPptx = consultation.aiSlideDeckUrl?.endsWith('.pptx');
+                          const hasJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
+                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !hasJsonContent;
                           
-                          if (hasGeneratedSlides) {
+                          if (hasPptx) {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-background rounded">
+                                <span className="text-sm">📽️ Slide Deck (PPTX)</span>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a href={consultation.aiSlideDeckUrl || '#'} download>
+                                      Download
+                                    </a>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={generatePptx.isPending}
+                                    onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
+                                  >
+                                    {generatePptx.isPending ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                                    ) : 'Regenerate'}
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          } else if (hasGeneratedSlides) {
                             return (
                               <div className="flex items-center justify-between p-2 bg-background rounded">
                                 <span className="text-sm">📽️ Slide Deck</span>
@@ -483,14 +538,36 @@ export default function AdminPanel() {
                                       View
                                     </a>
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={generatePptx.isPending}
+                                    onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
+                                  >
+                                    {generatePptx.isPending ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                                    ) : '→ PPTX'}
+                                  </Button>
                                 </div>
                               </div>
                             );
                           } else {
                             return (
                               <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                                <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
-                                <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
+                                <span className="text-sm">📽️ Slide Deck</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  disabled={generatePptx.isPending}
+                                  onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
+                                >
+                                  {generatePptx.isPending ? (
+                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                                  ) : (
+                                    <><Brain className="h-3 w-3 mr-1" />Generate PPTX</>
+                                  )}
+                                </Button>
                               </div>
                             );
                           }

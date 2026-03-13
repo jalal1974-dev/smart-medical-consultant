@@ -754,13 +754,15 @@ export const appRouter = router({
         // Import generateInfographic function
         const { regenerateInfographicForConsultation } = await import('./contentGeneration');
         
-        // Regenerate infographic
+        // Regenerate infographic (now uses Python API with fallback)
         const newInfographicUrl = await regenerateInfographicForConsultation(
           consultation.id,
           consultation.aiAnalysis,
           consultation.patientName,
           consultation.preferredLanguage as "en" | "ar",
-          input.customPrompt
+          input.customPrompt,
+          consultation.symptoms,
+          consultation.medicalHistory
         );
 
         if (!newInfographicUrl) {
@@ -779,6 +781,49 @@ export const appRouter = router({
           success: true, 
           infographicUrl: newInfographicUrl 
         };
+      }),
+
+    // Generate PPTX slide deck for a consultation via Python API
+    generatePptx: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        const { generatePptxViaPython } = await import('./pythonApiClient');
+        const pptxUrl = await generatePptxViaPython({
+          id: consultation.id,
+          patientName: consultation.patientName,
+          symptoms: consultation.symptoms,
+          medicalHistory: consultation.medicalHistory,
+          aiAnalysis: consultation.aiAnalysis,
+          preferredLanguage: consultation.preferredLanguage,
+        });
+
+        if (!pptxUrl) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to generate PPTX. Python API may be unavailable.',
+          });
+        }
+
+        // Save the PPTX URL to the consultation
+        await db.updateConsultation(input.consultationId, {
+          aiSlideDeckUrl: pptxUrl,
+        });
+
+        return { success: true, pptxUrl };
+      }),
+
+    // Check Python API health
+    checkPythonApi: adminProcedure
+      .query(async () => {
+        const { checkPythonApiHealth } = await import('./pythonApiClient');
+        return await checkPythonApiHealth();
       }),
 
     // Get analytics data
