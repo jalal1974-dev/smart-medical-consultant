@@ -581,3 +581,8 @@
 - [x] Add "Archive" button in AdminPanel.tsx (only for completed consultations)
 - [x] Ensure patient consultation.list still returns archived consultations
 - [x] Remove all test/demo data from the database
+
+## Google Sign-In
+- [x] Investigate existing Manus OAuth flow and how Google OAuth is supported
+- [x] Add "Sign in with Google" button to login/register UI
+- [x] Ensure Google OAuth redirects correctly and creates user session

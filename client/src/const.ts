@@ -15,3 +15,20 @@ export const getLoginUrl = () => {
 
   return url.toString();
 };
+
+// Direct Google OAuth — skips the provider-selection screen
+export const getGoogleLoginUrl = () => {
+  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
+  const appId = import.meta.env.VITE_APP_ID;
+  const redirectUri = `${window.location.origin}/api/oauth/callback`;
+  const state = btoa(redirectUri);
+
+  const url = new URL(`${oauthPortalUrl}/app-auth`);
+  url.searchParams.set("appId", appId);
+  url.searchParams.set("redirectUri", redirectUri);
+  url.searchParams.set("state", state);
+  url.searchParams.set("type", "signIn");
+  url.searchParams.set("provider", "google");
+
+  return url.toString();
+};
