@@ -1,0 +1,31 @@
+{
+  "query": "\nDELETE FROM videos WHERE titleEn LIKE '%Test%' OR titleEn LIKE '%test%' OR titleEn LIKE '%demo%' OR titleEn LIKE '%Demo%' OR titleEn LIKE '%sample%' OR titleEn LIKE '%Sample%';\nDELETE FROM podcasts WHERE titleEn LIKE '%Test%' OR titleEn LIKE '%test%' OR titleEn LIKE '%demo%' OR titleEn LIKE '%Demo%' OR titleEn LIKE '%sample%' OR titleEn LIKE '%Sample%';\nSELECT COUNT(*) as remaining_consultations FROM consultations;\nSELECT COUNT(*) as remaining_videos FROM videos;\nSELECT COUNT(*) as remaining_podcasts FROM podcasts;\nSELECT COUNT(*) as remaining_users FROM users;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nDELETE FROM videos WHERE titleEn LIKE '%Test%' OR titleEn LIKE '%test%' OR titleEn LIKE '%demo%' OR titleEn LIKE '%Demo%' OR titleEn LIKE '%sample%' OR titleEn LIKE '%Sample%';\nDELETE FROM podcasts WHERE titleEn LIKE '%Test%' OR titleEn LIKE '%test%' OR titleEn LIKE '%demo%' OR titleEn LIKE '%Demo%' OR titleEn LIKE '%sample%' OR titleEn LIKE '%Sample%';\nSELECT COUNT(*) as remaining_consultations FROM consultations;\nSELECT COUNT(*) as remaining_videos FROM videos;\nSELECT COUNT(*) as remaining_podcasts FROM podcasts;\nSELECT COUNT(*) as remaining_users FROM users;\n",
+  "rows": [
+    {
+      "remaining_consultations": "0"
+    },
+    {
+      "remaining_consultations": "remaining_videos"
+    },
+    {
+      "remaining_consultations": "0"
+    },
+    {
+      "remaining_consultations": "remaining_podcasts"
+    },
+    {
+      "remaining_consultations": "0"
+    },
+    {
+      "remaining_consultations": "remaining_users"
+    },
+    {
+      "remaining_consultations": "52"
+    }
+  ],
+  "messages": [],
+  "stdout": "remaining_consultations\n0\nremaining_videos\n0\nremaining_podcasts\n0\nremaining_users\n52\n",
+  "stderr": "",
+  "execution_time_ms": 2584
+}

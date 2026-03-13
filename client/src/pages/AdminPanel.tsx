@@ -13,7 +13,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
@@ -120,6 +120,14 @@ export default function AdminPanel() {
       resetMediaForm();
     },
     onError: () => toast.error("Failed to update podcast"),
+  });
+
+  const archiveConsultation = trpc.admin.archiveConsultation.useMutation({
+    onSuccess: () => {
+      toast.success("Consultation archived — it remains visible to the patient.");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (error) => toast.error(`Failed to archive: ${error.message}`),
   });
 
   const generatePptx = trpc.admin.generatePptx.useMutation({
@@ -634,6 +642,28 @@ export default function AdminPanel() {
                         <SelectItem value="follow_up">Follow Up</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {/* Archive button — only show for completed consultations */}
+                    {consultation.status === "completed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-muted-foreground hover:text-destructive hover:border-destructive"
+                        disabled={archiveConsultation.isPending}
+                        onClick={() => {
+                          if (confirm(`Archive this consultation for ${consultation.patientName}? It will be removed from this list but the patient can still see it in their records.`)) {
+                            archiveConsultation.mutate({ consultationId: consultation.id });
+                          }
+                        }}
+                        title="Archive — removes from admin view, patient record is preserved"
+                      >
+                        {archiveConsultation.isPending ? (
+                          <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Archiving...</>
+                        ) : (
+                          <><Archive className="h-3 w-3 mr-1" />Archive</>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

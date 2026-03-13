@@ -96,6 +96,10 @@ export const consultations = mysqlTable("consultations", {
   amount: int("amount").default(0).notNull(),
   paymentStatus: mysqlEnum("paymentStatus", ["pending", "completed", "failed"]).default("pending").notNull(),
   paymentId: varchar("paymentId", { length: 255 }),
+
+  // Admin archive — hides consultation from admin panel but keeps it in patient's record
+  archivedByAdmin: boolean("archivedByAdmin").default(false).notNull(),
+  archivedAt: timestamp("archivedAt"),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

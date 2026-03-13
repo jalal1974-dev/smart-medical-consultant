@@ -826,6 +826,22 @@ export const appRouter = router({
         return await checkPythonApiHealth();
       }),
 
+    // Archive a consultation — hides it from admin panel but keeps it in patient record
+    archiveConsultation: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        await db.archiveConsultation(input.consultationId);
+
+        return { success: true };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({

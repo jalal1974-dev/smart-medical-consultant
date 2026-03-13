@@ -1,0 +1,122 @@
+{
+  "query": "\nSELECT id, titleEn, titleAr, createdAt FROM videos ORDER BY createdAt;\nSELECT id, titleEn, titleAr, createdAt FROM podcasts ORDER BY createdAt;\nSELECT id, patientName, status, archivedByAdmin, createdAt FROM consultations ORDER BY createdAt;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nSELECT id, titleEn, titleAr, createdAt FROM videos ORDER BY createdAt;\nSELECT id, titleEn, titleAr, createdAt FROM podcasts ORDER BY createdAt;\nSELECT id, patientName, status, archivedByAdmin, createdAt FROM consultations ORDER BY createdAt;\n",
+  "rows": [
+    {
+      "id": "180001",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 00:30:48"
+    },
+    {
+      "id": "180002",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 00:34:47"
+    },
+    {
+      "id": "210001",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 23:03:14"
+    },
+    {
+      "id": "210002",
+      "titleEn": "Test Video for Watch History",
+      "titleAr": "فيديو اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 23:04:41"
+    },
+    {
+      "id": "id",
+      "titleEn": "titleEn",
+      "titleAr": "titleAr",
+      "createdAt": "createdAt"
+    },
+    {
+      "id": "150001",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 00:30:49"
+    },
+    {
+      "id": "150002",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 00:34:48"
+    },
+    {
+      "id": "180001",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 23:03:14"
+    },
+    {
+      "id": "180002",
+      "titleEn": "Test Podcast for Watch History",
+      "titleAr": "بودكاست اختبار لسجل المشاهدة",
+      "createdAt": "2026-03-13 23:04:41"
+    }
+  ],
+  "messages": [
+    "id\tpatientName\tstatus\tarchivedByAdmin\tcreatedAt",
+    "300001\tTest Patient 0\tsubmitted\t0\t2026-03-13 00:30:45",
+    "300002\tTest Patient\tcompleted\t0\t2026-03-13 00:30:45",
+    "300003\tTest Patient 1\tai_processing\t0\t2026-03-13 00:30:45",
+    "300004\tJohn Doe\tai_processing\t0\t2026-03-13 00:30:45",
+    "300005\tTest Patient 2\tspecialist_review\t0\t2026-03-13 00:30:45",
+    "300006\tTest Patient 3\tcompleted\t0\t2026-03-13 00:30:45",
+    "300007\tTest Patient 4\tfollow_up\t0\t2026-03-13 00:30:45",
+    "300008\tJohn Doe\tai_processing\t0\t2026-03-13 00:30:48",
+    "300009\tTest Patient 2\tai_processing\t0\t2026-03-13 00:30:49",
+    "300010\tTest Patient 3\tai_processing\t0\t2026-03-13 00:30:50",
+    "300011\tTest Patient\tai_processing\t0\t2026-03-13 00:30:51",
+    "300012\tTest Patient 4\tai_processing\t0\t2026-03-13 00:30:53",
+    "300013\tPayment Test\tai_processing\t0\t2026-03-13 00:30:54",
+    "300014\tStatus Test\tai_processing\t0\t2026-03-13 00:30:56",
+    "300015\tTest Patient 0\tsubmitted\t0\t2026-03-13 00:34:43",
+    "300016\tTest Patient 1\tai_processing\t0\t2026-03-13 00:34:44",
+    "300017\tTest Patient\tcompleted\t0\t2026-03-13 00:34:44",
+    "300018\tTest Patient 2\tspecialist_review\t0\t2026-03-13 00:34:44",
+    "300019\tJohn Doe\tai_processing\t0\t2026-03-13 00:34:44",
+    "300020\tTest Patient 3\tcompleted\t0\t2026-03-13 00:34:44",
+    "300021\tTest Patient 4\tfollow_up\t0\t2026-03-13 00:34:44",
+    "300022\tJohn Doe\tai_processing\t0\t2026-03-13 00:34:48",
+    "300023\tTest Patient 2\tai_processing\t0\t2026-03-13 00:34:48",
+    "300024\tTest Patient 3\tai_processing\t0\t2026-03-13 00:34:49",
+    "300025\tTest Patient\tai_processing\t0\t2026-03-13 00:34:50",
+    "300026\tTest Patient 4\tsubmitted\t0\t2026-03-13 00:34:52",
+    "300027\tPayment Test\tai_processing\t0\t2026-03-13 00:34:53",
+    "300028\tStatus Test\tai_processing\t0\t2026-03-13 00:34:55",
+    "330001\tTest Patient 0\tsubmitted\t0\t2026-03-13 23:03:11",
+    "330002\tTest Patient\tcompleted\t0\t2026-03-13 23:03:11",
+    "330003\tTest Patient 1\tai_processing\t0\t2026-03-13 23:03:11",
+    "330004\tJohn Doe\tai_processing\t0\t2026-03-13 23:03:11",
+    "330005\tTest Patient 2\tspecialist_review\t0\t2026-03-13 23:03:11",
+    "330006\tTest Patient 3\tcompleted\t0\t2026-03-13 23:03:11",
+    "330007\tTest Patient 4\tfollow_up\t0\t2026-03-13 23:03:11",
+    "330008\tJohn Doe\tai_processing\t0\t2026-03-13 23:03:14",
+    "330009\tTest Patient 2\tai_processing\t0\t2026-03-13 23:03:15",
+    "330010\tTest Patient 3\tai_processing\t0\t2026-03-13 23:03:16",
+    "330011\tTest Patient\tai_processing\t0\t2026-03-13 23:03:17",
+    "330012\tTest Patient 4\tai_processing\t0\t2026-03-13 23:03:19",
+    "330013\tPayment Test\tai_processing\t0\t2026-03-13 23:03:20",
+    "330014\tStatus Test\tai_processing\t0\t2026-03-13 23:03:22",
+    "330015\tTest Patient 0\tsubmitted\t0\t2026-03-13 23:04:37",
+    "330016\tTest Patient 1\tai_processing\t0\t2026-03-13 23:04:38",
+    "330017\tTest Patient\tcompleted\t0\t2026-03-13 23:04:38",
+    "330018\tTest Patient 2\tspecialist_review\t0\t2026-03-13 23:04:38",
+    "330019\tJohn Doe\tai_processing\t0\t2026-03-13 23:04:38",
+    "330020\tTest Patient 3\tcompleted\t0\t2026-03-13 23:04:38",
+    "330021\tTest Patient 4\tfollow_up\t0\t2026-03-13 23:04:38",
+    "330022\tJohn Doe\tai_processing\t0\t2026-03-13 23:04:41",
+    "330023\tTest Patient 2\tai_processing\t0\t2026-03-13 23:04:42",
+    "330024\tTest Patient 3\tai_processing\t0\t2026-03-13 23:04:43",
+    "330025\tTest Patient\tai_processing\t0\t2026-03-13 23:04:44",
+    "330026\tTest Patient 4\tai_processing\t0\t2026-03-13 23:04:46",
+    "330027\tPayment Test\tai_processing\t0\t2026-03-13 23:04:47",
+    "330028\tStatus Test\tspecialist_review\t0\t2026-03-13 23:04:49"
+  ],
+  "stdout": "id\ttitleEn\ttitleAr\tcreatedAt\n180001\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t2026-03-13 00:30:48\n180002\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t2026-03-13 00:34:47\n210001\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t2026-03-13 23:03:14\n210002\tTest Video for Watch History\tفيديو اختبار لسجل المشاهدة\t2026-03-13 23:04:41\nid\ttitleEn\ttitleAr\tcreatedAt\n150001\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t2026-03-13 00:30:49\n150002\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t2026-03-13 00:34:48\n180001\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t2026-03-13 23:03:14\n180002\tTest Podcast for Watch History\tبودكاست اختبار لسجل المشاهدة\t2026-03-13 23:04:41\nid\tpatientName\tstatus\tarchivedByAdmin\tcreatedAt\n300001\tTest Patient 0\tsubmitted\t0\t2026-03-13 00:30:45\n300002\tTest Patient\tcompleted\t0\t2026-03-13 00:30:45\n300003\tTest Patient 1\tai_processing\t0\t2026-03-13 00:30:45\n300004\tJohn Doe\tai_processing\t0\t2026-03-13 00:30:45\n300005\tTest Patient 2\tspecialist_review\t0\t2026-03-13 00:30:45\n300006\tTest Patient 3\tcompleted\t0\t2026-03-13 00:30:45\n300007\tTest Patient 4\tfollow_up\t0\t2026-03-13 00:30:45\n300008\tJohn Doe\tai_processing\t0\t2026-03-13 00:30:48\n300009\tTest Patient 2\tai_processing\t0\t2026-03-13 00:30:49\n300010\tTest Patient 3\tai_processing\t0\t2026-03-13 00:30:50\n300011\tTest Patient\tai_processing\t0\t2026-03-13 00:30:51\n300012\tTest Patient 4\tai_processing\t0\t2026-03-13 00:30:53\n300013\tPayment Test\tai_processing\t0\t2026-03-13 00:30:54\n300014\tStatus Test\tai_processing\t0\t2026-03-13 00:30:56\n300015\tTest Patient 0\tsubmitted\t0\t2026-03-13 00:34:43\n300016\tTest Patient 1\tai_processing\t0\t2026-03-13 00:34:44\n300017\tTest Patient\tcompleted\t0\t2026-03-13 00:34:44\n300018\tTest Patient 2\tspecialist_review\t0\t2026-03-13 00:34:44\n300019\tJohn Doe\tai_processing\t0\t2026-03-13 00:34:44\n300020\tTest Patient 3\tcompleted\t0\t2026-03-13 00:34:44\n300021\tTest Patient 4\tfollow_up\t0\t2026-03-13 00:34:44\n300022\tJohn Doe\tai_processing\t0\t2026-03-13 00:34:48\n300023\tTest Patient 2\tai_processing\t0\t2026-03-13 00:34:48\n300024\tTest Patient 3\tai_processing\t0\t2026-03-13 00:34:49\n300025\tTest Patient\tai_processing\t0\t2026-03-13 00:34:50\n300026\tTest Patient 4\tsubmitted\t0\t2026-03-13 00:34:52\n300027\tPayment Test\tai_processing\t0\t2026-03-13 00:34:53\n300028\tStatus Test\tai_processing\t0\t2026-03-13 00:34:55\n330001\tTest Patient 0\tsubmitted\t0\t2026-03-13 23:03:11\n330002\tTest Patient\tcompleted\t0\t2026-03-13 23:03:11\n330003\tTest Patient 1\tai_processing\t0\t2026-03-13 23:03:11\n330004\tJohn Doe\tai_processing\t0\t2026-03-13 23:03:11\n330005\tTest Patient 2\tspecialist_review\t0\t2026-03-13 23:03:11\n330006\tTest Patient 3\tcompleted\t0\t2026-03-13 23:03:11\n330007\tTest Patient 4\tfollow_up\t0\t2026-03-13 23:03:11\n330008\tJohn Doe\tai_processing\t0\t2026-03-13 23:03:14\n330009\tTest Patient 2\tai_processing\t0\t2026-03-13 23:03:15\n330010\tTest Patient 3\tai_processing\t0\t2026-03-13 23:03:16\n330011\tTest Patient\tai_processing\t0\t2026-03-13 23:03:17\n330012\tTest Patient 4\tai_processing\t0\t2026-03-13 23:03:19\n330013\tPayment Test\tai_processing\t0\t2026-03-13 23:03:20\n330014\tStatus Test\tai_processing\t0\t2026-03-13 23:03:22\n330015\tTest Patient 0\tsubmitted\t0\t2026-03-13 23:04:37\n330016\tTest Patient 1\tai_processing\t0\t2026-03-13 23:04:38\n330017\tTest Patient\tcompleted\t0\t2026-03-13 23:04:38\n330018\tTest Patient 2\tspecialist_review\t0\t2026-03-13 23:04:38\n330019\tJohn Doe\tai_processing\t0\t2026-03-13 23:04:38\n330020\tTest Patient 3\tcompleted\t0\t2026-03-13 23:04:38\n330021\tTest Patient 4\tfollow_up\t0\t2026-03-13 23:04:38\n330022\tJohn Doe\tai_processing\t0\t2026-03-13 23:04:41\n330023\tTest Patient 2\tai_processing\t0\t2026-03-13 23:04:42\n330024\tTest Patient 3\tai_processing\t0\t2026-03-13 23:04:43\n330025\tTest Patient\tai_processing\t0\t2026-03-13 23:04:44\n330026\tTest Patient 4\tai_processing\t0\t2026-03-13 23:04:46\n330027\tPayment Test\tai_processing\t0\t2026-03-13 23:04:47\n330028\tStatus Test\tspecialist_review\t0\t2026-03-13 23:04:49\n",
+  "stderr": "",
+  "execution_time_ms": 1978
+}

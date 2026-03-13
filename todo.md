@@ -571,3 +571,13 @@
 - [x] "Add a short bio" italic placeholder shown when bio is empty
 - [x] Supports JPEG, PNG, WebP, GIF image formats
 - [x] Zero TypeScript errors after all changes
+
+## Admin Archive & Test Data Cleanup
+- [x] Add archivedByAdmin boolean column to consultations table in schema.ts
+- [x] Run pnpm db:push to migrate the database
+- [x] Add archiveConsultation DB helper in db.ts
+- [x] Add admin.archiveConsultation tRPC mutation in routers.ts (soft-delete from admin view)
+- [x] Filter out archived consultations from admin.consultations query
+- [x] Add "Archive" button in AdminPanel.tsx (only for completed consultations)
+- [x] Ensure patient consultation.list still returns archived consultations
+- [x] Remove all test/demo data from the database

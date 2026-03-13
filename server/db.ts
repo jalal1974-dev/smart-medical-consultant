@@ -190,7 +190,22 @@ export async function getAllConsultations() {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(consultations).orderBy(desc(consultations.createdAt));
+  // Exclude consultations archived by admin — they remain visible to patients
+  return await db
+    .select()
+    .from(consultations)
+    .where(eq(consultations.archivedByAdmin, false))
+    .orderBy(desc(consultations.createdAt));
+}
+
+export async function archiveConsultation(id: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(consultations)
+    .set({ archivedByAdmin: true, archivedAt: new Date(), updatedAt: new Date() })
+    .where(eq(consultations.id, id));
 }
 
 export async function updateConsultationStatus(id: number, status: typeof consultations.$inferSelect.status) {
