@@ -555,3 +555,18 @@
 - [x] Show 3-column summary cards: Total Spent, Paid Consultations count, Free Consultations count
 - [x] Symptoms preview shown below consultation ID for quick identification
 - [x] Responsive: Amount hidden on mobile, PayPal Order ID hidden on tablet
+
+## Claude AI + Python API Integration
+- [x] Install Python dependencies (fastapi, uvicorn, anthropic, python-pptx, Pillow, pydantic)
+- [x] Copy ultimate_server.py to server/python/ultimate_server.py
+- [x] Add ANTHROPIC_API_KEY secret (auto-matched from BYOK)
+- [x] Add PYTHON_API_URL env variable = http://localhost:8000
+- [x] Create server/pythonServer.ts: auto-starts FastAPI as child process on Node.js startup
+- [x] Integrated into server/_core/index.ts: startPythonServer() called before Express setup
+- [x] Rewrite server/contentGeneration.ts: PPTX via /generate/slides, SVG via /generate/infographic
+- [x] Fix PPTX downloads: .pptx files use download attribute in AdminPanel, AIConsultationReview, Dashboard, MyProfile
+- [x] Language enforcement: pure Arabic OR pure English prompts in Python API (no mixing)
+- [x] buildPatientPayload() maps MedicalAnalysisResult → PatientDataPayload for Python API
+- [x] Brand colors #06B6D4 and #10B981 hardcoded in BrandColors class in ultimate_server.py
+- [x] End-to-end test: PPTX 34676 bytes ✅ | SVG infographic 6312 bytes ✅
+- [x] Vitest: pythonApi.test.ts passes (health check + anthropic_configured=true)

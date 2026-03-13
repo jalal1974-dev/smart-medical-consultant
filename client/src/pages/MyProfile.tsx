@@ -502,9 +502,16 @@ export default function MyProfile() {
                             )}
                             {c.aiSlideDeckUrl && (
                               <Button size="sm" variant="outline" asChild className="gap-1 text-xs">
-                                <a href={c.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
+                                <a
+                                  href={c.aiSlideDeckUrl}
+                                  {...(c.aiSlideDeckUrl.endsWith('.pptx')
+                                    ? { download: `consultation-${c.id}-slides.pptx` }
+                                    : { target: '_blank', rel: 'noopener noreferrer' })}
+                                >
                                   <Eye className="w-3 h-3" />
-                                  {t("viewSlides", language)}
+                                  {c.aiSlideDeckUrl.endsWith('.pptx')
+                                    ? (isAr ? "⬇ .pptx" : "⬇ .pptx")
+                                    : t("viewSlides", language)}
                                 </a>
                               </Button>
                             )}

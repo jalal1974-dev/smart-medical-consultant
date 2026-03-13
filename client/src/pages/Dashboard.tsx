@@ -415,9 +415,16 @@ export default function Dashboard() {
                         )}
                         {consultation.aiSlideDeckUrl && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
-                            <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
+                            <a
+                              href={consultation.aiSlideDeckUrl}
+                              {...(consultation.aiSlideDeckUrl.endsWith('.pptx')
+                                ? { download: `consultation-${consultation.id}-slides.pptx` }
+                                : { target: '_blank', rel: 'noopener noreferrer' })}
+                            >
                               <Presentation className="w-4 h-4 mr-2" />
-                              {language === "ar" ? "العرض التقديمي" : "Slide Deck"}
+                              {consultation.aiSlideDeckUrl.endsWith('.pptx')
+                                ? (language === "ar" ? "⬇ تنزيل (.pptx)" : "⬇ Download (.pptx)")
+                                : (language === "ar" ? "العرض التقديمي" : "Slide Deck")}
                             </a>
                           </Button>
                         )}

@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { startPythonServer } from "../pythonServer";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -28,6 +29,11 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Start Python FastAPI backend for PPTX/infographic generation
+  startPythonServer().catch((err) =>
+    console.warn("[Python API] Failed to start:", err)
+  );
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
