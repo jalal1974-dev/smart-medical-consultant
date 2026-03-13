@@ -1,8 +1,0 @@
-{
-  "query": "\n-- Delete all non-owner test users (keep the owner account)\nDELETE FROM users WHERE open_id NOT IN (SELECT open_id FROM (SELECT open_id FROM users ORDER BY created_at ASC LIMIT 1) AS first_user);\n-- Reset the owner's consultation counters and test data\nUPDATE users SET \n  consultations_remaining = 0,\n  free_consultations_used = 0,\n  free_consultations_total = 0,\n  subscription_type = 'free'\nWHERE open_id IN (SELECT open_id FROM (SELECT open_id FROM users ORDER BY created_at ASC LIMIT 1) AS first_user);\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \n-- Delete all non-owner test users (keep the owner account)\nDELETE FROM users WHERE open_id NOT IN (SELECT open_id FROM (SELECT open_id FROM users ORDER BY created_at ASC LIMIT 1) AS first_user);\n-- Reset the owner's consultation counters and test data\nUPDATE users SET \n  consultations_remaining = 0,\n  free_consultations_used = 0,\n  free_consultations_total = 0,\n  subscription_type = 'free'\nWHERE open_id IN (SELECT open_id FROM (SELECT open_id FROM users ORDER BY created_at ASC LIMIT 1) AS first_user);\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 3: Unknown column 'open_id' in 'where clause'"
-  ]
-}

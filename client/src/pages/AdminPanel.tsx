@@ -469,29 +469,11 @@ export default function AdminPanel() {
                         })()}
                         
                         {(() => {
-                          // .pptx = real binary file; .json = old content-only format (legacy)
-                          const isPptx = consultation.aiSlideDeckUrl?.endsWith('.pptx');
-                          const isJson = consultation.aiSlideDeckUrl?.endsWith('.json');
-                          const hasRealSlides = consultation.aiSlideDeckUrl && (isPptx || (!isJson && consultation.aiSlideDeckUrl));
-
-                          if (isPptx) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📽️ Slide Deck (.pptx)</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a
-                                      href={consultation.aiSlideDeckUrl || '#'}
-                                      download={`consultation-${consultation.id}-slides.pptx`}
-                                      rel="noopener noreferrer"
-                                    >
-                                      ⬇ Download
-                                    </a>
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          } else if (hasRealSlides) {
+                          // Check if slide deck is a JSON file (content structure) or actual slides
+                          const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
+                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          
+                          if (hasGeneratedSlides) {
                             return (
                               <div className="flex items-center justify-between p-2 bg-background rounded">
                                 <span className="text-sm">📽️ Slide Deck</span>

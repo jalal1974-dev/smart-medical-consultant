@@ -1,9 +1,0 @@
-{
-  "query": "\n-- Delete child records first to avoid FK constraint errors\nDELETE FROM consultation_attached_records;\nDELETE FROM consultation_questions;\nDELETE FROM satisfaction_surveys;\nDELETE FROM consultations;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \n-- Delete child records first to avoid FK constraint errors\nDELETE FROM consultation_attached_records;\nDELETE FROM consultation_questions;\nDELETE FROM satisfaction_surveys;\nDELETE FROM consultations;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 2172
-}

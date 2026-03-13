@@ -24,7 +24,7 @@ export function registerOAuthRoutes(app: Express) {
       const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
 
       if (!userInfo.openId) {
-        res.redirect(302, "/login?error=missing_user_info");
+        res.status(400).json({ error: "openId missing from user info" });
         return;
       }
 
@@ -45,18 +45,9 @@ export function registerOAuthRoutes(app: Express) {
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       res.redirect(302, "/");
-    } catch (error: any) {
+    } catch (error) {
       console.error("[OAuth] Callback failed", error);
-      // Determine the error type for a user-friendly redirect
-      const errMsg = error?.response?.data?.message || error?.message || "";
-      let errorCode = "auth_failed";
-      if (errMsg.includes("expired") || errMsg.includes("invalid") || errMsg.includes("state")) {
-        errorCode = "session_expired";
-      } else if (errMsg.includes("unauthenticated") || errMsg.includes("authorization code")) {
-        errorCode = "session_expired";
-      }
-      // Redirect back to login with a friendly error instead of showing a 500 page
-      res.redirect(302, `/login?error=${errorCode}`);
+      res.status(500).json({ error: "OAuth callback failed" });
     }
   });
 }

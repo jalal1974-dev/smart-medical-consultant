@@ -381,17 +381,12 @@ export default function AIConsultationReview() {
                       {selected.aiSlideDeckUrl && (
                         <a
                           href={selected.aiSlideDeckUrl}
-                          {...(selected.aiSlideDeckUrl.endsWith('.pptx')
-                            ? { download: `consultation-${selected.id}-slides.pptx` }
-                            : { target: '_blank', rel: 'noopener noreferrer' })}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="flex items-center gap-2 p-4 border rounded-lg hover:bg-accent transition-colors"
                         >
                           <Presentation className="w-5 h-5 text-primary" />
-                          <span className="font-medium">
-                            {selected.aiSlideDeckUrl.endsWith('.pptx')
-                              ? (language === "ar" ? "⬇ تنزيل العرض (.pptx)" : "⬇ Download Slides (.pptx)")
-                              : (language === "ar" ? "عرض تقديمي" : "Slide Deck")}
-                          </span>
+                          <span className="font-medium">{language === "ar" ? "عرض تقديمي" : "Slide Deck"}</span>
                         </a>
                       )}
                       {selected.aiMindMapUrl && (

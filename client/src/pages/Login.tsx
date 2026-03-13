@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff, User, Lock, LogIn, Shield, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, User, Lock, LogIn, Shield } from "lucide-react";
 import { getLoginUrl } from "@/const";
-
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  session_expired: "Your login session expired. Please try signing in again.",
-  auth_failed: "Sign-in failed. Please try again.",
-  missing_user_info: "Could not retrieve your account info. Please try again.",
-};
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -21,13 +15,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Show OAuth error from redirect query param
-  const oauthError = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("error");
-    return code ? (OAUTH_ERROR_MESSAGES[code] ?? "Sign-in failed. Please try again.") : null;
-  }, []);
 
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.loginLocal.useMutation({
@@ -142,14 +129,6 @@ export default function Login() {
                   <span className="bg-slate-800 px-2 text-slate-500">or</span>
                 </div>
               </div>
-
-              {/* OAuth error banner */}
-              {oauthError && (
-                <div className="flex items-start gap-2 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg text-amber-300 text-sm">
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>{oauthError}</span>
-                </div>
-              )}
 
               {/* OAuth login option */}
               <Button
