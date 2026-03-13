@@ -1,0 +1,61 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'users' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "openId"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "loginMethod"
+    },
+    {
+      "COLUMN_NAME": "role"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "lastSignedIn"
+    },
+    {
+      "COLUMN_NAME": "hasUsedFreeConsultation"
+    },
+    {
+      "COLUMN_NAME": "subscription_type"
+    },
+    {
+      "COLUMN_NAME": "consultations_remaining"
+    },
+    {
+      "COLUMN_NAME": "username"
+    },
+    {
+      "COLUMN_NAME": "password_hash"
+    },
+    {
+      "COLUMN_NAME": "auth_method"
+    },
+    {
+      "COLUMN_NAME": "free_consultations_used"
+    },
+    {
+      "COLUMN_NAME": "free_consultations_total"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nopenId\nname\nemail\nloginMethod\nrole\ncreatedAt\nupdatedAt\nlastSignedIn\nhasUsedFreeConsultation\nsubscription_type\nconsultations_remaining\nusername\npassword_hash\nauth_method\nfree_consultations_used\nfree_consultations_total\n",
+  "stderr": "",
+  "execution_time_ms": 1496
+}

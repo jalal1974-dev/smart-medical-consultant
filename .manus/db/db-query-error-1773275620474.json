@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT id, title, createdAt FROM blog_posts ORDER BY createdAt DESC LIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nSELECT id, title, createdAt FROM blog_posts ORDER BY createdAt DESC LIMIT 10;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'title' in 'field list'"
+  ]
+}
