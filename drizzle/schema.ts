@@ -97,6 +97,19 @@ export const consultations = mysqlTable("consultations", {
   paymentStatus: mysqlEnum("paymentStatus", ["pending", "completed", "failed"]).default("pending").notNull(),
   paymentId: varchar("paymentId", { length: 255 }),
 
+  // Per-material admin approval workflow
+  // Each material (report, infographic, slide deck) is approved independently.
+  // When approved, the patient receives an email notification.
+  reportApproved: boolean("reportApproved").default(false).notNull(),
+  reportApprovedAt: timestamp("reportApprovedAt"),
+  reportApprovedBy: int("reportApprovedBy"),
+  infographicApproved: boolean("infographicApproved").default(false).notNull(),
+  infographicApprovedAt: timestamp("infographicApprovedAt"),
+  infographicApprovedBy: int("infographicApprovedBy"),
+  slideDeckApproved: boolean("slideDeckApproved").default(false).notNull(),
+  slideDeckApprovedAt: timestamp("slideDeckApprovedAt"),
+  slideDeckApprovedBy: int("slideDeckApprovedBy"),
+
   // Admin archive — hides consultation from admin panel but keeps it in patient's record
   archivedByAdmin: boolean("archivedByAdmin").default(false).notNull(),
   archivedAt: timestamp("archivedAt"),

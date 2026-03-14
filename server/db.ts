@@ -208,6 +208,78 @@ export async function archiveConsultation(id: number) {
     .where(eq(consultations.id, id));
 }
 
+/**
+ * Approve a specific material (report | infographic | slideDeck) for a consultation.
+ * Records who approved it and when.
+ */
+export async function approveMaterial(
+  consultationId: number,
+  material: "report" | "infographic" | "slideDeck",
+  approvedBy: number
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  const now = new Date();
+  const updateData: Record<string, unknown> = { updatedAt: now };
+
+  if (material === "report") {
+    updateData.reportApproved = true;
+    updateData.reportApprovedAt = now;
+    updateData.reportApprovedBy = approvedBy;
+  } else if (material === "infographic") {
+    updateData.infographicApproved = true;
+    updateData.infographicApprovedAt = now;
+    updateData.infographicApprovedBy = approvedBy;
+  } else if (material === "slideDeck") {
+    updateData.slideDeckApproved = true;
+    updateData.slideDeckApprovedAt = now;
+    updateData.slideDeckApprovedBy = approvedBy;
+  }
+
+  await db
+    .update(consultations)
+    .set(updateData as any)
+    .where(eq(consultations.id, consultationId));
+}
+
+/**
+ * Replace the URL for a specific material (admin uploads a replacement file).
+ */
+export async function replaceMaterialUrl(
+  consultationId: number,
+  material: "report" | "infographic" | "slideDeck",
+  newUrl: string
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+  if (material === "report") {
+    updateData.aiReportUrl = newUrl;
+    // Reset approval when replaced
+    updateData.reportApproved = false;
+    updateData.reportApprovedAt = null;
+    updateData.reportApprovedBy = null;
+  } else if (material === "infographic") {
+    updateData.aiInfographicUrl = newUrl;
+    updateData.infographicApproved = false;
+    updateData.infographicApprovedAt = null;
+    updateData.infographicApprovedBy = null;
+  } else if (material === "slideDeck") {
+    updateData.aiSlideDeckUrl = newUrl;
+    updateData.slideDeckApproved = false;
+    updateData.slideDeckApprovedAt = null;
+    updateData.slideDeckApprovedBy = null;
+  }
+
+  await db
+    .update(consultations)
+    .set(updateData as any)
+    .where(eq(consultations.id, consultationId));
+}
+
 export async function updateConsultationStatus(id: number, status: typeof consultations.$inferSelect.status) {
   const db = await getDb();
   if (!db) return;

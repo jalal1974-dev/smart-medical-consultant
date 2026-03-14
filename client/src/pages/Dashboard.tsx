@@ -429,7 +429,8 @@ export default function Dashboard() {
                       <p className="text-sm font-medium mb-2">{language === "ar" ? "التحليل الطبي" : "Medical Analysis"}</p>
                       <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {consultation.aiReportUrl && (
+                        {/* Only show materials that have been approved by admin */}
+                        {consultation.aiReportUrl && consultation.reportApproved && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
                               <Download className="w-4 h-4 mr-2" />
@@ -437,7 +438,7 @@ export default function Dashboard() {
                             </a>
                           </Button>
                         )}
-                        {consultation.aiInfographicUrl && (
+                        {consultation.aiInfographicUrl && consultation.infographicApproved && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
                               <FileText className="w-4 h-4 mr-2" />
@@ -445,7 +446,7 @@ export default function Dashboard() {
                             </a>
                           </Button>
                         )}
-                        {consultation.aiSlideDeckUrl && (
+                        {consultation.aiSlideDeckUrl && consultation.slideDeckApproved && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
                               <Presentation className="w-4 h-4 mr-2" />

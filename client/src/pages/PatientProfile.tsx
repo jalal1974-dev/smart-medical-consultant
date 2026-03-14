@@ -341,8 +341,8 @@ export default function PatientProfile() {
                           <TabsContent value="responses" className="space-y-4">
                             {consultation.status === "completed" || consultation.status === "follow_up" ? (
                               <div className="space-y-4">
-                                {/* AI Generated Reports */}
-                                {consultation.aiReportUrl && (
+                                {/* AI Generated Reports — only show when approved by admin */}
+                                {consultation.aiReportUrl && consultation.reportApproved && (
                                   <div>
                                     <h4 className="font-medium mb-2 flex items-center gap-2">
                                       <FileText className="h-4 w-4" />
@@ -357,17 +357,33 @@ export default function PatientProfile() {
                                   </div>
                                 )}
 
-                                {/* Infographics */}
-                                {consultation.infographicUrl && (
+                                {/* Infographic — only show when approved by admin */}
+                                {consultation.aiInfographicUrl && consultation.infographicApproved && (
                                   <div>
                                     <h4 className="font-medium mb-2 flex items-center gap-2">
                                       <ImageIcon className="h-4 w-4" />
                                       {language === "ar" ? "الرسومات التوضيحية" : "Infographic"}
                                     </h4>
                                     <Button variant="outline" asChild>
-                                      <a href={consultation.infographicUrl} target="_blank" rel="noopener noreferrer">
+                                      <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
                                         <Download className="h-4 w-4 mr-2" />
                                         {language === "ar" ? "عرض الرسم" : "View Infographic"}
+                                      </a>
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {/* Slide Deck — only show when approved by admin */}
+                                {consultation.aiSlideDeckUrl && consultation.slideDeckApproved && (
+                                  <div>
+                                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                                      <Download className="h-4 w-4" />
+                                      {language === "ar" ? "عرض الشرائح" : "Slide Deck"}
+                                    </h4>
+                                    <Button variant="outline" asChild>
+                                      <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer" download>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        {language === "ar" ? "تحميل العرض" : "Download Slides"}
                                       </a>
                                     </Button>
                                   </div>

@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
+import { MaterialReviewPanel } from "@/components/MaterialReviewPanel";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -463,162 +464,9 @@ export default function AdminPanel() {
                       </div>
                     )}
                     
-                    {/* Generated Materials */}
-                    {consultation.status === "specialist_review" && (
-                      <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
-                        <h4 className="font-semibold text-sm">Generated Materials for Review</h4>
-                        
-                        {consultation.aiReportUrl && (
-                          <div className="flex items-center justify-between p-2 bg-background rounded">
-                            <span className="text-sm">📄 Medical Report</span>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
-                                  View
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {(() => {
-                          // Infographic is always an image (not JSON), so show View button when available
-                          if (consultation.aiInfographicUrl) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📈 Infographic</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                                      View
-                                    </a>
-                                  </Button>
-                                  <RegenerateInfographicButton consultationId={consultation.id} />
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                                <span className="text-sm">📈 Infographic (Content Prepared)</span>
-                                <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
-                              </div>
-                            );
-                          }
-                        })()}
-                        
-                        {(() => {
-                          // Check if slide deck is a PPTX file (actual generated slides)
-                          const hasPptx = consultation.aiSlideDeckUrl?.endsWith('.pptx');
-                          const hasJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
-                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !hasJsonContent;
-                          
-                          if (hasPptx) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📽️ Slide Deck (PPTX)</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a href={consultation.aiSlideDeckUrl || '#'} download>
-                                      Download
-                                    </a>
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={generatePptx.isPending}
-                                    onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
-                                  >
-                                    {generatePptx.isPending ? (
-                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
-                                    ) : 'Regenerate'}
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          } else if (hasGeneratedSlides) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📽️ Slide Deck</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">
-                                      View
-                                    </a>
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={generatePptx.isPending}
-                                    onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
-                                  >
-                                    {generatePptx.isPending ? (
-                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
-                                    ) : '→ PPTX'}
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                                <span className="text-sm">📽️ Slide Deck</span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs"
-                                  disabled={generatePptx.isPending}
-                                  onClick={() => generatePptx.mutate({ consultationId: consultation.id })}
-                                >
-                                  {generatePptx.isPending ? (
-                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
-                                  ) : (
-                                    <><Brain className="h-3 w-3 mr-1" />Generate PPTX</>
-                                  )}
-                                </Button>
-                              </div>
-                            );
-                          }
-                        })()}
-                        
-                        {consultation.specialistApprovalStatus === "pending_review" && (
-                          <div className="flex gap-2 mt-3">
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="flex-1"
-                              onClick={() => {
-                                updateConsultationStatus.mutate({
-                                  id: consultation.id,
-                                  status: "completed",
-                                });
-                              }}
-                            >
-                              ✓ Approve All
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="flex-1"
-                              onClick={() => {
-                                const reason = prompt("Rejection reason:");
-                                if (reason) {
-                                  // TODO: Add rejection mutation
-                                  toast.info("Rejection functionality coming soon");
-                                }
-                              }}
-                            >
-                              ✗ Reject
-                            </Button>
-                          </div>
-                        )}
-                        
-                        {consultation.specialistApprovalStatus && (
-                          <Badge variant={consultation.specialistApprovalStatus === "approved" ? "default" : "secondary"}>
-                            {consultation.specialistApprovalStatus}
-                          </Badge>
-                        )}
-                      </div>
+                    {/* Generated Materials — per-item approval, download, replace */}
+                    {(consultation.status === "specialist_review" || consultation.status === "completed") && (
+                      <MaterialReviewPanel consultation={consultation} />
                     )}
                   </div>
                   <div className="flex gap-2">

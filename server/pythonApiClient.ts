@@ -5,6 +5,11 @@
  *   POST /generate/infographic  → SVG infographic (base64)
  *   POST /generate/slides       → PPTX slide deck (base64)
  *   GET  /health                → Health check
+ *
+ * Key design decision: We pass the FULL raw AI analysis text to the Python API
+ * rather than pre-parsed fragments. This lets the Python backend (Claude) extract
+ * and format content in the correct language, avoiding the ????? encoding issue
+ * that occurred when English fallback strings were sent with language="ar".
  */
 
 import { ENV } from "./_core/env";
@@ -13,12 +18,12 @@ import { nanoid } from "nanoid";
 
 interface PatientData {
   name: string;
-  symptoms: string[];
+  /** Raw symptoms text as entered by the patient */
+  symptoms_raw: string;
+  /** Full AI analysis text — let the Python backend parse this */
+  ai_analysis_raw?: string | null;
   medical_history?: string | null;
-  diagnosis: string;
-  recommendations: string[];
-  tests: string[];
-  urgency?: "low" | "medium" | "high";
+  preferred_language: "en" | "ar";
 }
 
 interface PythonApiResponse {
@@ -30,76 +35,23 @@ interface PythonApiResponse {
 }
 
 /**
- * Build PatientData from a consultation record and its parsed AI analysis.
+ * Build PatientData from a consultation record.
+ * We deliberately pass raw text so the Python backend can parse it
+ * in the correct language using Claude.
  */
 export function buildPatientData(consultation: {
   patientName: string;
   symptoms: string;
   medicalHistory?: string | null;
   aiAnalysis?: string | null;
+  preferredLanguage: string;
 }): PatientData {
-  // Parse symptoms into an array (comma or newline separated)
-  const symptomsArray = consultation.symptoms
-    .split(/[,،\n]/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 3)
-    .slice(0, 8);
-
-  // Try to extract structured info from AI analysis
-  let diagnosis = "Requires specialist evaluation";
-  let recommendations: string[] = ["Consult a specialist", "Follow up regularly"];
-  let tests: string[] = ["Complete blood count", "General examination"];
-  let urgency: "low" | "medium" | "high" = "medium";
-
-  if (consultation.aiAnalysis) {
-    const analysis = consultation.aiAnalysis;
-
-    // Extract urgency
-    const urgencyMatch = analysis.match(/urgency[:\s]+(\w+)/i);
-    if (urgencyMatch) {
-      const u = urgencyMatch[1].toLowerCase();
-      if (u === "low") urgency = "low";
-      else if (u === "high" || u === "critical") urgency = "high";
-      else urgency = "medium";
-    }
-
-    // Extract diagnosis (first line after "diagnosis:" keyword)
-    const diagMatch = analysis.match(/(?:diagnosis|تشخيص)[:\s]+([^\n]+)/i);
-    if (diagMatch) diagnosis = diagMatch[1].trim().slice(0, 200);
-
-    // Extract recommendations (lines after "recommendations:" keyword)
-    const recMatch = analysis.match(
-      /(?:recommendations|توصيات)[:\s]+([\s\S]*?)(?:\n\n|(?:tests|فحوصات|$))/i
-    );
-    if (recMatch) {
-      recommendations = recMatch[1]
-        .split(/\n|•|-|[0-9]+\./)
-        .map((r) => r.trim())
-        .filter((r) => r.length > 5)
-        .slice(0, 5);
-    }
-
-    // Extract tests
-    const testsMatch = analysis.match(
-      /(?:tests|examinations|فحوصات)[:\s]+([\s\S]*?)(?:\n\n|$)/i
-    );
-    if (testsMatch) {
-      tests = testsMatch[1]
-        .split(/\n|•|-|[0-9]+\./)
-        .map((t) => t.trim())
-        .filter((t) => t.length > 3)
-        .slice(0, 5);
-    }
-  }
-
   return {
     name: consultation.patientName,
-    symptoms: symptomsArray.length > 0 ? symptomsArray : [consultation.symptoms.slice(0, 100)],
+    symptoms_raw: consultation.symptoms,
+    ai_analysis_raw: consultation.aiAnalysis || null,
     medical_history: consultation.medicalHistory || null,
-    diagnosis,
-    recommendations,
-    tests,
-    urgency,
+    preferred_language: consultation.preferredLanguage === "ar" ? "ar" : "en",
   };
 }
 
@@ -119,21 +71,19 @@ export async function generateInfographicViaPython(
   customPrompt?: string
 ): Promise<string | null> {
   const baseUrl = ENV.pythonApiUrl;
-  const language = (consultation.preferredLanguage === "ar" ? "ar" : "en") as "ar" | "en";
   const patientData = buildPatientData(consultation);
 
-  console.log(`[PythonAPI] Generating infographic for consultation #${consultation.id}...`);
+  console.log(`[PythonAPI] Generating infographic for consultation #${consultation.id} (lang: ${patientData.preferred_language})...`);
 
   try {
     const response = await fetch(`${baseUrl}/generate/infographic`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         patient_data: patientData,
-        language,
+        language: patientData.preferred_language,
         custom_prompt: customPrompt || null,
       }),
-      // 90-second timeout
       signal: AbortSignal.timeout(90_000),
     });
 
@@ -152,7 +102,7 @@ export async function generateInfographicViaPython(
 
     // Decode base64 and upload to S3
     const fileBuffer = Buffer.from(result.data, "base64");
-    const ext = result.file_type === "image/svg+xml" ? "svg" : "svg";
+    const ext = "svg";
     const fileKey = `infographics/consultation-${consultation.id}-${nanoid(8)}.${ext}`;
     const { url } = await storagePut(fileKey, fileBuffer, result.file_type || "image/svg+xml");
 
@@ -179,19 +129,18 @@ export async function generatePptxViaPython(
   }
 ): Promise<string | null> {
   const baseUrl = ENV.pythonApiUrl;
-  const language = (consultation.preferredLanguage === "ar" ? "ar" : "en") as "ar" | "en";
   const patientData = buildPatientData(consultation);
 
-  console.log(`[PythonAPI] Generating PPTX for consultation #${consultation.id}...`);
+  console.log(`[PythonAPI] Generating PPTX for consultation #${consultation.id} (lang: ${patientData.preferred_language})...`);
 
   try {
     const response = await fetch(`${baseUrl}/generate/slides`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json; charset=utf-8" },
       body: JSON.stringify({
         patient_data: patientData,
         consultation_id: consultation.id,
-        language,
+        language: patientData.preferred_language,
       }),
       // 180-second timeout (PPTX generation can take 2-3 minutes)
       signal: AbortSignal.timeout(180_000),

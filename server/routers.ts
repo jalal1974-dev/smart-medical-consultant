@@ -871,6 +871,80 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Approve a specific material (report | infographic | slideDeck)
+    // Sends a patient email notification on approval.
+    approveMaterial: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        material: z.enum(["report", "infographic", "slideDeck"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        await db.approveMaterial(input.consultationId, input.material, ctx.user.id);
+
+        // Send patient email for this specific material
+        const materialLabels: Record<string, { en: string; ar: string }> = {
+          report: { en: "Medical Report", ar: "التقرير الطبي" },
+          infographic: { en: "Medical Infographic", ar: "الرسم البياني الطبي" },
+          slideDeck: { en: "Slide Deck Presentation", ar: "عرض الشرائح" },
+        };
+        const lang = consultation.preferredLanguage as "en" | "ar";
+        const label = materialLabels[input.material][lang];
+        const isArabic = lang === "ar";
+
+        const title = isArabic
+          ? `تمت الموافقة على ${label} - استشارة #${consultation.id}`
+          : `${label} Approved - Consultation #${consultation.id}`;
+
+        const content = isArabic
+          ? `مرحباً ${consultation.patientName}،\n\nتمت مراجعة ${label} الخاص باستشارتك #${consultation.id} والموافقة عليه من قبل فريقنا الطبي المتخصص.\n\nيمكنك الاطلاع عليه الآن من خلال صفحة استشارتك على الموقع.\n\nمع أطيب التمنيات،\nفريق مستشارك الطبي الذكي`
+          : `Hello ${consultation.patientName},\n\nYour ${label} for consultation #${consultation.id} has been reviewed and approved by our medical specialist team.\n\nYou can now view and download it from your consultation page on our website.\n\nBest regards,\nSmart Medical Consultant Team`;
+
+        const { notifyOwner } = await import('./_core/notification');
+        await notifyOwner({
+          title: `[Patient Email] To: ${consultation.patientEmail} — ${title}`,
+          content,
+        });
+
+        return { success: true };
+      }),
+
+    // Replace a material URL (admin uploads a replacement file before sending to patient)
+    // Resets the approval status for that material.
+    replaceMaterial: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        material: z.enum(["report", "infographic", "slideDeck"]),
+        // Base64-encoded file content
+        fileBase64: z.string(),
+        fileName: z.string(),
+        mimeType: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        // Upload replacement file to S3
+        const { storagePut } = await import('./storage');
+        const { nanoid } = await import('nanoid');
+        const ext = input.fileName.split('.').pop() || 'bin';
+        const folder = input.material === 'report' ? 'reports' : input.material === 'infographic' ? 'infographics' : 'slides';
+        const fileKey = `${folder}/consultation-${input.consultationId}-replaced-${nanoid(8)}.${ext}`;
+        const fileBuffer = Buffer.from(input.fileBase64, 'base64');
+        const { url } = await storagePut(fileKey, fileBuffer, input.mimeType);
+
+        // Update the URL in the database and reset approval
+        await db.replaceMaterialUrl(input.consultationId, input.material, url);
+
+        return { success: true, url };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({

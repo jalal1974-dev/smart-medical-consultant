@@ -610,3 +610,14 @@
 - [x] Check how language context works in the app (useLanguage hook)
 - [x] Add Arabic strings to the plan selection step in Register.tsx
 - [x] Ensure all other registration steps are also bilingual
+
+## Material Approval Workflow Overhaul
+- [x] Fix slide deck ????? encoding — pass full AI analysis text to Python API instead of parsed fragments
+- [x] Add per-material approval columns: reportApproved, infographicApproved, slideDeckApproved
+- [x] Add per-material approval timestamps and approvedBy fields
+- [x] Add tRPC: admin.approveMaterial (report | infographic | slideDeck)
+- [x] Add tRPC: admin.replaceMaterial (upload new file to S3, update URL)
+- [x] Fix email routing: send patient email on each material approval (not admin)
+- [x] Admin panel: per-item approve button, download button, replace upload button (MaterialReviewPanel)
+- [x] Admin panel: show patient-page visibility status for each material
+- [x] Patient record page: show approved materials with download links (Dashboard, MyProfile, PatientProfile)
