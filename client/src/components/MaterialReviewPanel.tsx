@@ -14,7 +14,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Clock, XCircle, Download, Eye, RefreshCw, Upload, Brain } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, XCircle, Download, Eye, RefreshCw, Upload, Brain, Zap } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -283,16 +283,69 @@ export function MaterialReviewPanel({ consultation }: MaterialReviewPanelProps) 
     onError: (err) => toast.error(`Failed to regenerate: ${err.message}`),
   });
 
+  const approveAll = trpc.admin.approveAllMaterials.useMutation({
+    onSuccess: (data) => {
+      if (data.approved.length === 0) {
+        toast.info("All materials are already approved.");
+      } else {
+        toast.success(
+          `Approved ${data.approved.length} material${data.approved.length > 1 ? "s" : ""} — patient notified with a combined email.`
+        );
+      }
+      utils.admin.consultations.invalidate();
+    },
+    onError: (err) => toast.error(`Approve All failed: ${err.message}`),
+  });
+
   const refresh = () => utils.admin.consultations.invalidate();
+
+  // Determine if there is at least one unapproved material that exists
+  const hasUnapproved =
+    (!!consultation.aiReportUrl && !consultation.reportApproved) ||
+    (!!consultation.aiInfographicUrl && !consultation.infographicApproved) ||
+    (!!consultation.aiSlideDeckUrl && !consultation.slideDeckApproved);
+
+  // All three exist and all approved
+  const allApproved =
+    !!consultation.aiReportUrl && consultation.reportApproved &&
+    !!consultation.aiInfographicUrl && consultation.infographicApproved &&
+    !!consultation.aiSlideDeckUrl && consultation.slideDeckApproved;
 
   return (
     <div className="mt-4 p-4 bg-muted/50 rounded-lg space-y-3">
-      <h4 className="font-semibold text-sm flex items-center gap-2">
-        📋 Materials Review
-        <span className="text-xs font-normal text-muted-foreground">
-          — Approve each item separately to notify the patient
-        </span>
-      </h4>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h4 className="font-semibold text-sm flex items-center gap-2">
+          📋 Materials Review
+          <span className="text-xs font-normal text-muted-foreground">
+            — Approve each item separately or all at once
+          </span>
+        </h4>
+        {/* Approve All button — shown when at least one unapproved material exists */}
+        {hasUnapproved && (
+          <Button
+            size="sm"
+            className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+            disabled={approveAll.isPending}
+            onClick={() => {
+              if (confirm("Approve all available materials and send a single combined email to the patient?")) {
+                approveAll.mutate({ consultationId: consultation.id });
+              }
+            }}
+          >
+            {approveAll.isPending ? (
+              <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Approving All...</>
+            ) : (
+              <><Zap className="h-3 w-3 mr-1" />Approve All &amp; Notify</>
+            )}
+          </Button>
+        )}
+        {allApproved && (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" />
+            All Approved
+          </Badge>
+        )}
+      </div>
 
       {/* Medical Report */}
       <MaterialRow

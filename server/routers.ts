@@ -945,6 +945,60 @@ export const appRouter = router({
         return { success: true, url };
       }),
 
+    // Approve all available materials at once and send a single combined patient email
+    approveAllMaterials: adminProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+
+        const materialsToApprove: Array<"report" | "infographic" | "slideDeck"> = [];
+        if (consultation.aiReportUrl && !consultation.reportApproved) materialsToApprove.push("report");
+        if (consultation.aiInfographicUrl && !consultation.infographicApproved) materialsToApprove.push("infographic");
+        if (consultation.aiSlideDeckUrl && !consultation.slideDeckApproved) materialsToApprove.push("slideDeck");
+
+        if (materialsToApprove.length === 0) {
+          return { success: true, approved: [], message: 'All materials already approved.' };
+        }
+
+        // Approve each material in DB
+        for (const material of materialsToApprove) {
+          await db.approveMaterial(input.consultationId, material, ctx.user.id);
+        }
+
+        // Build combined email
+        const lang = consultation.preferredLanguage as "en" | "ar";
+        const isArabic = lang === "ar";
+
+        const materialLabels: Record<string, { en: string; ar: string }> = {
+          report: { en: "Medical Report", ar: "التقرير الطبي" },
+          infographic: { en: "Medical Infographic", ar: "الرسم البياني الطبي" },
+          slideDeck: { en: "Slide Deck Presentation", ar: "عرض الشرائح" },
+        };
+
+        const approvedList = materialsToApprove
+          .map(m => isArabic ? `• ${materialLabels[m].ar}` : `• ${materialLabels[m].en}`)
+          .join("\n");
+
+        const title = isArabic
+          ? `تمت الموافقة على مواد استشارتك #${consultation.id}`
+          : `Your Consultation #${consultation.id} Materials Are Ready`;
+
+        const content = isArabic
+          ? `مرحباً ${consultation.patientName}،\n\nتمت مراجعة المواد التالية والموافقة عليها من قبل فريقنا الطبي المتخصص:\n\n${approvedList}\n\nيمكنك الاطلاع عليها الآن وتنزيلها من خلال صفحة استشارتك على الموقع.\n\nمع أطيب التمنيات،\nفريق مستشارك الطبي الذكي`
+          : `Hello ${consultation.patientName},\n\nThe following materials for your consultation #${consultation.id} have been reviewed and approved by our medical specialist team:\n\n${approvedList}\n\nYou can now view and download them from your consultation page on our website.\n\nBest regards,\nSmart Medical Consultant Team`;
+
+        const { notifyOwner } = await import('./_core/notification');
+        await notifyOwner({
+          title: `[Patient Email] To: ${consultation.patientEmail} — ${title}`,
+          content,
+        });
+
+        return { success: true, approved: materialsToApprove };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({

@@ -621,3 +621,8 @@
 - [x] Admin panel: per-item approve button, download button, replace upload button (MaterialReviewPanel)
 - [x] Admin panel: show patient-page visibility status for each material
 - [x] Patient record page: show approved materials with download links (Dashboard, MyProfile, PatientProfile)
+
+## Approve All & Notify
+- [x] Add admin.approveAllMaterials tRPC route (approves all 3 materials, sends one combined patient email)
+- [x] Add "Approve All & Notify" button to MaterialReviewPanel (only shown when ≥1 material exists and not all approved)
+- [x] Combined email lists all newly approved materials in one message
