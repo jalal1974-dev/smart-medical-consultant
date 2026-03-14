@@ -599,3 +599,9 @@
 - [x] Remove PaymentGuard from App.tsx — no forced payment wall
 - [x] Convert /activate into a voluntary upgrade page (reachable from dashboard)
 - [x] Add "Upgrade for $1" button on dashboard for users with 0 consultations remaining
+
+## Registration Plan Selection
+- [x] Read Register.tsx step flow
+- [x] Add "Choose Your Plan" step after account creation (free vs $1 premium)
+- [x] Free plan: skip payment, go directly to dashboard
+- [x] Premium plan: show PayPal button, then go to dashboard after payment

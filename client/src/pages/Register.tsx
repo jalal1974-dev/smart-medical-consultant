@@ -8,10 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle, User, Mail, Lock, CreditCard, Upload, ArrowRight, ArrowLeft, Shield, Gift, FolderHeart } from "lucide-react";
+import {
+  Eye, EyeOff, CheckCircle, User, Mail, Lock, CreditCard,
+  Upload, ArrowRight, ArrowLeft, Shield, Gift, FolderHeart, Sparkles, Zap,
+} from "lucide-react";
 import { getGoogleLoginUrl } from "@/const";
 
-type Step = "account" | "payment" | "upload" | "success";
+// Steps: account → plan → payment (only if premium) → success
+type Step = "account" | "plan" | "payment" | "success";
 
 interface AccountData {
   username: string;
@@ -31,6 +35,7 @@ export default function Register() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState<Step>("account");
   const [userId, setUserId] = useState<number | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "premium" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
@@ -51,7 +56,7 @@ export default function Register() {
   const confirmPaymentMutation = trpc.auth.confirmPaypalPayment.useMutation();
   const utils = trpc.useUtils();
 
-  // Load PayPal SDK
+  // Load PayPal SDK only when on the payment step
   useEffect(() => {
     if (step !== "payment") return;
     const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -69,9 +74,6 @@ export default function Register() {
     script.onload = () => setPaypalLoaded(true);
     script.onerror = () => setPaypalError("Failed to load PayPal. Please refresh and try again.");
     document.body.appendChild(script);
-    return () => {
-      // Don't remove script to avoid re-loading
-    };
   }, [step]);
 
   // Render PayPal buttons
@@ -80,26 +82,17 @@ export default function Register() {
     paypalRendered.current = true;
 
     window.paypal.Buttons({
-      style: {
-        layout: "vertical",
-        color: "blue",
-        shape: "rect",
-        label: "pay",
-        height: 50,
-      },
+      style: { layout: "vertical", color: "blue", shape: "rect", label: "pay", height: 50 },
       createOrder: (_data: any, actions: any) => {
         return actions.order.create({
           purchase_units: [{
             amount: { value: "1.00", currency_code: "USD" },
-            description: "Smart Medical Consultant – Registration (10 consultations)",
+            description: "Smart Medical Consultant – Premium Plan (10 consultations)",
           }],
-          application_context: {
-            brand_name: "Smart Medical Consultant",
-            user_action: "PAY_NOW",
-          },
+          application_context: { brand_name: "Smart Medical Consultant", user_action: "PAY_NOW" },
         });
       },
-      onApprove: async (data: any, actions: any) => {
+      onApprove: async (_data: any, actions: any) => {
         try {
           const order = await actions.order.capture();
           await confirmPaymentMutation.mutateAsync({
@@ -108,8 +101,8 @@ export default function Register() {
             paypalPayerId: order.payer?.payer_id,
           });
           await utils.auth.me.invalidate();
-          setStep("upload");
-          toast.success("Payment successful! You now have 10 free consultations.");
+          setStep("success");
+          toast.success("Payment successful! You now have 10 consultations.");
         } catch (err: any) {
           toast.error(err.message || "Payment confirmation failed. Please contact support.");
         }
@@ -158,7 +151,7 @@ export default function Register() {
         password: accountData.password,
       });
       setUserId(result.userId);
-      setStep("payment");
+      setStep("plan");
     } catch (err: any) {
       const msg = err?.data?.message || err?.message || "Registration failed";
       if (msg.toLowerCase().includes("username")) {
@@ -171,18 +164,32 @@ export default function Register() {
     }
   };
 
-  const handleSkipUpload = () => {
-    setStep("success");
+  const handlePlanSelect = (plan: "free" | "premium") => {
+    setSelectedPlan(plan);
+    if (plan === "free") {
+      // Free plan: log in and go straight to success
+      utils.auth.me.invalidate();
+      setStep("success");
+    } else {
+      // Premium plan: go to PayPal payment
+      setStep("payment");
+    }
   };
 
+  // Step definitions — "plan" replaces old "upload" in the indicator
   const steps = [
     { id: "account", label: "Account", icon: User },
+    { id: "plan",    label: "Plan",    icon: Sparkles },
     { id: "payment", label: "Payment", icon: CreditCard },
-    { id: "upload", label: "Upload", icon: Upload },
-    { id: "success", label: "Done", icon: CheckCircle },
+    { id: "success", label: "Done",    icon: CheckCircle },
   ];
 
-  const currentStepIndex = steps.findIndex(s => s.id === step);
+  // For free-plan users, "payment" step is skipped so show it as completed once on success
+  const getStepIndex = (s: Step) => {
+    if (s === "success" && selectedPlan === "free") return 3; // jump to last
+    return steps.findIndex(x => x.id === s);
+  };
+  const currentStepIndex = getStepIndex(step);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
@@ -190,7 +197,12 @@ export default function Register() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/">
-            <img src="/logo.png" alt="Smart Medical Consultant" className="h-14 mx-auto mb-3 cursor-pointer" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img
+              src="/logo.png"
+              alt="Smart Medical Consultant"
+              className="h-14 mx-auto mb-3 cursor-pointer"
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
           </Link>
           <h1 className="text-2xl font-bold text-white">Create Your Account</h1>
           <p className="text-slate-400 text-sm mt-1">Join Smart Medical Consultant today</p>
@@ -202,17 +214,25 @@ export default function Register() {
             const Icon = s.icon;
             const isCompleted = idx < currentStepIndex;
             const isCurrent = idx === currentStepIndex;
+            // For free plan, skip payment step visually
+            const isSkipped = selectedPlan === "free" && s.id === "payment" && step === "success";
             return (
               <div key={s.id} className="flex items-center">
-                <div className={`flex flex-col items-center gap-1`}>
+                <div className="flex flex-col items-center gap-1">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                    isSkipped   ? "bg-slate-700 border-slate-600 text-slate-500" :
                     isCompleted ? "bg-green-500 border-green-500 text-white" :
-                    isCurrent ? "bg-blue-600 border-blue-500 text-white" :
-                    "bg-slate-800 border-slate-600 text-slate-400"
+                    isCurrent   ? "bg-blue-600 border-blue-500 text-white" :
+                                  "bg-slate-800 border-slate-600 text-slate-400"
                   }`}>
-                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                    {isCompleted && !isSkipped ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                   </div>
-                  <span className={`text-xs font-medium ${isCurrent ? "text-blue-400" : isCompleted ? "text-green-400" : "text-slate-500"}`}>
+                  <span className={`text-xs font-medium ${
+                    isSkipped   ? "text-slate-600" :
+                    isCurrent   ? "text-blue-400" :
+                    isCompleted ? "text-green-400" :
+                                  "text-slate-500"
+                  }`}>
                     {s.label}
                   </span>
                 </div>
@@ -224,7 +244,7 @@ export default function Register() {
           })}
         </div>
 
-        {/* Step 1: Account Info */}
+        {/* ── Step 1: Account Info ── */}
         {step === "account" && (
           <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
             <CardHeader>
@@ -309,12 +329,12 @@ export default function Register() {
 
                 <div className="flex items-start gap-2 p-3 bg-blue-950/50 rounded-lg border border-blue-800/50">
                   <Shield className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                  <p className="text-xs text-slate-400">Your password is encrypted with bcrypt (12 rounds) — industry-standard security used by banks.</p>
+                  <p className="text-xs text-slate-400">Your password is encrypted with bcrypt — industry-standard security used by banks.</p>
                 </div>
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={registerMutation.isPending}>
-                  {registerMutation.isPending ? "Creating Account..." : (
-                    <span className="flex items-center gap-2">Continue to Payment <ArrowRight className="w-4 h-4" /></span>
+                  {registerMutation.isPending ? "Creating Account…" : (
+                    <span className="flex items-center gap-2">Continue <ArrowRight className="w-4 h-4" /></span>
                   )}
                 </Button>
 
@@ -327,7 +347,6 @@ export default function Register() {
                   </div>
                 </div>
 
-                {/* Google OAuth registration */}
                 <Button
                   type="button"
                   variant="outline"
@@ -352,17 +371,101 @@ export default function Register() {
           </Card>
         )}
 
-        {/* Step 2: Payment */}
+        {/* ── Step 2: Choose Your Plan ── */}
+        {step === "plan" && (
+          <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-400" /> Choose Your Plan
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Select the plan that works best for you — you can always upgrade later
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Free Plan Card */}
+              <button
+                onClick={() => handlePlanSelect("free")}
+                className="w-full text-left rounded-xl border-2 border-slate-600 hover:border-blue-500 bg-slate-700/40 hover:bg-slate-700/70 p-5 transition-all group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-600 group-hover:bg-blue-900/50 flex items-center justify-center shrink-0 transition-colors">
+                      <Zap className="w-5 h-5 text-slate-300 group-hover:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-base">Free Plan</p>
+                      <p className="text-slate-400 text-sm">Get started at no cost</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-slate-500 text-slate-300 shrink-0 mt-0.5">Free</Badge>
+                </div>
+                <ul className="mt-4 space-y-1.5 text-sm text-slate-400">
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" /> 1 AI-powered medical consultation</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" /> Full AI analysis report</li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-slate-500 shrink-0" /> Specialist review included</li>
+                </ul>
+                <p className="mt-3 text-xs text-slate-500">You can upgrade to 10 consultations for $1 at any time from your dashboard.</p>
+              </button>
+
+              {/* Premium Plan Card */}
+              <button
+                onClick={() => handlePlanSelect("premium")}
+                className="w-full text-left rounded-xl border-2 border-blue-500 bg-gradient-to-br from-blue-900/50 to-indigo-900/50 hover:from-blue-900/70 hover:to-indigo-900/70 p-5 transition-all relative overflow-hidden group"
+              >
+                {/* Popular badge */}
+                <div className="absolute top-3 right-3">
+                  <Badge className="bg-yellow-500 text-yellow-950 font-semibold text-xs">Most Popular</Badge>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-600/50 flex items-center justify-center shrink-0">
+                    <Gift className="w-5 h-5 text-yellow-300" />
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-base">Premium Plan</p>
+                    <p className="text-blue-300 text-sm font-medium">$1 one-time payment</p>
+                  </div>
+                </div>
+                <ul className="space-y-1.5 text-sm text-slate-300">
+                  {[
+                    "10 AI-powered medical consultations",
+                    "Detailed analysis reports & infographics",
+                    "Personalised slide deck for each case",
+                    "Specialist-reviewed results",
+                    "Bilingual support (English & Arabic)",
+                    "Priority support",
+                  ].map(item => (
+                    <li key={item} className="flex items-center gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" /> {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-blue-200 text-sm font-medium">10× more consultations</span>
+                  <span className="text-white font-bold text-lg">$1.00 →</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setStep("account")}
+                className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-300 mx-auto pt-1"
+              >
+                <ArrowLeft className="w-3 h-3" /> Back to account details
+              </button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Step 3: Payment (Premium only) ── */}
         {step === "payment" && (
           <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-blue-400" /> Complete Registration
+                <CreditCard className="w-5 h-5 text-blue-400" /> Complete Payment
               </CardTitle>
-              <CardDescription className="text-slate-400">One-time $1 fee to activate your account</CardDescription>
+              <CardDescription className="text-slate-400">One-time $1 — unlocks 10 AI-powered consultations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* What you get */}
               <div className="bg-gradient-to-r from-green-900/40 to-blue-900/40 border border-green-700/50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Gift className="w-5 h-5 text-green-400" />
@@ -385,7 +488,7 @@ export default function Register() {
               </div>
 
               <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                <span className="text-slate-300 font-medium">Registration Fee</span>
+                <span className="text-slate-300 font-medium">Premium Plan</span>
                 <Badge className="bg-blue-600 text-white text-base px-3 py-1">$1.00 USD</Badge>
               </div>
 
@@ -398,60 +501,23 @@ export default function Register() {
               {!paypalLoaded && !paypalError && (
                 <div className="text-center py-6 text-slate-400">
                   <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  Loading PayPal...
+                  Loading PayPal…
                 </div>
               )}
 
               <div ref={paypalContainerRef} className={paypalLoaded ? "block" : "hidden"} />
 
               <button
-                onClick={() => setStep("account")}
+                onClick={() => setStep("plan")}
                 className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-300 mx-auto"
               >
-                <ArrowLeft className="w-3 h-3" /> Back to account details
+                <ArrowLeft className="w-3 h-3" /> Back to plan selection
               </button>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 3: Upload Medical Report */}
-        {step === "upload" && (
-          <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Upload className="w-5 h-5 text-blue-400" /> Upload Medical Report (Optional)
-              </CardTitle>
-              <CardDescription className="text-slate-400">
-                Upload your existing medical reports to get started faster
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
-                <div>
-                  <p className="text-green-300 font-medium text-sm">Payment Successful!</p>
-                  <p className="text-slate-400 text-xs">10 consultations have been added to your account.</p>
-                </div>
-              </div>
-
-              <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center">
-                <Upload className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-                <p className="text-slate-300 font-medium">You can upload medical reports</p>
-                <p className="text-slate-500 text-sm mt-1">PDF, images, or Word documents up to 10MB</p>
-                <p className="text-slate-500 text-xs mt-3">You can also upload reports when submitting a consultation</p>
-              </div>
-
-              <Button onClick={() => setStep("success")} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                <span className="flex items-center gap-2">Continue to Dashboard <ArrowRight className="w-4 h-4" /></span>
-              </Button>
-              <button onClick={handleSkipUpload} className="w-full text-sm text-slate-400 hover:text-slate-300">
-                Skip for now
-              </button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 4: Success */}
+        {/* ── Step 4: Success ── */}
         {step === "success" && (
           <Card className="bg-slate-800/80 border-slate-700 shadow-2xl text-center">
             <CardContent className="pt-10 pb-8 space-y-5">
@@ -460,18 +526,28 @@ export default function Register() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">Welcome aboard!</h2>
-                <p className="text-slate-400 mt-2">Your account is ready with 10 free consultations</p>
+                {selectedPlan === "premium" ? (
+                  <p className="text-slate-400 mt-2">Your account is ready with <span className="text-blue-400 font-semibold">10 consultations</span></p>
+                ) : (
+                  <p className="text-slate-400 mt-2">Your free account is ready with <span className="text-blue-400 font-semibold">1 consultation</span></p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-slate-700/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-blue-400">10</p>
-                  <p className="text-slate-400">Consultations</p>
+                  <p className="text-2xl font-bold text-blue-400">{selectedPlan === "premium" ? "10" : "1"}</p>
+                  <p className="text-slate-400">Consultation{selectedPlan === "premium" ? "s" : ""}</p>
                 </div>
                 <div className="bg-slate-700/50 rounded-lg p-3">
                   <p className="text-2xl font-bold text-green-400">AI</p>
                   <p className="text-slate-400">Powered Analysis</p>
                 </div>
               </div>
+              {selectedPlan === "free" && (
+                <div className="p-3 bg-blue-900/30 border border-blue-700/40 rounded-lg text-blue-300 text-sm">
+                  <Sparkles className="w-4 h-4 inline mr-1.5 text-yellow-400" />
+                  You can upgrade to 10 consultations for $1 at any time from your dashboard.
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <Button onClick={() => navigate("/my-profile")} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-5">
                   <span className="flex items-center gap-2"><FolderHeart className="w-5 h-5" /> View My Medical Profile</span>
