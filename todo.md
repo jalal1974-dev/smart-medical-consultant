@@ -626,3 +626,15 @@
 - [x] Add admin.approveAllMaterials tRPC route (approves all 3 materials, sends one combined patient email)
 - [x] Add "Approve All & Notify" button to MaterialReviewPanel (only shown when ≥1 material exists and not all approved)
 - [x] Combined email lists all newly approved materials in one message
+
+## Patient In-App Push Notifications
+- [x] Add notifications table to schema (id, userId, title, body, type, consultationId, read, createdAt)
+- [x] Migrate DB with ALTER TABLE
+- [x] Add createNotification, getNotificationsByUserId, markNotificationRead DB helpers
+- [x] Add notifications.list tRPC query (protectedProcedure, returns unread count + list)
+- [x] Add notifications.markRead tRPC mutation
+- [x] Trigger createNotification in approveMaterial route (per-material approval)
+- [x] Trigger createNotification in approveAllMaterials route (combined notification)
+- [x] Build NotificationBell component (bell icon, unread badge, dropdown list)
+- [x] Wire NotificationBell into Header component
+- [x] Poll notifications every 30s for real-time feel

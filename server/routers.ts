@@ -910,6 +910,18 @@ export const appRouter = router({
           content,
         });
 
+        // Create in-app notification for the patient
+        const notifBody = isArabic
+          ? `تمت الموافقة على ${label} الخاص باستشارتك #${consultation.id}. يمكنك الاطلاع عليه الآن.`
+          : `Your ${label} for consultation #${consultation.id} has been approved. You can now view and download it.`;
+        await db.createNotification({
+          userId: consultation.userId,
+          title,
+          body: notifBody,
+          type: 'material_approved',
+          consultationId: consultation.id,
+        });
+
         return { success: true };
       }),
 
@@ -994,6 +1006,18 @@ export const appRouter = router({
         await notifyOwner({
           title: `[Patient Email] To: ${consultation.patientEmail} — ${title}`,
           content,
+        });
+
+        // Create a single in-app notification for the patient listing all approved materials
+        const notifBody = isArabic
+          ? `تمت الموافقة على ${materialsToApprove.length} مادة لاستشارتك #${consultation.id}. يمكنك الاطلاع عليها وتنزيلها الآن.`
+          : `${materialsToApprove.length} material${materialsToApprove.length > 1 ? 's' : ''} approved for consultation #${consultation.id}. You can now view and download them.`;
+        await db.createNotification({
+          userId: consultation.userId,
+          title,
+          body: notifBody,
+          type: 'material_approved',
+          consultationId: consultation.id,
         });
 
         return { success: true, approved: materialsToApprove };
@@ -1779,8 +1803,30 @@ export const appRouter = router({
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       }));
+     }),
+  }),
+
+  notifications: router({
+    // Get all notifications for the current user (most recent first, max 50)
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const items = await db.getNotificationsByUserId(ctx.user.id);
+      const unreadCount = items.filter(n => !n.read).length;
+      return { items, unreadCount };
+    }),
+
+    // Mark a single notification as read
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.markNotificationRead(input.id, ctx.user.id);
+        return { success: true };
+      }),
+
+    // Mark all notifications as read
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.markAllNotificationsRead(ctx.user.id);
+      return { success: true };
     }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

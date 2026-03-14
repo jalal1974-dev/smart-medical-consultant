@@ -414,3 +414,20 @@ export const consultationAttachedRecords = mysqlTable("consultation_attached_rec
 
 export type ConsultationAttachedRecord = typeof consultationAttachedRecords.$inferSelect;
 export type InsertConsultationAttachedRecord = typeof consultationAttachedRecords.$inferInsert;
+
+/**
+ * In-app notifications table - real-time alerts for patients
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  type: varchar("type", { length: 64 }).default("material_approved").notNull(),
+  consultationId: int("consultation_id"),
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

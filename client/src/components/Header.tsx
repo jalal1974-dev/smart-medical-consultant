@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useState } from "react";
 
 export function Header() {
@@ -82,6 +83,7 @@ export function Header() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
           <LanguageToggle />
+          <NotificationBell />
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

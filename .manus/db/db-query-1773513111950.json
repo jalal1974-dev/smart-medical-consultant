@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS notifications (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  user_id INT NOT NULL,\n  title VARCHAR(255) NOT NULL,\n  body TEXT NOT NULL,\n  type VARCHAR(64) NOT NULL DEFAULT 'material_approved',\n  consultation_id INT,\n  `read` BOOLEAN NOT NULL DEFAULT FALSE,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_notifications_user (user_id),\n  INDEX idx_notifications_unread (user_id, `read`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute CREATE TABLE IF NOT EXISTS notifications (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  user_id INT NOT NULL,\n  title VARCHAR(255) NOT NULL,\n  body TEXT NOT NULL,\n  type VARCHAR(64) NOT NULL DEFAULT 'material_approved',\n  consultation_id INT,\n  `read` BOOLEAN NOT NULL DEFAULT FALSE,\n  createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  INDEX idx_notifications_user (user_id),\n  INDEX idx_notifications_unread (user_id, `read`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1591
+}
