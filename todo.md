@@ -605,3 +605,8 @@
 - [x] Add "Choose Your Plan" step after account creation (free vs $1 premium)
 - [x] Free plan: skip payment, go directly to dashboard
 - [x] Premium plan: show PayPal button, then go to dashboard after payment
+
+## Arabic Translations — Registration Plan Step
+- [x] Check how language context works in the app (useLanguage hook)
+- [x] Add Arabic strings to the plan selection step in Register.tsx
+- [x] Ensure all other registration steps are also bilingual
