@@ -28,44 +28,15 @@ import ResetPassword from "./pages/ResetPassword";
 import Activate from "./pages/Activate";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
-import { useAuth } from "./_core/hooks/useAuth";
-
-// Routes that require the account to be activated (paid)
-const PROTECTED_PATHS = ["/dashboard", "/consultations", "/profile", "/my-profile", "/analytics"];
-
-function PaymentGuard({ children }: { children: React.ReactNode }) {
-  const [location, navigate] = useLocation();
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (loading || !user) return;
-    const path = location.split("?")[0];
-    const isProtected = PROTECTED_PATHS.some(p => path === p || path.startsWith(p + "/"));
-    if (!isProtected) return;
-
-    const isPremium =
-      (user as any).freeConsultationsTotal > 1 ||
-      (user as any).free_consultations_total > 1 ||
-      (user as any).subscriptionType === "pay_per_case" ||
-      (user as any).subscription_type === "pay_per_case";
-
-    if (!isPremium) {
-      navigate("/activate");
-    }
-  }, [user, loading, location, navigate]);
-
-  return <>{children}</>;
-}
 
 function Router() {
   const [location] = useLocation();
-  
+
   // Update SEO on route change
   useEffect(() => {
-    const path = location.split('?')[0]; // Remove query params
+    const path = location.split('?')[0];
     updateCanonicalURL(path);
-    
-    // Map routes to SEO page keys
+
     const routeToPageMap: Record<string, string> = {
       '/': 'home',
       '/videos': 'videos',
@@ -76,46 +47,45 @@ function Router() {
       '/admin': 'admin',
       '/blog': 'blog'
     };
-    
+
     const pageKey = routeToPageMap[path];
     if (pageKey) {
       updatePageSEO(pageKey as any);
     }
   }, [location]);
-  
+
   return (
     <>
       <Header />
-      <PaymentGuard>
       <div className="flex flex-col min-h-screen">
         <main className="flex-1">
           <Switch>
-        <Route path={"/"} component={Home} />
-        <Route path={"/videos"} component={Videos} />
-        <Route path={"/podcasts"} component={Podcasts} />
-        <Route path={"/consultations"} component={Consultations} />
-        <Route path={"/dashboard"} component={Dashboard} />
-        <Route path="/profile" component={PatientProfile} />
-        <Route path="/my-profile" component={MyProfile} />
-        <Route path="/analytics" component={Analytics} />
-        <Route path={"/admin"} component={AdminPanel} />
-        <Route path={"/admin/ai-review"} component={AIConsultationReview} />
-        <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
-        <Route path="/blog" component={Blog} />
-        <Route path="/blog/:slug" component={BlogArticle} />
-        <Route path="/admin/blog" component={BlogManagement} />
-        <Route path="/register" component={Register} />
-        <Route path="/login" component={Login} />
-        <Route path="/forgot-password" component={ForgotPassword} />
-        <Route path="/reset-password" component={ResetPassword} />
-        <Route path="/activate" component={Activate} />
-        <Route path={"/404"} component={NotFound} />
-        <Route component={NotFound} />
+            <Route path={"/"} component={Home} />
+            <Route path={"/videos"} component={Videos} />
+            <Route path={"/podcasts"} component={Podcasts} />
+            <Route path={"/consultations"} component={Consultations} />
+            <Route path={"/dashboard"} component={Dashboard} />
+            <Route path="/profile" component={PatientProfile} />
+            <Route path="/my-profile" component={MyProfile} />
+            <Route path="/analytics" component={Analytics} />
+            <Route path={"/admin"} component={AdminPanel} />
+            <Route path={"/admin/ai-review"} component={AIConsultationReview} />
+            <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
+            <Route path="/blog" component={Blog} />
+            <Route path="/blog/:slug" component={BlogArticle} />
+            <Route path="/admin/blog" component={BlogManagement} />
+            <Route path="/register" component={Register} />
+            <Route path="/login" component={Login} />
+            <Route path="/forgot-password" component={ForgotPassword} />
+            <Route path="/reset-password" component={ResetPassword} />
+            {/* Voluntary upgrade page — users can pay $1 for 10 consultations */}
+            <Route path="/activate" component={Activate} />
+            <Route path={"/404"} component={NotFound} />
+            <Route component={NotFound} />
           </Switch>
         </main>
         <Footer />
       </div>
-      </PaymentGuard>
     </>
   );
 }

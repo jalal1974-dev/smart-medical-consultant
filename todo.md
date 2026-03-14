@@ -593,3 +593,9 @@
 - [x] Add payment guard in App.tsx: redirect unpaid users to /activate
 - [x] Update OAuth callback to redirect to /activate instead of / for new unpaid users
 - [x] Handle confirmPaypalPayment for OAuth users (no userId pre-created)
+
+## Fix OAuth Payment Gate (was wrong)
+- [x] Remove forced /activate redirect from OAuth callback — all users go to / after sign-in
+- [x] Remove PaymentGuard from App.tsx — no forced payment wall
+- [x] Convert /activate into a voluntary upgrade page (reachable from dashboard)
+- [x] Add "Upgrade for $1" button on dashboard for users with 0 consultations remaining

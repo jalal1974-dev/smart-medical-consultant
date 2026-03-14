@@ -36,9 +36,6 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
 
-      // Fetch the user to check payment/activation status
-      const dbUser = await db.getUserByOpenId(userInfo.openId);
-
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
         expiresInMs: ONE_YEAR_MS,
@@ -47,18 +44,8 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      // Redirect unpaid OAuth users to the activation/payment page
-      const isPremium = dbUser &&
-        ((dbUser as any).free_consultations_total > 1 ||
-         dbUser.freeConsultationsTotal > 1 ||
-         (dbUser as any).subscription_type === 'pay_per_case' ||
-         dbUser.subscriptionType === 'pay_per_case');
-
-      if (!isPremium) {
-        res.redirect(302, "/activate");
-      } else {
-        res.redirect(302, "/");
-      }
+      // All users go to the homepage after sign-in (free plan: 1 consultation included)
+      res.redirect(302, "/");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

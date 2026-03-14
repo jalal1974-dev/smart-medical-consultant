@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { CheckCircle, Gift, Shield, Loader2, LogOut } from "lucide-react";
+import { CheckCircle, Gift, Shield, Loader2, ArrowLeft } from "lucide-react";
 
 declare global {
   interface Window {
@@ -15,7 +15,7 @@ declare global {
 
 export default function Activate() {
   const [, navigate] = useLocation();
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
 
   const [paypalLoaded, setPaypalLoaded] = useState(false);
@@ -28,27 +28,18 @@ export default function Activate() {
     onSuccess: async () => {
       await utils.auth.me.invalidate();
       setActivated(true);
-      toast.success("Account activated! You now have 10 consultations.");
+      toast.success("Upgraded! You now have 10 consultations.");
       setTimeout(() => navigate("/dashboard"), 2000);
     },
     onError: (err) => {
-      toast.error(err.message || "Activation failed. Please contact support.");
+      toast.error(err.message || "Payment failed. Please contact support.");
     },
   });
 
-  // If user is already premium, redirect to dashboard
+  // Redirect to login if not authenticated
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
+    if (!authLoading && !user) {
       navigate("/login");
-      return;
-    }
-    const isPremium = (user as any).freeConsultationsTotal > 1 ||
-      (user as any).free_consultations_total > 1 ||
-      (user as any).subscriptionType === "pay_per_case" ||
-      (user as any).subscription_type === "pay_per_case";
-    if (isPremium) {
-      navigate("/dashboard");
     }
   }, [user, authLoading, navigate]);
 
@@ -71,7 +62,7 @@ export default function Activate() {
     document.body.appendChild(script);
   }, []);
 
-  // Render PayPal buttons
+  // Render PayPal buttons once SDK is ready
   useEffect(() => {
     if (!paypalLoaded || !paypalContainerRef.current || paypalRendered.current || !user) return;
     paypalRendered.current = true;
@@ -82,7 +73,7 @@ export default function Activate() {
         return actions.order.create({
           purchase_units: [{
             amount: { value: "1.00", currency_code: "USD" },
-            description: "Smart Medical Consultant – Account Activation (10 consultations)",
+            description: "Smart Medical Consultant – Premium Upgrade (10 consultations)",
           }],
           application_context: {
             brand_name: "Smart Medical Consultant",
@@ -106,7 +97,7 @@ export default function Activate() {
         toast.error("Payment failed. Please try again.");
       },
       onCancel: () => {
-        toast.info("Payment cancelled. You can try again when ready.");
+        toast.info("Payment cancelled.");
       },
     }).render(paypalContainerRef.current);
   }, [paypalLoaded, user]);
@@ -124,7 +115,7 @@ export default function Activate() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4">
         <div className="text-center">
           <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Account Activated!</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">Upgrade Successful!</h1>
           <p className="text-slate-400">Redirecting you to your dashboard…</p>
         </div>
       </div>
@@ -134,6 +125,16 @@ export default function Activate() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        {/* Back link */}
+        <div className="mb-6">
+          <Link href="/dashboard">
+            <Button variant="ghost" className="text-slate-400 hover:text-white px-0">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
+
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/">
@@ -144,19 +145,19 @@ export default function Activate() {
               onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </Link>
-          <h1 className="text-2xl font-bold text-white">One Last Step</h1>
+          <h1 className="text-2xl font-bold text-white">Upgrade Your Plan</h1>
           <p className="text-slate-400 text-sm mt-1">
-            Welcome{user?.name ? `, ${user.name}` : ""}! Activate your account to get started.
+            Get 10 AI-powered consultations for just $1
           </p>
         </div>
 
         <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
-              <Gift className="w-5 h-5 text-blue-400" /> Activate Your Account
+              <Gift className="w-5 h-5 text-blue-400" /> Premium Upgrade — $1
             </CardTitle>
             <CardDescription className="text-slate-400">
-              One-time $1 fee — unlocks 10 AI-powered medical consultations
+              One-time payment — no subscription, no hidden fees
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -179,6 +180,11 @@ export default function Activate() {
               </ul>
             </div>
 
+            {/* Current plan note */}
+            <div className="p-3 bg-blue-900/20 border border-blue-700/40 rounded-lg text-blue-300 text-sm">
+              Your current free plan includes <strong>1 consultation</strong>. Upgrading adds <strong>10 more</strong>.
+            </div>
+
             {/* PayPal button */}
             {paypalError ? (
               <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm">
@@ -199,15 +205,6 @@ export default function Activate() {
                 Payments are processed securely by PayPal. We never store your card details.
               </p>
             </div>
-
-            <Button
-              variant="ghost"
-              className="w-full text-slate-500 hover:text-slate-300 text-sm"
-              onClick={async () => { await logout(); navigate("/"); }}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign out and return to homepage
-            </Button>
           </CardContent>
         </Card>
       </div>
