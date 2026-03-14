@@ -130,6 +130,35 @@ export const appRouter = router({
         return { success: true, consultationsGranted: 10 };
       }),
 
+    // Activate account via PayPal for OAuth users (Google, etc.) who are already logged in
+    activateWithPaypal: protectedProcedure
+      .input(z.object({
+        paypalOrderId: z.string(),
+        paypalPayerId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = ctx.user.id;
+        // Prevent double-activation
+        const existing = await db.getRegistrationPaymentByOrderId(input.paypalOrderId);
+        if (existing && existing.status === 'completed') {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Payment already processed' });
+        }
+        if (!existing) {
+          await db.createRegistrationPayment({
+            userId,
+            paypalOrderId: input.paypalOrderId,
+            amount: 1.00,
+            currency: 'USD',
+            status: 'completed',
+            consultationsGranted: 10,
+          });
+        } else {
+          await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
+        }
+        await db.grantConsultationsAfterPayment(userId, 10);
+        return { success: true, consultationsGranted: 10 };
+      }),
+
     // Request password reset - sends email with token
     requestPasswordReset: publicProcedure
       .input(z.object({

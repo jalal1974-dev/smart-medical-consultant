@@ -586,3 +586,10 @@
 - [x] Investigate existing Manus OAuth flow and how Google OAuth is supported
 - [x] Add "Sign in with Google" button to login/register UI
 - [x] Ensure Google OAuth redirects correctly and creates user session
+
+## OAuth Payment Gate
+- [x] Check user schema for paymentStatus and loginMethod fields
+- [x] Create /activate page for OAuth users who haven't paid (PayPal button)
+- [x] Add payment guard in App.tsx: redirect unpaid users to /activate
+- [x] Update OAuth callback to redirect to /activate instead of / for new unpaid users
+- [x] Handle confirmPaypalPayment for OAuth users (no userId pre-created)

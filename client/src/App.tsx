@@ -25,8 +25,37 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Activate from "./pages/Activate";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
+import { useAuth } from "./_core/hooks/useAuth";
+
+// Routes that require the account to be activated (paid)
+const PROTECTED_PATHS = ["/dashboard", "/consultations", "/profile", "/my-profile", "/analytics"];
+
+function PaymentGuard({ children }: { children: React.ReactNode }) {
+  const [location, navigate] = useLocation();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading || !user) return;
+    const path = location.split("?")[0];
+    const isProtected = PROTECTED_PATHS.some(p => path === p || path.startsWith(p + "/"));
+    if (!isProtected) return;
+
+    const isPremium =
+      (user as any).freeConsultationsTotal > 1 ||
+      (user as any).free_consultations_total > 1 ||
+      (user as any).subscriptionType === "pay_per_case" ||
+      (user as any).subscription_type === "pay_per_case";
+
+    if (!isPremium) {
+      navigate("/activate");
+    }
+  }, [user, loading, location, navigate]);
+
+  return <>{children}</>;
+}
 
 function Router() {
   const [location] = useLocation();
@@ -57,6 +86,7 @@ function Router() {
   return (
     <>
       <Header />
+      <PaymentGuard>
       <div className="flex flex-col min-h-screen">
         <main className="flex-1">
           <Switch>
@@ -78,12 +108,14 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/activate" component={Activate} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>
         </main>
         <Footer />
       </div>
+      </PaymentGuard>
     </>
   );
 }
