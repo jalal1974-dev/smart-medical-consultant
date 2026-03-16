@@ -638,3 +638,26 @@
 - [x] Build NotificationBell component (bell icon, unread badge, dropdown list)
 - [x] Wire NotificationBell into Header component
 - [x] Poll notifications every 30s for real-time feel
+
+## Visual Infographic & Slide Deck Improvement
+- [x] Audit pythonApiClient.ts payload structure
+- [x] Add structured visual data to payload: parsed diagnosis, risk level, key metrics, recommendations list, tests list
+- [x] Improve infographic: rich SVG with colour-coded sections, icons, charts, visual hierarchy
+- [x] Improve slide deck: structured payload so Python generates visual slides with charts/icons
+- [x] Test with real consultation data
+
+## Pricing Model Revamp & Admin Access
+- [ ] Audit current schema (freeConsultationsTotal, paymentStatus) and consultation submission logic
+- [ ] Update users schema: add planType (free|premium), keep freeConsultationsTotal (1 for free, 10 for premium)
+- [ ] Update Register.tsx plan step: Free = 1 free consultation then $5 each; Premium = $1 upfront + 10 free then $5 each
+- [ ] Update Activate.tsx to reflect new pricing (remove as upgrade page, repurpose or remove)
+- [ ] Remove "Upgrade for $1" banner from Dashboard
+- [ ] Add $5 per-consultation PayPal payment flow: when quota=0, show PayPal $5 before submitting
+- [ ] Add confirmPerConsultationPayment tRPC mutation (grants 1 consultation after $5 payment)
+- [ ] Admin accounts: unlimited free consultations (bypass quota check in consultation submission)
+- [ ] Admin accounts: can view any user's profile page (PatientProfile accessible from admin panel)
+- [ ] Add "View Patient Page" button in admin consultation cards linking to /patient/:userId
+- [ ] Update PatientProfile page to be accessible by admin (not just the patient themselves)
+- [ ] Test free plan: 1 free → $5 payment required → consultation granted
+- [ ] Test premium plan: $1 payment → 10 free → $5 payment required
+- [ ] Test admin: unlimited consultations, can view all patient pages
