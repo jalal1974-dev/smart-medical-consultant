@@ -572,6 +572,17 @@
 - [x] Supports JPEG, PNG, WebP, GIF image formats
 - [x] Zero TypeScript errors after all changes
 
+## Admin Customer Management Routes
+- [x] Wire /admin/customers and /admin/customer/:userId routes in App.tsx
+- [x] Add Customer Management navigation button in AdminPanel.tsx
+- [x] Fix TypeScript compilation errors in AdminPanel.tsx
+
+## Arabic Font Fix in SVG Infographics
+- [x] Download Cairo Arabic font (Regular + Bold) as woff2 files
+- [x] Implement injectArabicFontIntoSvg() to embed fonts as base64 data URIs
+- [x] Replace Google Fonts CSS @import with embedded font in SVG post-processing
+- [x] Verify TypeScript compiles clean with 0 errors
+
 ## Admin Archive & Test Data Cleanup
 - [x] Add archivedByAdmin boolean column to consultations table in schema.ts
 - [x] Run pnpm db:push to migrate the database

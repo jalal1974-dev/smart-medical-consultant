@@ -26,6 +26,8 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Activate from "./pages/Activate";
+import AdminCustomers from "./pages/AdminCustomers";
+import AdminCustomerView from "./pages/AdminCustomerView";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -70,6 +72,8 @@ function Router() {
             <Route path="/analytics" component={Analytics} />
             <Route path={"/admin"} component={AdminPanel} />
             <Route path={"/admin/ai-review"} component={AIConsultationReview} />
+            <Route path="/admin/customers" component={AdminCustomers} />
+            <Route path="/admin/customer/:userId" component={AdminCustomerView} />
             <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
             <Route path="/blog" component={Blog} />
             <Route path="/blog/:slug" component={BlogArticle} />

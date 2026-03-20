@@ -410,6 +410,28 @@ export default function AdminPanel() {
           )}
         </div>
 
+        {/* Quick Navigation */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => window.location.href = '/admin/customers'}
+          >
+            <Users className="w-4 h-4" />
+            {language === 'ar' ? 'إدارة العملاء' : 'Customer Management'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => window.location.href = '/admin/blog'}
+          >
+            <FileText className="w-4 h-4" />
+            {language === 'ar' ? 'إدارة المدونة' : 'Blog Management'}
+          </Button>
+        </div>
+
         {/* Tabs */}
         <Tabs defaultValue="consultations" className="space-y-4">
           <TabsList>

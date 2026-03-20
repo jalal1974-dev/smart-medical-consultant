@@ -17,6 +17,78 @@ import { ENV } from "./_core/env";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// ─── Arabic Font Cache ────────────────────────────────────────────────────────
+// Embed Cairo Arabic font as base64 data URI so SVG renders Arabic correctly
+// in all browsers and PDF viewers without external network requests.
+let _cairoRegularB64: string | null = null;
+let _cairoBoldB64: string | null = null;
+
+function getCairoFonts(): { regular: string; bold: string } {
+  if (!_cairoRegularB64) {
+    try {
+      const regularPath = join(__dirname, "fonts", "Cairo-Regular-Arabic.woff2");
+      _cairoRegularB64 = readFileSync(regularPath).toString("base64");
+    } catch {
+      _cairoRegularB64 = "";
+    }
+  }
+  if (!_cairoBoldB64) {
+    try {
+      const boldPath = join(__dirname, "fonts", "Cairo-Bold-Arabic.woff2");
+      _cairoBoldB64 = readFileSync(boldPath).toString("base64");
+    } catch {
+      _cairoBoldB64 = "";
+    }
+  }
+  return { regular: _cairoRegularB64!, bold: _cairoBoldB64! };
+}
+
+/**
+ * Post-process an SVG string to embed the Cairo Arabic font as a base64
+ * data URI and replace all Arial font references with Cairo.
+ * This ensures Arabic text renders correctly in any browser or viewer.
+ */
+function injectArabicFontIntoSvg(svgContent: string): string {
+  const { regular, bold } = getCairoFonts();
+  
+  const fontStyle = `<style>
+    @font-face {
+      font-family: 'Cairo';
+      font-style: normal;
+      font-weight: 400;
+      src: url('data:font/woff2;base64,${regular}') format('woff2');
+      unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFC;
+    }
+    @font-face {
+      font-family: 'Cairo';
+      font-style: normal;
+      font-weight: 700;
+      src: url('data:font/woff2;base64,${bold}') format('woff2');
+      unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFC;
+    }
+    text, tspan { font-family: 'Cairo', Arial, sans-serif !important; }
+  </style>`;
+
+  // Replace font-family="Arial" with Cairo
+  svgContent = svgContent.replace(/font-family="Arial"/g, 'font-family="Cairo, Arial, sans-serif"');
+  svgContent = svgContent.replace(/font-family='Arial'/g, "font-family='Cairo, Arial, sans-serif'");
+
+  // Inject font style into <defs> or create one after the opening <svg> tag
+  if (svgContent.includes('<defs>')) {
+    svgContent = svgContent.replace('<defs>', `<defs>\n  ${fontStyle}`);
+  } else if (svgContent.includes('</defs>')) {
+    // defs tag already closed — insert before it
+    svgContent = svgContent.replace('</defs>', `${fontStyle}\n</defs>`);
+  } else {
+    // No defs at all — inject right after the opening <svg ...> tag
+    svgContent = svgContent.replace(/(<svg[^>]*>)/, `$1\n<defs>\n  ${fontStyle}\n</defs>`);
+  }
+
+  return svgContent;
+}
 
 // ─── Python API Schema ────────────────────────────────────────────────────────
 
@@ -252,27 +324,10 @@ export async function generateInfographicViaPython(
       return null;
     }
 
-    // Post-process SVG: inject Arabic Google Font and fix font-family for Arabic text
+    // Post-process SVG: embed Cairo Arabic font as base64 data URI
+    // so Arabic text renders correctly in all browsers without external requests.
     let svgContent = Buffer.from(result.data, "base64").toString("utf-8");
-    
-    // Inject Google Fonts Arabic font (Cairo for Arabic, Roboto for Latin)
-    const fontImport = `<defs>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;family=Roboto:wght@400;700&amp;display=swap');
-    text { font-family: 'Cairo', 'Roboto', Arial, sans-serif !important; }
-  </style>
-</defs>`;
-    
-    // Replace font-family="Arial" with Cairo (supports Arabic)
-    svgContent = svgContent.replace(/font-family="Arial"/g, 'font-family="Cairo, Arial, sans-serif"');
-    svgContent = svgContent.replace(/font-family='Arial'/g, "font-family='Cairo, Arial, sans-serif'");
-    
-    // Inject defs after opening <svg tag
-    if (!svgContent.includes('<defs>')) {
-      svgContent = svgContent.replace(/(<svg[^>]*>)/, `$1\n${fontImport}`);
-    } else {
-      svgContent = svgContent.replace('<defs>', `<defs>\n  <style>@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap'); text { font-family: 'Cairo', Arial, sans-serif !important; }</style>`);
-    }
+    svgContent = injectArabicFontIntoSvg(svgContent);
     
     const fileBuffer = Buffer.from(svgContent, "utf-8");
     const fileKey = `infographics/consultation-${consultation.id}-${nanoid(8)}.svg`;

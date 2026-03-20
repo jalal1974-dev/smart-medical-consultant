@@ -315,11 +315,13 @@ export const appRouter = router({
         }
 
         // ── Quota check ──────────────────────────────────────────────────────
+        // Admins always get free consultations (unlimited, for testing purposes)
+        const isAdmin = ctx.user.role === 'admin';
         // Determine how many free consultations this user has left
         const quota = await db.getUserFreeQuota(ctx.user.id);
         const freeRemaining = quota.total - quota.used;
 
-        if (input.isFree) {
+        if (input.isFree && !isAdmin) {
           // User wants to use a free slot — make sure one is available
           if (freeRemaining <= 0) {
             throw new TRPCError({
@@ -757,10 +759,17 @@ export const appRouter = router({
     }),
 
     // Get all users
-    users: adminProcedure.query(async () => {
+     users: adminProcedure.query(async () => {
       return await db.getAllUsers();
     }),
-
+    // Get a specific user by ID (admin only)
+    getUserById: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const user = await db.getUserById(input.userId);
+        if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+        return user;
+      }),
     // Regenerate infographic for a consultation
     regenerateInfographic: adminProcedure
       .input(z.object({
