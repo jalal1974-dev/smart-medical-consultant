@@ -1796,6 +1796,44 @@ export const appRouter = router({
         return { url };
       }),
 
+    // ── Admin: View any patient's full profile ──
+    // Allows admins to view the complete profile of any user by their userId.
+    getProfileByUserId: adminProcedure
+      .input(z.number())
+      .query(async ({ input }) => {
+        const targetUser = await db.getUserById(input);
+        if (!targetUser) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+        const consultationsList = await db.getConsultationsByUserId(input);
+        const records = await db.getUserMedicalRecords(input);
+        const totalConsultations = consultationsList.length;
+        const completedConsultations = consultationsList.filter((c: any) => c.status === 'completed').length;
+        const pendingConsultations = consultationsList.filter((c: any) =>
+          ['submitted', 'ai_processing', 'specialist_review'].includes(c.status)
+        ).length;
+        return {
+          user: {
+            id: targetUser.id,
+            name: targetUser.name,
+            email: targetUser.email,
+            loginMethod: (targetUser as any).login_method ?? targetUser.loginMethod ?? 'oauth',
+            subscriptionType: (targetUser as any).subscription_type ?? targetUser.subscriptionType ?? 'free',
+            consultationsRemaining: (targetUser as any).consultations_remaining ?? targetUser.consultationsRemaining ?? 0,
+            hasUsedFreeConsultation: Boolean((targetUser as any).has_used_free_consultation ?? targetUser.hasUsedFreeConsultation),
+            avatarUrl: (targetUser as any).avatar_url ?? targetUser.avatarUrl ?? null,
+            bio: (targetUser as any).bio ?? null,
+            createdAt: targetUser.createdAt,
+          },
+          stats: {
+            totalConsultations,
+            completedConsultations,
+            pendingConsultations,
+            totalRecords: records.length,
+          },
+          consultations: consultationsList,
+          records,
+        };
+      }),
+
     // ── Payment History ──
     // Returns all completed-payment consultations for the current user.
     getPaymentHistory: protectedProcedure.query(async ({ ctx }) => {

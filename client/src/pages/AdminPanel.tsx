@@ -13,8 +13,9 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, Archive } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, Archive, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
@@ -23,6 +24,7 @@ import { MaterialReviewPanel } from "@/components/MaterialReviewPanel";
 export default function AdminPanel() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
@@ -513,6 +515,19 @@ export default function AdminPanel() {
                       </SelectContent>
                     </Select>
 
+                    {/* View Patient Page button — always visible for all consultations */}
+                    {consultation.userId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                        onClick={() => setLocation(`/patient/${consultation.userId}`)}
+                        title="View full patient profile page"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Patient Page
+                      </Button>
+                    )}
                     {/* Archive button — only show for completed consultations */}
                     {consultation.status === "completed" && (
                       <Button

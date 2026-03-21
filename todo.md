@@ -672,3 +672,12 @@
 - [ ] Test free plan: 1 free → $5 payment required → consultation granted
 - [ ] Test premium plan: $1 payment → 10 free → $5 payment required
 - [ ] Test admin: unlimited consultations, can view all patient pages
+
+## Admin "View Patient Page" Feature
+- [x] Audit PatientProfile page to understand current permission/routing logic
+- [x] Add profile.getProfileByUserId tRPC route (adminProcedure) to fetch any user's profile
+- [x] Update PatientProfile page to accept a :userId param for admin viewing
+- [x] Add "View Patient Page" button in AdminPanel consultation cards
+- [x] Add /patient/:userId route in App.tsx
+- [x] Show admin-only banner on PatientProfile when admin is viewing another user
+- [x] Non-admin users redirected to / if they try to access /patient/:userId
