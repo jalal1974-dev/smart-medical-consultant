@@ -569,15 +569,28 @@ export default function AdminPanel() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Joined: {format(new Date(user.createdAt), "PPP")}
-                  </p>
+                 <CardContent>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Joined: {format(new Date(user.createdAt), "PPP")}
+                    </p>
+                    {user.role !== "admin" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                        onClick={() => setLocation(`/patient/${user.id}`)}
+                        title="View full patient profile page"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View Patient Page
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </TabsContent>
-
           <TabsContent value="media" className="space-y-4">
             <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
               <DialogTrigger asChild>

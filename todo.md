@@ -681,3 +681,6 @@
 - [x] Add /patient/:userId route in App.tsx
 - [x] Show admin-only banner on PatientProfile when admin is viewing another user
 - [x] Non-admin users redirected to / if they try to access /patient/:userId
+
+## Admin Users Tab — View Patient Page Link
+- [x] Add "View Patient Page" button to each user card in the Users tab of AdminPanel
