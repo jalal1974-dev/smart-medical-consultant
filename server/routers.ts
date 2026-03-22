@@ -1875,5 +1875,91 @@ export const appRouter = router({
       return { success: true };
     }),
   }),
+
+  // ── Direct Python API Consultation Generator ──────────────────────────────
+  // Calls POST /analyze on the Python backend, uploads the PPTX to S3,
+  // and returns a download URL so the client can trigger a file download.
+  generate: router({
+    consultationPptx: protectedProcedure
+      .input(z.object({
+        patientName: z.string().min(1, 'Patient name is required'),
+        age: z.number().int().min(1).max(120).optional(),
+        gender: z.string().optional(),
+        symptoms: z.string().min(5, 'Please describe the symptoms'),
+        medicalHistory: z.string().optional(),
+        medications: z.string().optional(),
+        language: z.enum(['ar', 'en']).default('ar'),
+      }))
+      .mutation(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        const baseUrl = ENV.pythonApiUrl;
+
+        const requestBody = {
+          patient: {
+            name: input.patientName,
+            ...(input.age !== undefined && { age: input.age }),
+            ...(input.gender && { gender: input.gender }),
+          },
+          symptoms: input.symptoms,
+          ...(input.medicalHistory && { medical_history: input.medicalHistory }),
+          ...(input.medications && { medications: input.medications }),
+          language: input.language,
+          output_type: 'claude',
+        };
+
+        let apiResponse: Response;
+        try {
+          apiResponse = await fetch(`${baseUrl}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+            signal: AbortSignal.timeout(60_000), // 60s timeout
+          });
+        } catch (fetchError: any) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Network error reaching the generation API: ${fetchError.message}`,
+          });
+        }
+
+        if (!apiResponse.ok) {
+          const errText = await apiResponse.text().catch(() => 'Unknown error');
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Generation API returned ${apiResponse.status}: ${errText}`,
+          });
+        }
+
+        const result = await apiResponse.json();
+
+        if (!result.success || !result.results?.claude?.data) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: result.detail || 'Generation failed: no PPTX data returned',
+          });
+        }
+
+        const base64Data: string = result.results.claude.data;
+        const filename: string = result.results.claude.filename ||
+          `medical_consultation_${input.patientName.replace(/\s+/g, '_')}.pptx`;
+
+        // Upload PPTX to S3 for reliable download
+        const fileBuffer = Buffer.from(base64Data, 'base64');
+        const safeFilename = filename.replace(/[^a-zA-Z0-9._\u0600-\u06FF-]/g, '_');
+        const fileKey = `generated-pptx/${Date.now()}-${safeFilename}`;
+        const { storagePut } = await import('./storage');
+        const { url } = await storagePut(
+          fileKey,
+          fileBuffer,
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        );
+
+        return {
+          success: true,
+          downloadUrl: url,
+          filename,
+        };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

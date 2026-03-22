@@ -40,6 +40,7 @@ export function Header() {
 
   if (isAuthenticated) {
     navItems.push({ path: "/dashboard", label: t("dashboard") });
+    navItems.push({ path: "/generate", label: language === "ar" ? "توليد استشارة" : "Generate" });
   }
 
   if (user?.role === "admin") {

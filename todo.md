@@ -684,3 +684,16 @@
 
 ## Admin Users Tab — View Patient Page Link
 - [x] Add "View Patient Page" button to each user card in the Users tab of AdminPanel
+
+## Python API Consultation Generator (POST /analyze)
+- [x] Add generate.consultationPptx tRPC route (protectedProcedure) that calls POST /analyze on Python API
+- [x] Route accepts: patientName, age, gender, symptoms, medicalHistory, medications, language
+- [x] Route decodes base64 PPTX, uploads to S3, returns download URL + filename
+- [x] Build MedicalConsultationGenerator page with bilingual (AR/EN) patient form
+- [x] Form fields: name, age, gender, symptoms, medical history, medications, language toggle
+- [x] Loading state with spinner and "Generating..." message (2-5s)
+- [x] On success: trigger PPTX download and show success toast
+- [x] On error: show Arabic/English user-friendly error with retry option
+- [x] Add /generate route to App.tsx
+- [x] Add "Generate Consultation" link in navigation for authenticated users
+- [x] Write vitest tests for the tRPC route (6/6 passing)

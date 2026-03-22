@@ -28,6 +28,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Activate from "./pages/Activate";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminCustomerView from "./pages/AdminCustomerView";
+import MedicalConsultationGenerator from "./pages/MedicalConsultationGenerator";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -85,6 +86,8 @@ function Router() {
             <Route path="/reset-password" component={ResetPassword} />
             {/* Voluntary upgrade page — users can pay $1 for 10 consultations */}
             <Route path="/activate" component={Activate} />
+            {/* Direct Python API consultation PPTX generator */}
+            <Route path="/generate" component={MedicalConsultationGenerator} />
             <Route path={"/404"} component={NotFound} />
             <Route component={NotFound} />
           </Switch>
