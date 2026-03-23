@@ -44,7 +44,6 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      // All users go to the homepage after sign-in (free plan: 1 consultation included)
       res.redirect(302, "/");
     } catch (error) {
       console.error("[OAuth] Callback failed", error);

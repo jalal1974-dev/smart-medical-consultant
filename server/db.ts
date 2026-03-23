@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, notifications } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -190,94 +190,7 @@ export async function getAllConsultations() {
   const db = await getDb();
   if (!db) return [];
 
-  // Exclude consultations archived by admin — they remain visible to patients
-  return await db
-    .select()
-    .from(consultations)
-    .where(eq(consultations.archivedByAdmin, false))
-    .orderBy(desc(consultations.createdAt));
-}
-
-export async function archiveConsultation(id: number) {
-  const db = await getDb();
-  if (!db) return;
-
-  await db
-    .update(consultations)
-    .set({ archivedByAdmin: true, archivedAt: new Date(), updatedAt: new Date() })
-    .where(eq(consultations.id, id));
-}
-
-/**
- * Approve a specific material (report | infographic | slideDeck) for a consultation.
- * Records who approved it and when.
- */
-export async function approveMaterial(
-  consultationId: number,
-  material: "report" | "infographic" | "slideDeck",
-  approvedBy: number
-) {
-  const db = await getDb();
-  if (!db) return;
-
-  const now = new Date();
-  const updateData: Record<string, unknown> = { updatedAt: now };
-
-  if (material === "report") {
-    updateData.reportApproved = true;
-    updateData.reportApprovedAt = now;
-    updateData.reportApprovedBy = approvedBy;
-  } else if (material === "infographic") {
-    updateData.infographicApproved = true;
-    updateData.infographicApprovedAt = now;
-    updateData.infographicApprovedBy = approvedBy;
-  } else if (material === "slideDeck") {
-    updateData.slideDeckApproved = true;
-    updateData.slideDeckApprovedAt = now;
-    updateData.slideDeckApprovedBy = approvedBy;
-  }
-
-  await db
-    .update(consultations)
-    .set(updateData as any)
-    .where(eq(consultations.id, consultationId));
-}
-
-/**
- * Replace the URL for a specific material (admin uploads a replacement file).
- */
-export async function replaceMaterialUrl(
-  consultationId: number,
-  material: "report" | "infographic" | "slideDeck",
-  newUrl: string
-) {
-  const db = await getDb();
-  if (!db) return;
-
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
-
-  if (material === "report") {
-    updateData.aiReportUrl = newUrl;
-    // Reset approval when replaced
-    updateData.reportApproved = false;
-    updateData.reportApprovedAt = null;
-    updateData.reportApprovedBy = null;
-  } else if (material === "infographic") {
-    updateData.aiInfographicUrl = newUrl;
-    updateData.infographicApproved = false;
-    updateData.infographicApprovedAt = null;
-    updateData.infographicApprovedBy = null;
-  } else if (material === "slideDeck") {
-    updateData.aiSlideDeckUrl = newUrl;
-    updateData.slideDeckApproved = false;
-    updateData.slideDeckApprovedAt = null;
-    updateData.slideDeckApprovedBy = null;
-  }
-
-  await db
-    .update(consultations)
-    .set(updateData as any)
-    .where(eq(consultations.id, consultationId));
+  return await db.select().from(consultations).orderBy(desc(consultations.createdAt));
 }
 
 export async function updateConsultationStatus(id: number, status: typeof consultations.$inferSelect.status) {
@@ -1575,78 +1488,4 @@ export async function updateUserProfile(
         .join(', ')
     )} WHERE id = ${userId}`
   );
-}
-
-
-// ==================== Notification Functions ====================
-
-export async function createNotification(data: {
-  userId: number;
-  title: string;
-  body: string;
-  type?: string;
-  consultationId?: number;
-}): Promise<void> {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot create notification: database not available");
-    return;
-  }
-  await db.insert(notifications).values({
-    userId: data.userId,
-    title: data.title,
-    body: data.body,
-    type: data.type ?? "material_approved",
-    consultationId: data.consultationId ?? null,
-    read: false,
-  });
-}
-
-export async function getNotificationsByUserId(userId: number): Promise<{
-  id: number;
-  userId: number;
-  title: string;
-  body: string;
-  type: string;
-  consultationId: number | null;
-  read: boolean;
-  createdAt: Date;
-}[]> {
-  const db = await getDb();
-  if (!db) return [];
-  const rows = await db
-    .select()
-    .from(notifications)
-    .where(eq(notifications.userId, userId))
-    .orderBy(desc(notifications.createdAt))
-    .limit(50);
-  return rows;
-}
-
-export async function markNotificationRead(notificationId: number, userId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db
-    .update(notifications)
-    .set({ read: true })
-    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
-}
-
-export async function markAllNotificationsRead(userId: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  await db
-    .update(notifications)
-    .set({ read: true })
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
-}
-
-export async function getUnreadNotificationCount(userId: number): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-  const rows = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(notifications)
-    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
-  return Number(rows[0]?.count ?? 0);
 }

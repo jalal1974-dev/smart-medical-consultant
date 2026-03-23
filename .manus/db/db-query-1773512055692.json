@@ -1,9 +1,0 @@
-{
-  "query": "\nALTER TABLE consultations\n  ADD COLUMN reportApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN reportApprovedAt DATETIME NULL,\n  ADD COLUMN reportApprovedBy INT NULL,\n  ADD COLUMN infographicApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN infographicApprovedAt DATETIME NULL,\n  ADD COLUMN infographicApprovedBy INT NULL,\n  ADD COLUMN slideDeckApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN slideDeckApprovedAt DATETIME NULL,\n  ADD COLUMN slideDeckApprovedBy INT NULL;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nALTER TABLE consultations\n  ADD COLUMN reportApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN reportApprovedAt DATETIME NULL,\n  ADD COLUMN reportApprovedBy INT NULL,\n  ADD COLUMN infographicApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN infographicApprovedAt DATETIME NULL,\n  ADD COLUMN infographicApprovedBy INT NULL,\n  ADD COLUMN slideDeckApproved BOOLEAN NOT NULL DEFAULT FALSE,\n  ADD COLUMN slideDeckApprovedAt DATETIME NULL,\n  ADD COLUMN slideDeckApprovedBy INT NULL;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 2926
-}

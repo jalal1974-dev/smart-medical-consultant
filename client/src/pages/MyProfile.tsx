@@ -642,8 +642,7 @@ export default function MyProfile() {
                         {/* AI Materials */}
                         {c.aiAnalysis && (
                           <div className="flex flex-wrap gap-2">
-                            {/* Only show materials approved by admin */}
-                            {c.aiReportUrl && c.reportApproved && (
+                            {c.aiReportUrl && (
                               <Button size="sm" variant="outline" asChild className="gap-1 text-xs">
                                 <a href={c.aiReportUrl} target="_blank" rel="noopener noreferrer">
                                   <FileText className="w-3 h-3" />
@@ -651,7 +650,7 @@ export default function MyProfile() {
                                 </a>
                               </Button>
                             )}
-                            {c.aiInfographicUrl && c.infographicApproved && (
+                            {c.aiInfographicUrl && (
                               <Button size="sm" variant="outline" asChild className="gap-1 text-xs">
                                 <a href={c.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
                                   <Star className="w-3 h-3" />
@@ -659,7 +658,7 @@ export default function MyProfile() {
                                 </a>
                               </Button>
                             )}
-                            {c.aiSlideDeckUrl && c.slideDeckApproved && (
+                            {c.aiSlideDeckUrl && (
                               <Button size="sm" variant="outline" asChild className="gap-1 text-xs">
                                 <a href={c.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
                                   <Eye className="w-3 h-3" />

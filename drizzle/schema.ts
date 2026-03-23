@@ -15,7 +15,6 @@ export const users = mysqlTable("users", {
   consultationsRemaining: int("consultations_remaining").default(1).notNull(),
   freeConsultationsUsed: int("free_consultations_used").default(0).notNull(),   // how many free ones consumed
   freeConsultationsTotal: int("free_consultations_total").default(1).notNull(), // 1 for free plan, 10 for $1 premium
-  planType: mysqlEnum("plan_type", ["free", "premium"]).default("free").notNull(), // free = 1 free then $5 each; premium = $1 upfront + 10 free then $5 each
   avatarUrl: varchar("avatar_url", { length: 500 }),   // S3 URL for profile picture
   bio: text("bio"),                                     // Short user bio (max 300 chars)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -97,23 +96,6 @@ export const consultations = mysqlTable("consultations", {
   amount: int("amount").default(0).notNull(),
   paymentStatus: mysqlEnum("paymentStatus", ["pending", "completed", "failed"]).default("pending").notNull(),
   paymentId: varchar("paymentId", { length: 255 }),
-
-  // Per-material admin approval workflow
-  // Each material (report, infographic, slide deck) is approved independently.
-  // When approved, the patient receives an email notification.
-  reportApproved: boolean("reportApproved").default(false).notNull(),
-  reportApprovedAt: timestamp("reportApprovedAt"),
-  reportApprovedBy: int("reportApprovedBy"),
-  infographicApproved: boolean("infographicApproved").default(false).notNull(),
-  infographicApprovedAt: timestamp("infographicApprovedAt"),
-  infographicApprovedBy: int("infographicApprovedBy"),
-  slideDeckApproved: boolean("slideDeckApproved").default(false).notNull(),
-  slideDeckApprovedAt: timestamp("slideDeckApprovedAt"),
-  slideDeckApprovedBy: int("slideDeckApprovedBy"),
-
-  // Admin archive — hides consultation from admin panel but keeps it in patient's record
-  archivedByAdmin: boolean("archivedByAdmin").default(false).notNull(),
-  archivedAt: timestamp("archivedAt"),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -415,20 +397,3 @@ export const consultationAttachedRecords = mysqlTable("consultation_attached_rec
 
 export type ConsultationAttachedRecord = typeof consultationAttachedRecords.$inferSelect;
 export type InsertConsultationAttachedRecord = typeof consultationAttachedRecords.$inferInsert;
-
-/**
- * In-app notifications table - real-time alerts for patients
- */
-export const notifications = mysqlTable("notifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("user_id").notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  body: text("body").notNull(),
-  type: varchar("type", { length: 64 }).default("material_approved").notNull(),
-  consultationId: int("consultation_id"),
-  read: boolean("read").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = typeof notifications.$inferInsert;

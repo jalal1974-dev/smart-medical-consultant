@@ -130,35 +130,6 @@ export const appRouter = router({
         return { success: true, consultationsGranted: 10 };
       }),
 
-    // Activate account via PayPal for OAuth users (Google, etc.) who are already logged in
-    activateWithPaypal: protectedProcedure
-      .input(z.object({
-        paypalOrderId: z.string(),
-        paypalPayerId: z.string().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const userId = ctx.user.id;
-        // Prevent double-activation
-        const existing = await db.getRegistrationPaymentByOrderId(input.paypalOrderId);
-        if (existing && existing.status === 'completed') {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Payment already processed' });
-        }
-        if (!existing) {
-          await db.createRegistrationPayment({
-            userId,
-            paypalOrderId: input.paypalOrderId,
-            amount: 1.00,
-            currency: 'USD',
-            status: 'completed',
-            consultationsGranted: 10,
-          });
-        } else {
-          await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
-        }
-        await db.grantConsultationsAfterPayment(userId, 10);
-        return { success: true, consultationsGranted: 10 };
-      }),
-
     // Request password reset - sends email with token
     requestPasswordReset: publicProcedure
       .input(z.object({
@@ -315,13 +286,11 @@ export const appRouter = router({
         }
 
         // ── Quota check ──────────────────────────────────────────────────────
-        // Admins always get free consultations (unlimited, for testing purposes)
-        const isAdmin = ctx.user.role === 'admin';
         // Determine how many free consultations this user has left
         const quota = await db.getUserFreeQuota(ctx.user.id);
         const freeRemaining = quota.total - quota.used;
 
-        if (input.isFree && !isAdmin) {
+        if (input.isFree) {
           // User wants to use a free slot — make sure one is available
           if (freeRemaining <= 0) {
             throw new TRPCError({
@@ -759,17 +728,10 @@ export const appRouter = router({
     }),
 
     // Get all users
-     users: adminProcedure.query(async () => {
+    users: adminProcedure.query(async () => {
       return await db.getAllUsers();
     }),
-    // Get a specific user by ID (admin only)
-    getUserById: adminProcedure
-      .input(z.object({ userId: z.number() }))
-      .query(async ({ input }) => {
-        const user = await db.getUserById(input.userId);
-        if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
-        return user;
-      }),
+
     // Regenerate infographic for a consultation
     regenerateInfographic: adminProcedure
       .input(z.object({
@@ -792,15 +754,13 @@ export const appRouter = router({
         // Import generateInfographic function
         const { regenerateInfographicForConsultation } = await import('./contentGeneration');
         
-        // Regenerate infographic (now uses Python API with fallback)
+        // Regenerate infographic
         const newInfographicUrl = await regenerateInfographicForConsultation(
           consultation.id,
           consultation.aiAnalysis,
           consultation.patientName,
           consultation.preferredLanguage as "en" | "ar",
-          input.customPrompt,
-          consultation.symptoms,
-          consultation.medicalHistory
+          input.customPrompt
         );
 
         if (!newInfographicUrl) {
@@ -819,217 +779,6 @@ export const appRouter = router({
           success: true, 
           infographicUrl: newInfographicUrl 
         };
-      }),
-
-    // Generate PPTX slide deck for a consultation via Python API
-    generatePptx: adminProcedure
-      .input(z.object({
-        consultationId: z.number(),
-      }))
-      .mutation(async ({ input }) => {
-        const consultation = await db.getConsultationById(input.consultationId);
-        if (!consultation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
-        }
-
-        const { generatePptxViaPython } = await import('./pythonApiClient');
-        const pptxUrl = await generatePptxViaPython({
-          id: consultation.id,
-          patientName: consultation.patientName,
-          symptoms: consultation.symptoms,
-          medicalHistory: consultation.medicalHistory,
-          aiAnalysis: consultation.aiAnalysis,
-          preferredLanguage: consultation.preferredLanguage,
-        });
-
-        if (!pptxUrl) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to generate PPTX. Python API may be unavailable.',
-          });
-        }
-
-        // Save the PPTX URL to the consultation
-        await db.updateConsultation(input.consultationId, {
-          aiSlideDeckUrl: pptxUrl,
-        });
-
-        return { success: true, pptxUrl };
-      }),
-
-    // Check Python API health
-    checkPythonApi: adminProcedure
-      .query(async () => {
-        const { checkPythonApiHealth } = await import('./pythonApiClient');
-        return await checkPythonApiHealth();
-      }),
-
-    // Archive a consultation — hides it from admin panel but keeps it in patient record
-    archiveConsultation: adminProcedure
-      .input(z.object({
-        consultationId: z.number(),
-      }))
-      .mutation(async ({ input }) => {
-        const consultation = await db.getConsultationById(input.consultationId);
-        if (!consultation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
-        }
-
-        await db.archiveConsultation(input.consultationId);
-
-        return { success: true };
-      }),
-
-    // Approve a specific material (report | infographic | slideDeck)
-    // Sends a patient email notification on approval.
-    approveMaterial: adminProcedure
-      .input(z.object({
-        consultationId: z.number(),
-        material: z.enum(["report", "infographic", "slideDeck"]),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const consultation = await db.getConsultationById(input.consultationId);
-        if (!consultation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
-        }
-
-        await db.approveMaterial(input.consultationId, input.material, ctx.user.id);
-
-        // Send patient email for this specific material
-        const materialLabels: Record<string, { en: string; ar: string }> = {
-          report: { en: "Medical Report", ar: "التقرير الطبي" },
-          infographic: { en: "Medical Infographic", ar: "الرسم البياني الطبي" },
-          slideDeck: { en: "Slide Deck Presentation", ar: "عرض الشرائح" },
-        };
-        const lang = consultation.preferredLanguage as "en" | "ar";
-        const label = materialLabels[input.material][lang];
-        const isArabic = lang === "ar";
-
-        const title = isArabic
-          ? `تمت الموافقة على ${label} - استشارة #${consultation.id}`
-          : `${label} Approved - Consultation #${consultation.id}`;
-
-        const content = isArabic
-          ? `مرحباً ${consultation.patientName}،\n\nتمت مراجعة ${label} الخاص باستشارتك #${consultation.id} والموافقة عليه من قبل فريقنا الطبي المتخصص.\n\nيمكنك الاطلاع عليه الآن من خلال صفحة استشارتك على الموقع.\n\nمع أطيب التمنيات،\nفريق مستشارك الطبي الذكي`
-          : `Hello ${consultation.patientName},\n\nYour ${label} for consultation #${consultation.id} has been reviewed and approved by our medical specialist team.\n\nYou can now view and download it from your consultation page on our website.\n\nBest regards,\nSmart Medical Consultant Team`;
-
-        const { notifyOwner } = await import('./_core/notification');
-        await notifyOwner({
-          title: `[Patient Email] To: ${consultation.patientEmail} — ${title}`,
-          content,
-        });
-
-        // Create in-app notification for the patient
-        const notifBody = isArabic
-          ? `تمت الموافقة على ${label} الخاص باستشارتك #${consultation.id}. يمكنك الاطلاع عليه الآن.`
-          : `Your ${label} for consultation #${consultation.id} has been approved. You can now view and download it.`;
-        await db.createNotification({
-          userId: consultation.userId,
-          title,
-          body: notifBody,
-          type: 'material_approved',
-          consultationId: consultation.id,
-        });
-
-        return { success: true };
-      }),
-
-    // Replace a material URL (admin uploads a replacement file before sending to patient)
-    // Resets the approval status for that material.
-    replaceMaterial: adminProcedure
-      .input(z.object({
-        consultationId: z.number(),
-        material: z.enum(["report", "infographic", "slideDeck"]),
-        // Base64-encoded file content
-        fileBase64: z.string(),
-        fileName: z.string(),
-        mimeType: z.string(),
-      }))
-      .mutation(async ({ input }) => {
-        const consultation = await db.getConsultationById(input.consultationId);
-        if (!consultation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
-        }
-
-        // Upload replacement file to S3
-        const { storagePut } = await import('./storage');
-        const { nanoid } = await import('nanoid');
-        const ext = input.fileName.split('.').pop() || 'bin';
-        const folder = input.material === 'report' ? 'reports' : input.material === 'infographic' ? 'infographics' : 'slides';
-        const fileKey = `${folder}/consultation-${input.consultationId}-replaced-${nanoid(8)}.${ext}`;
-        const fileBuffer = Buffer.from(input.fileBase64, 'base64');
-        const { url } = await storagePut(fileKey, fileBuffer, input.mimeType);
-
-        // Update the URL in the database and reset approval
-        await db.replaceMaterialUrl(input.consultationId, input.material, url);
-
-        return { success: true, url };
-      }),
-
-    // Approve all available materials at once and send a single combined patient email
-    approveAllMaterials: adminProcedure
-      .input(z.object({ consultationId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        const consultation = await db.getConsultationById(input.consultationId);
-        if (!consultation) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
-        }
-
-        const materialsToApprove: Array<"report" | "infographic" | "slideDeck"> = [];
-        if (consultation.aiReportUrl && !consultation.reportApproved) materialsToApprove.push("report");
-        if (consultation.aiInfographicUrl && !consultation.infographicApproved) materialsToApprove.push("infographic");
-        if (consultation.aiSlideDeckUrl && !consultation.slideDeckApproved) materialsToApprove.push("slideDeck");
-
-        if (materialsToApprove.length === 0) {
-          return { success: true, approved: [], message: 'All materials already approved.' };
-        }
-
-        // Approve each material in DB
-        for (const material of materialsToApprove) {
-          await db.approveMaterial(input.consultationId, material, ctx.user.id);
-        }
-
-        // Build combined email
-        const lang = consultation.preferredLanguage as "en" | "ar";
-        const isArabic = lang === "ar";
-
-        const materialLabels: Record<string, { en: string; ar: string }> = {
-          report: { en: "Medical Report", ar: "التقرير الطبي" },
-          infographic: { en: "Medical Infographic", ar: "الرسم البياني الطبي" },
-          slideDeck: { en: "Slide Deck Presentation", ar: "عرض الشرائح" },
-        };
-
-        const approvedList = materialsToApprove
-          .map(m => isArabic ? `• ${materialLabels[m].ar}` : `• ${materialLabels[m].en}`)
-          .join("\n");
-
-        const title = isArabic
-          ? `تمت الموافقة على مواد استشارتك #${consultation.id}`
-          : `Your Consultation #${consultation.id} Materials Are Ready`;
-
-        const content = isArabic
-          ? `مرحباً ${consultation.patientName}،\n\nتمت مراجعة المواد التالية والموافقة عليها من قبل فريقنا الطبي المتخصص:\n\n${approvedList}\n\nيمكنك الاطلاع عليها الآن وتنزيلها من خلال صفحة استشارتك على الموقع.\n\nمع أطيب التمنيات،\nفريق مستشارك الطبي الذكي`
-          : `Hello ${consultation.patientName},\n\nThe following materials for your consultation #${consultation.id} have been reviewed and approved by our medical specialist team:\n\n${approvedList}\n\nYou can now view and download them from your consultation page on our website.\n\nBest regards,\nSmart Medical Consultant Team`;
-
-        const { notifyOwner } = await import('./_core/notification');
-        await notifyOwner({
-          title: `[Patient Email] To: ${consultation.patientEmail} — ${title}`,
-          content,
-        });
-
-        // Create a single in-app notification for the patient listing all approved materials
-        const notifBody = isArabic
-          ? `تمت الموافقة على ${materialsToApprove.length} مادة لاستشارتك #${consultation.id}. يمكنك الاطلاع عليها وتنزيلها الآن.`
-          : `${materialsToApprove.length} material${materialsToApprove.length > 1 ? 's' : ''} approved for consultation #${consultation.id}. You can now view and download them.`;
-        await db.createNotification({
-          userId: consultation.userId,
-          title,
-          body: notifBody,
-          type: 'material_approved',
-          consultationId: consultation.id,
-        });
-
-        return { success: true, approved: materialsToApprove };
       }),
 
     // Get analytics data
@@ -1796,44 +1545,6 @@ export const appRouter = router({
         return { url };
       }),
 
-    // ── Admin: View any patient's full profile ──
-    // Allows admins to view the complete profile of any user by their userId.
-    getProfileByUserId: adminProcedure
-      .input(z.number())
-      .query(async ({ input }) => {
-        const targetUser = await db.getUserById(input);
-        if (!targetUser) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
-        const consultationsList = await db.getConsultationsByUserId(input);
-        const records = await db.getUserMedicalRecords(input);
-        const totalConsultations = consultationsList.length;
-        const completedConsultations = consultationsList.filter((c: any) => c.status === 'completed').length;
-        const pendingConsultations = consultationsList.filter((c: any) =>
-          ['submitted', 'ai_processing', 'specialist_review'].includes(c.status)
-        ).length;
-        return {
-          user: {
-            id: targetUser.id,
-            name: targetUser.name,
-            email: targetUser.email,
-            loginMethod: (targetUser as any).login_method ?? targetUser.loginMethod ?? 'oauth',
-            subscriptionType: (targetUser as any).subscription_type ?? targetUser.subscriptionType ?? 'free',
-            consultationsRemaining: (targetUser as any).consultations_remaining ?? targetUser.consultationsRemaining ?? 0,
-            hasUsedFreeConsultation: Boolean((targetUser as any).has_used_free_consultation ?? targetUser.hasUsedFreeConsultation),
-            avatarUrl: (targetUser as any).avatar_url ?? targetUser.avatarUrl ?? null,
-            bio: (targetUser as any).bio ?? null,
-            createdAt: targetUser.createdAt,
-          },
-          stats: {
-            totalConsultations,
-            completedConsultations,
-            pendingConsultations,
-            totalRecords: records.length,
-          },
-          consultations: consultationsList,
-          records,
-        };
-      }),
-
     // ── Payment History ──
     // Returns all completed-payment consultations for the current user.
     getPaymentHistory: protectedProcedure.query(async ({ ctx }) => {
@@ -1850,116 +1561,8 @@ export const appRouter = router({
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       }));
-     }),
-  }),
-
-  notifications: router({
-    // Get all notifications for the current user (most recent first, max 50)
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const items = await db.getNotificationsByUserId(ctx.user.id);
-      const unreadCount = items.filter(n => !n.read).length;
-      return { items, unreadCount };
     }),
-
-    // Mark a single notification as read
-    markRead: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        await db.markNotificationRead(input.id, ctx.user.id);
-        return { success: true };
-      }),
-
-    // Mark all notifications as read
-    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
-      await db.markAllNotificationsRead(ctx.user.id);
-      return { success: true };
-    }),
-  }),
-
-  // ── Direct Python API Consultation Generator ──────────────────────────────
-  // Calls POST /analyze on the Python backend, uploads the PPTX to S3,
-  // and returns a download URL so the client can trigger a file download.
-  generate: router({
-    consultationPptx: protectedProcedure
-      .input(z.object({
-        patientName: z.string().min(1, 'Patient name is required'),
-        age: z.number().int().min(1).max(120).optional(),
-        gender: z.string().optional(),
-        symptoms: z.string().min(5, 'Please describe the symptoms'),
-        medicalHistory: z.string().optional(),
-        medications: z.string().optional(),
-        language: z.enum(['ar', 'en']).default('ar'),
-      }))
-      .mutation(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        const baseUrl = ENV.pythonApiUrl;
-
-        const requestBody = {
-          patient: {
-            name: input.patientName,
-            ...(input.age !== undefined && { age: input.age }),
-            ...(input.gender && { gender: input.gender }),
-          },
-          symptoms: input.symptoms,
-          ...(input.medicalHistory && { medical_history: input.medicalHistory }),
-          ...(input.medications && { medications: input.medications }),
-          language: input.language,
-          output_type: 'claude',
-        };
-
-        let apiResponse: Response;
-        try {
-          apiResponse = await fetch(`${baseUrl}/analyze`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(60_000), // 60s timeout
-          });
-        } catch (fetchError: any) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Network error reaching the generation API: ${fetchError.message}`,
-          });
-        }
-
-        if (!apiResponse.ok) {
-          const errText = await apiResponse.text().catch(() => 'Unknown error');
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: `Generation API returned ${apiResponse.status}: ${errText}`,
-          });
-        }
-
-        const result = await apiResponse.json();
-
-        if (!result.success || !result.results?.claude?.data) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: result.detail || 'Generation failed: no PPTX data returned',
-          });
-        }
-
-        const base64Data: string = result.results.claude.data;
-        const filename: string = result.results.claude.filename ||
-          `medical_consultation_${input.patientName.replace(/\s+/g, '_')}.pptx`;
-
-        // Upload PPTX to S3 for reliable download
-        const fileBuffer = Buffer.from(base64Data, 'base64');
-        const safeFilename = filename.replace(/[^a-zA-Z0-9._\u0600-\u06FF-]/g, '_');
-        const fileKey = `generated-pptx/${Date.now()}-${safeFilename}`;
-        const { storagePut } = await import('./storage');
-        const { url } = await storagePut(
-          fileKey,
-          fileBuffer,
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        );
-
-        return {
-          success: true,
-          downloadUrl: url,
-          filename,
-        };
-      }),
   }),
 });
+
 export type AppRouter = typeof appRouter;

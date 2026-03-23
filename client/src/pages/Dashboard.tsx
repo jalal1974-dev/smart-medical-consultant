@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, Sparkles } from "lucide-react";
+import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map } from "lucide-react";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -238,38 +238,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Upgrade banner — shown to free users who have used or are about to use their 1 free consultation */}
-        {(() => {
-          const remaining = (user as any)?.consultationsRemaining ?? (user as any)?.consultations_remaining ?? 0;
-          const total = (user as any)?.freeConsultationsTotal ?? (user as any)?.free_consultations_total ?? 1;
-          const isPremium = total > 1 || (user as any)?.subscriptionType === 'pay_per_case' || (user as any)?.subscription_type === 'pay_per_case';
-          if (isPremium) return null;
-          return (
-            <div className="mb-8 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
-              <div className="flex items-start gap-3">
-                <Sparkles className="w-6 h-6 text-yellow-300 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-white font-semibold text-base">
-                    {remaining === 0
-                      ? (language === 'ar' ? 'لقد استخدمت استشارتك المجانية' : 'You have used your free consultation')
-                      : (language === 'ar' ? `لديك ${remaining} استشارة مجانية متبقية` : `You have ${remaining} free consultation remaining`)}
-                  </p>
-                  <p className="text-blue-100 text-sm mt-0.5">
-                    {language === 'ar'
-                      ? 'احصل على 10 استشارات إضافية مقابل دولار واحد فقط'
-                      : 'Upgrade for $1 and get 10 more AI-powered consultations'}
-                  </p>
-                </div>
-              </div>
-              <Link href="/activate">
-                <Button className="bg-white text-blue-700 hover:bg-blue-50 font-semibold shrink-0 whitespace-nowrap">
-                  {language === 'ar' ? 'ترقية مقابل $1' : 'Upgrade for $1'}
-                </Button>
-              </Link>
-            </div>
-          );
-        })()}
-
         {/* Continue Watching Section */}
         <ContinueWatchingSection language={language} />
 
@@ -429,8 +397,7 @@ export default function Dashboard() {
                       <p className="text-sm font-medium mb-2">{language === "ar" ? "التحليل الطبي" : "Medical Analysis"}</p>
                       <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {/* Only show materials that have been approved by admin */}
-                        {consultation.aiReportUrl && consultation.reportApproved && (
+                        {consultation.aiReportUrl && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
                               <Download className="w-4 h-4 mr-2" />
@@ -438,7 +405,7 @@ export default function Dashboard() {
                             </a>
                           </Button>
                         )}
-                        {consultation.aiInfographicUrl && consultation.infographicApproved && (
+                        {consultation.aiInfographicUrl && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
                               <FileText className="w-4 h-4 mr-2" />
@@ -446,7 +413,7 @@ export default function Dashboard() {
                             </a>
                           </Button>
                         )}
-                        {consultation.aiSlideDeckUrl && consultation.slideDeckApproved && (
+                        {consultation.aiSlideDeckUrl && (
                           <Button size="sm" variant="outline" asChild className="justify-start">
                             <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
                               <Presentation className="w-4 h-4 mr-2" />

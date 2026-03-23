@@ -13,18 +13,15 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, Archive, ExternalLink } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from "lucide-react";
 import { format } from "date-fns";
-import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
-import { MaterialReviewPanel } from "@/components/MaterialReviewPanel";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
-  const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
@@ -123,27 +120,6 @@ export default function AdminPanel() {
       resetMediaForm();
     },
     onError: () => toast.error("Failed to update podcast"),
-  });
-
-  const archiveConsultation = trpc.admin.archiveConsultation.useMutation({
-    onSuccess: () => {
-      toast.success("Consultation archived — it remains visible to the patient.");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (error) => toast.error(`Failed to archive: ${error.message}`),
-  });
-
-  const generatePptx = trpc.admin.generatePptx.useMutation({
-    onSuccess: () => {
-      toast.success("PPTX slide deck generated successfully!");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (error) => toast.error(`Failed to generate PPTX: ${error.message}`),
-  });
-
-  const { data: pythonApiStatus } = trpc.admin.checkPythonApi.useQuery(undefined, {
-    enabled: isAuthenticated && user?.role === "admin",
-    refetchInterval: 60_000, // re-check every 60s
   });
 
   const resetMediaForm = () => {
@@ -394,46 +370,6 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* Python API Status */}
-        <div className="mb-4 flex items-center gap-2 text-sm">
-          <span className="font-medium text-muted-foreground">AI Backend:</span>
-          {pythonApiStatus === undefined ? (
-            <span className="text-muted-foreground">Checking...</span>
-          ) : pythonApiStatus.healthy ? (
-            <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-              <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
-              Online {pythonApiStatus.anthropicConfigured ? '· Anthropic ✓' : '· Anthropic ✗'}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-              <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-              Offline {pythonApiStatus.error ? `(${pythonApiStatus.error})` : ''}
-            </span>
-          )}
-        </div>
-
-        {/* Quick Navigation */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => window.location.href = '/admin/customers'}
-          >
-            <Users className="w-4 h-4" />
-            {language === 'ar' ? 'إدارة العملاء' : 'Customer Management'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => window.location.href = '/admin/blog'}
-          >
-            <FileText className="w-4 h-4" />
-            {language === 'ar' ? 'إدارة المدونة' : 'Blog Management'}
-          </Button>
-        </div>
-
         {/* Tabs */}
         <Tabs defaultValue="consultations" className="space-y-4">
           <TabsList>
@@ -488,9 +424,116 @@ export default function AdminPanel() {
                       </div>
                     )}
                     
-                    {/* Generated Materials — per-item approval, download, replace */}
-                    {(consultation.status === "specialist_review" || consultation.status === "completed") && (
-                      <MaterialReviewPanel consultation={consultation} />
+                    {/* Generated Materials */}
+                    {consultation.status === "specialist_review" && (
+                      <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
+                        <h4 className="font-semibold text-sm">Generated Materials for Review</h4>
+                        
+                        {consultation.aiReportUrl && (
+                          <div className="flex items-center justify-between p-2 bg-background rounded">
+                            <span className="text-sm">📄 Medical Report</span>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
+                                  View
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {(() => {
+                          // Infographic is always an image (not JSON), so show View button when available
+                          if (consultation.aiInfographicUrl) {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-background rounded">
+                                <span className="text-sm">📈 Infographic</span>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                                      View
+                                    </a>
+                                  </Button>
+                                  <RegenerateInfographicButton consultationId={consultation.id} />
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                                <span className="text-sm">📈 Infographic (Content Prepared)</span>
+                                <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
+                              </div>
+                            );
+                          }
+                        })()}
+                        
+                        {(() => {
+                          // Check if slide deck is a JSON file (content structure) or actual slides
+                          const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
+                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          
+                          if (hasGeneratedSlides) {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-background rounded">
+                                <span className="text-sm">📽️ Slide Deck</span>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" asChild>
+                                    <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">
+                                      View
+                                    </a>
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
+                                <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
+                                <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
+                              </div>
+                            );
+                          }
+                        })()}
+                        
+                        {consultation.specialistApprovalStatus === "pending_review" && (
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="flex-1"
+                              onClick={() => {
+                                updateConsultationStatus.mutate({
+                                  id: consultation.id,
+                                  status: "completed",
+                                });
+                              }}
+                            >
+                              ✓ Approve All
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={() => {
+                                const reason = prompt("Rejection reason:");
+                                if (reason) {
+                                  // TODO: Add rejection mutation
+                                  toast.info("Rejection functionality coming soon");
+                                }
+                              }}
+                            >
+                              ✗ Reject
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {consultation.specialistApprovalStatus && (
+                          <Badge variant={consultation.specialistApprovalStatus === "approved" ? "default" : "secondary"}>
+                            {consultation.specialistApprovalStatus}
+                          </Badge>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -514,41 +557,6 @@ export default function AdminPanel() {
                         <SelectItem value="follow_up">Follow Up</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    {/* View Patient Page button — always visible for all consultations */}
-                    {consultation.userId && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
-                        onClick={() => setLocation(`/patient/${consultation.userId}`)}
-                        title="View full patient profile page"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Patient Page
-                      </Button>
-                    )}
-                    {/* Archive button — only show for completed consultations */}
-                    {consultation.status === "completed" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-muted-foreground hover:text-destructive hover:border-destructive"
-                        disabled={archiveConsultation.isPending}
-                        onClick={() => {
-                          if (confirm(`Archive this consultation for ${consultation.patientName}? It will be removed from this list but the patient can still see it in their records.`)) {
-                            archiveConsultation.mutate({ consultationId: consultation.id });
-                          }
-                        }}
-                        title="Archive — removes from admin view, patient record is preserved"
-                      >
-                        {archiveConsultation.isPending ? (
-                          <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Archiving...</>
-                        ) : (
-                          <><Archive className="h-3 w-3 mr-1" />Archive</>
-                        )}
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -569,28 +577,15 @@ export default function AdminPanel() {
                     </Badge>
                   </div>
                 </CardHeader>
-                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Joined: {format(new Date(user.createdAt), "PPP")}
-                    </p>
-                    {user.role !== "admin" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
-                        onClick={() => setLocation(`/patient/${user.id}`)}
-                        title="View full patient profile page"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        View Patient Page
-                      </Button>
-                    )}
-                  </div>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Joined: {format(new Date(user.createdAt), "PPP")}
+                  </p>
                 </CardContent>
               </Card>
             ))}
           </TabsContent>
+
           <TabsContent value="media" className="space-y-4">
             <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
               <DialogTrigger asChild>

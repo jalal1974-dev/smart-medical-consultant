@@ -57,8 +57,7 @@ export async function processConsultationWithAI(consultationId: number): Promise
       consultation.patientName,
       consultationId,
       consultation.symptoms,
-      consultation.preferredLanguage,
-      consultation.medicalHistory
+      consultation.preferredLanguage
     );
 
     // Update consultation with AI results

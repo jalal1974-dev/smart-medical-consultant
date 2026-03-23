@@ -179,43 +179,31 @@ Language: All text must be in English only, no Arabic words.${
 
 /**
  * Regenerate infographic for a consultation (exported for manual regeneration)
- * Now uses the deployed Python API for SVG infographic generation.
  */
 export async function regenerateInfographicForConsultation(
   consultationId: number,
   aiAnalysis: string,
   patientName: string,
   language: "en" | "ar",
-  customPrompt?: string,
-  symptoms?: string,
-  medicalHistory?: string | null
+  customPrompt?: string
 ): Promise<string | null> {
   try {
     console.log(`[Infographic Regeneration] Starting for consultation #${consultationId}`);
     
-    // Use the Python API for SVG infographic generation
-    const { generateInfographicViaPython } = await import('./pythonApiClient');
-    const infographicUrl = await generateInfographicViaPython(
-      {
-        id: consultationId,
-        patientName,
-        symptoms: symptoms || '',
-        medicalHistory: medicalHistory || null,
-        aiAnalysis,
-        preferredLanguage: language,
-      },
+    // Parse AI analysis to extract key information
+    const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
+    
+    // Generate new infographic
+    const infographicUrl = await generateInfographic(
+      analysisResult,
+      patientName,
+      language,
       customPrompt
     );
     
     if (!infographicUrl) {
-      console.error(`[Infographic Regeneration] Python API failed for consultation #${consultationId}, falling back to image generation`);
-      // Fallback: use image generation
-      try {
-        const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
-        return await generateInfographic(analysisResult, patientName, language, customPrompt);
-      } catch {
-        return null;
-      }
+      console.error(`[Infographic Regeneration] Failed for consultation #${consultationId}`);
+      return null;
     }
     
     console.log(`[Infographic Regeneration] Success for consultation #${consultationId}`);
@@ -368,52 +356,22 @@ export async function generateAllContent(
   patientName: string,
   consultationId: number,
   symptoms: string,
-  language: "en" | "ar",
-  medicalHistory?: string | null
+  language: "en" | "ar"
 ): Promise<GeneratedContent> {
   console.log(`Starting content generation for consultation #${consultationId}...`);
 
-  // Reconstruct a minimal consultation object for the Python API
-  const consultationForPython = {
-    id: consultationId,
-    patientName,
-    symptoms,
-    medicalHistory: medicalHistory || null,
-    aiAnalysis: analysisResult.analysis || JSON.stringify(analysisResult),
-    preferredLanguage: language,
-  };
-
-  // Generate PDF report and mind map in parallel (pure Node.js)
-  const [reportPdfUrl, mindMapUrl] = await Promise.all([
+  // Generate all content in parallel for efficiency
+  const [
+    reportPdfUrl,
+    infographicUrl,
+    slideDeckUrl,
+    mindMapUrl
+  ] = await Promise.all([
     generatePDFReport(analysisResult, patientName, consultationId, language),
-    generateMindMap(analysisResult, symptoms, language),
+    generateInfographic(analysisResult, patientName, language),
+    generateSlides(analysisResult, patientName, language),
+    generateMindMap(analysisResult, symptoms, language)
   ]);
-
-  // Generate infographic via Python API (SVG), fall back to image generation
-  let infographicUrl: string | null = null;
-  try {
-    const { generateInfographicViaPython } = await import('./pythonApiClient');
-    infographicUrl = await generateInfographicViaPython(consultationForPython);
-    if (!infographicUrl) {
-      // Fallback to image generation
-      infographicUrl = await generateInfographic(analysisResult, patientName, language);
-    }
-  } catch {
-    infographicUrl = await generateInfographic(analysisResult, patientName, language);
-  }
-
-  // Generate PPTX slide deck via Python API
-  let slideDeckUrl: string | null = null;
-  try {
-    const { generatePptxViaPython } = await import('./pythonApiClient');
-    slideDeckUrl = await generatePptxViaPython(consultationForPython);
-    if (!slideDeckUrl) {
-      // Fallback to JSON-based slides
-      slideDeckUrl = await generateSlides(analysisResult, patientName, language);
-    }
-  } catch {
-    slideDeckUrl = await generateSlides(analysisResult, patientName, language);
-  }
 
   console.log(`Content generation completed for consultation #${consultationId}`);
 
