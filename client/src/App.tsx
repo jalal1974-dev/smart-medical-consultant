@@ -66,6 +66,7 @@ function Router() {
         <Route path={"/consultations"} component={Consultations} />
         <Route path={"/dashboard"} component={Dashboard} />
         <Route path="/profile" component={PatientProfile} />
+        <Route path="/patient/:userId" component={PatientProfile} />
         <Route path="/my-profile" component={MyProfile} />
         <Route path="/analytics" component={Analytics} />
         <Route path={"/admin"} component={AdminPanel} />

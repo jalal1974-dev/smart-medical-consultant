@@ -12,6 +12,7 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   hasUsedFreeConsultation: boolean("hasUsedFreeConsultation").default(false).notNull(),
   subscriptionType: mysqlEnum("subscription_type", ["free", "pay_per_case", "monthly"]).default("free").notNull(),
+  planType: mysqlEnum("plan_type", ["free", "premium"]).default("free").notNull(), // simplified plan: free (1 consultation) | premium (10+ consultations)
   consultationsRemaining: int("consultations_remaining").default(1).notNull(),
   freeConsultationsUsed: int("free_consultations_used").default(0).notNull(),   // how many free ones consumed
   freeConsultationsTotal: int("free_consultations_total").default(1).notNull(), // 1 for free plan, 10 for $1 premium

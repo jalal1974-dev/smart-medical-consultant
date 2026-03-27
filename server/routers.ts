@@ -286,11 +286,13 @@ export const appRouter = router({
         }
 
         // ── Quota check ──────────────────────────────────────────────────────
+        // Admins bypass all quota restrictions — unlimited free consultations
+        const isAdmin = ctx.user.role === 'admin';
         // Determine how many free consultations this user has left
         const quota = await db.getUserFreeQuota(ctx.user.id);
         const freeRemaining = quota.total - quota.used;
 
-        if (input.isFree) {
+        if (input.isFree && !isAdmin) {
           // User wants to use a free slot — make sure one is available
           if (freeRemaining <= 0) {
             throw new TRPCError({
@@ -319,8 +321,8 @@ export const appRouter = router({
           paymentStatus: input.isFree ? "completed" : "pending",
         });
 
-        // Mark free consultation as used (increment counter)
-        if (input.isFree) {
+        // Mark free consultation as used (increment counter) — admins are exempt
+        if (input.isFree && !isAdmin) {
           await db.incrementFreeConsultationsUsed(ctx.user.id);
         }
 
@@ -1545,6 +1547,50 @@ export const appRouter = router({
         return { url };
       }),
 
+    // ── Admin: Get any user's full profile ──
+    getProfileByUserId: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const user = await db.getUserById(input.userId);
+        if (!user) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+        const consultationsList = await db.getConsultationsByUserId(input.userId);
+        const records = await db.getUserMedicalRecords(input.userId);
+        const totalConsultations = consultationsList.length;
+        const completedConsultations = consultationsList.filter((c: any) => c.status === 'completed').length;
+        const pendingConsultations = consultationsList.filter((c: any) =>
+          ['submitted', 'ai_processing', 'specialist_review'].includes(c.status)
+        ).length;
+        const freeTotal = (user as any).free_consultations_total ?? (user as any).freeConsultationsTotal ?? 0;
+        const freeUsed = (user as any).free_consultations_used ?? (user as any).freeConsultationsUsed ?? 0;
+        const consultationsRemaining = Math.max(0, freeTotal - freeUsed);
+        return {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            loginMethod: (user as any).login_method ?? user.loginMethod ?? 'oauth',
+            subscriptionType: (user as any).subscription_type ?? user.subscriptionType ?? 'free',
+            planType: (user as any).plan_type ?? 'free',
+            consultationsRemaining,
+            freeConsultationsTotal: freeTotal,
+            freeConsultationsUsed: freeUsed,
+            avatarUrl: (user as any).avatar_url ?? user.avatarUrl ?? null,
+            bio: (user as any).bio ?? null,
+            createdAt: user.createdAt,
+          },
+          stats: {
+            totalConsultations,
+            completedConsultations,
+            pendingConsultations,
+            totalRecords: records.length,
+            consultationsRemaining,
+          },
+          consultations: consultationsList,
+          records,
+        };
+      }),
+
     // ── Payment History ──
     // Returns all completed-payment consultations for the current user.
     getPaymentHistory: protectedProcedure.query(async ({ ctx }) => {
@@ -1566,3 +1612,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+

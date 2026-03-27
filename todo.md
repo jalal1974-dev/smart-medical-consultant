@@ -571,3 +571,20 @@
 - [x] "Add a short bio" italic placeholder shown when bio is empty
 - [x] Supports JPEG, PNG, WebP, GIF image formats
 - [x] Zero TypeScript errors after all changes
+
+## Admin Patient View & Users Tab Enhancements
+- [x] Add profile.getProfileByUserId adminProcedure to fetch any user's full profile
+- [x] Rebuild PatientProfile.tsx to support /profile (own) and /patient/:userId (admin view)
+- [x] Add patient stats summary card (total consultations, completed, pending, records, remaining) on admin view
+- [x] Add amber admin banner with back-to-admin button on /patient/:userId
+- [x] Add /patient/:userId route in App.tsx
+- [x] Add "View Patient Page" button to each non-admin user card in AdminPanel Users tab
+- [x] Add search/filter box in AdminPanel Users tab (filter by name or email)
+
+## Pricing Model Revamp
+- [x] Add planType enum (free/premium) column to users table in schema.ts
+- [x] Apply plan_type column via direct SQL (db:push was interactive, used SQL instead)
+- [x] Admin accounts bypass consultation quota check in consultation.create
+- [x] Enforce $5 PayPal flow for quota-exhausted users (already implemented, verified)
+- [x] Update PatientProfile to show planType badge (Free Plan / Premium) in profile header
+- [x] Write 9 vitest tests for admin features (getProfileByUserId, quota bypass, planType)

@@ -13,8 +13,9 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search } from "lucide-react";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
@@ -23,6 +24,8 @@ export default function AdminPanel() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
+  const [userSearch, setUserSearch] = useState("");
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: consultations } = trpc.admin.consultations.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
@@ -564,7 +567,24 @@ export default function AdminPanel() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            {users?.map((user) => (
+            {/* Search box */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={language === "ar" ? "ابحث بالاسم أو البريد الإلكتروني..." : "Search by name or email..."}
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {users?.filter((u) => {
+              if (!userSearch.trim()) return true;
+              const q = userSearch.toLowerCase();
+              return (
+                (u.name || "").toLowerCase().includes(q) ||
+                (u.email || "").toLowerCase().includes(q)
+              );
+            }).map((user) => (
               <Card key={user.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -572,9 +592,22 @@ export default function AdminPanel() {
                       <CardTitle>{user.name || "Unnamed User"}</CardTitle>
                       <CardDescription>{user.email}</CardDescription>
                     </div>
-                    <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                      {user.role}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {user.role !== "admin" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setLocation(`/patient/${user.id}`)}
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                          {language === "ar" ? "ملف المريض" : "Patient Page"}
+                        </Button>
+                      )}
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                        {user.role}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
