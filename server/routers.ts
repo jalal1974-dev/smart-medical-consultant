@@ -89,7 +89,8 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Confirm PayPal payment and grant 10 consultations
+    // DEPRECATED: Registration is now free. This route is kept for backward compatibility only.
+    // New users get 1 free consultation automatically via createLocalUser in db.ts.
     confirmPaypalPayment: publicProcedure
       .input(z.object({
         userId: z.number(),
@@ -116,7 +117,7 @@ export const appRouter = router({
           await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
         }
         // Grant 10 consultations to the user
-        await db.grantConsultationsAfterPayment(input.userId, 10);
+        await db.grantConsultationsAfterPayment(input.userId, 1); // DEPRECATED: now grants 1 for backward compat
         // Auto-login: create session for the new user
         const user = await db.getUserById(input.userId);
         if (user) {
@@ -1369,13 +1370,14 @@ export const appRouter = router({
       .input(z.object({
         paypalOrderId: z.string(),
         paypalPayerId: z.string().optional(),
-        plan: z.enum(['basic', 'standard', 'premium']), // 5, 15, 30 consultations
+        plan: z.enum(['basic', 'standard', 'premium']), // all map to 1 consultation for $5
       }))
       .mutation(async ({ ctx, input }) => {
+        // Pricing model: $5 = 1 consultation (flat rate, no bulk discounts)
         const planDetails: Record<string, { consultations: number; amount: number }> = {
-          basic: { consultations: 5, amount: 5 },
-          standard: { consultations: 15, amount: 12 },
-          premium: { consultations: 30, amount: 20 },
+          basic: { consultations: 1, amount: 5 },
+          standard: { consultations: 1, amount: 5 },
+          premium: { consultations: 1, amount: 5 },
         };
         const plan = planDetails[input.plan];
 

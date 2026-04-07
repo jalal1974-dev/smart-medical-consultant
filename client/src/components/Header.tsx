@@ -191,7 +191,7 @@ export function Header() {
                     <Link href="/login">{language === "ar" ? "تسجيل الدخول" : "Sign In"}</Link>
                   </Button>
                   <Button size="sm" asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                    <Link href="/register">{language === "ar" ? "إنشاء حساب ($1)" : "Register ($1)"}</Link>
+                    <Link href="/register">{language === "ar" ? "إنشاء حساب مجاناً" : "Register Free"}</Link>
                   </Button>
                 </div>
               )}

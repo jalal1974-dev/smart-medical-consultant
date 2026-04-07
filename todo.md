@@ -588,3 +588,43 @@
 - [x] Enforce $5 PayPal flow for quota-exhausted users (already implemented, verified)
 - [x] Update PatientProfile to show planType badge (Free Plan / Premium) in profile header
 - [x] Write 9 vitest tests for admin features (getProfileByUserId, quota bypass, planType)
+
+## Admin Replace AI Outputs
+- [ ] Add admin.replaceConsultationFile tRPC route (upload SVG/PNG/PPTX/PDF to S3, update DB field)
+- [ ] Add replace buttons (infographic, slide deck, medical report) on AIConsultationReview admin page
+- [ ] Show "Replaced by admin" badge on patient view when file has been replaced
+- [ ] Support file types: SVG/PNG for infographic, PPTX for slide deck, PDF/DOCX for medical report
+
+## Pricing Model Fix (Remove $1-for-10 offer)
+- [ ] Remove $1 premium plan card from Home page
+- [ ] Remove /register?plan=premium route and premium registration logic
+- [ ] Remove grantConsultationsAfterPayment $1 payment handler
+- [ ] Update home page pricing section: only show "Register Free — 1 free consultation"
+- [ ] Update consultation form copy to reflect 1 free + $5 each after
+- [ ] Update MyProfile consultation balance card (remove "10 free" references)
+- [ ] Set new user default consultationsRemaining = 1 (not 10) in registration
+
+## Launch Readiness
+- [ ] Add Terms of Service page (/terms)
+- [ ] Add Privacy Policy page (/privacy)
+- [ ] Add footer with Terms and Privacy links on all pages
+- [ ] Verify full consultation flow end-to-end (submit → AI → admin review → patient view)
+- [ ] Clean up placeholder nav items
+
+## Admin Replace AI Outputs (Session Apr 7)
+- [x] Add admin.replaceConsultationFile tRPC route (adminProcedure) — accepts fileType + base64 file, uploads to S3, updates consultation record
+- [x] Add replace buttons for infographic, slide deck, and medical report in AIConsultationReview page
+- [x] Each replace button opens a file picker and shows upload progress
+
+## Pricing Model Cleanup (Session Apr 7)
+- [x] Remove $1-for-10 consultations payment step from Register.tsx
+- [x] Register.tsx now: Account → Success (2 steps, no payment)
+- [x] createLocalUser in db.ts now grants 1 free consultation on signup
+- [x] Remove Premium Plan card from Home.tsx pricing section
+- [x] Update pricing section to show single Free Plan card centered
+- [x] Update ConsultationCounter.tsx to show single $5/consultation PayPal button
+- [x] Update purchaseConsultations route: $5 = 1 consultation
+- [x] Fix all $1 references in Header.tsx (desktop + mobile)
+- [x] Fix $1 reference in Login.tsx
+- [x] Update deprecated confirmPaypalPayment route to grant 1 (not 10) for backward compat
+- [x] TypeScript compiles with 0 errors

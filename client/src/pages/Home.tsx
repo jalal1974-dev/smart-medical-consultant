@@ -2,7 +2,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
-import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight, TrendingUp, CheckCircle, Star, Zap } from "lucide-react";
+import { Activity, Globe, Shield, Video, Play, Headphones, Clock, ArrowRight, TrendingUp, CheckCircle, Star, Zap, Gift } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { getThumbnailUrl } from "@/lib/videoUtils";
 import { SEO, OrganizationSchema, MedicalServiceSchema, WebsiteSchema } from "@/components/SEO";
@@ -351,32 +351,44 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="flex justify-center max-w-4xl mx-auto">
 
-            {/* ── Free Plan ── */}
-            <div className="relative rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 flex flex-col gap-6 shadow-sm">
+            {/* ── Single Plan ── */}
+            <div className="relative rounded-2xl border-2 border-blue-500 bg-white dark:bg-slate-900 p-8 flex flex-col gap-6 shadow-lg max-w-md mx-auto w-full">
+              {/* Free badge */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow">
+                  <Gift className="w-3 h-3" />
+                  {language === "ar" ? "مجاني للتسجيل" : "Free to Register"}
+                </span>
+              </div>
+
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-5 h-5 text-slate-500" />
-                  <span className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                    {language === "ar" ? "الخطة المجانية" : "Free Plan"}
+                  <Zap className="w-5 h-5 text-blue-500" />
+                  <span className="text-sm font-semibold uppercase tracking-wide text-blue-500">
+                    {language === "ar" ? "خطة الاستشارة" : "Consultation Plan"}
                   </span>
                 </div>
-                <div className="flex items-end gap-1 mb-1">
+                <div className="flex items-end gap-2 mb-1">
                   <span className="text-5xl font-extrabold">$0</span>
+                  <span className="text-muted-foreground mb-2 text-sm">
+                    {language === "ar" ? "للتسجيل" : "to register"}
+                  </span>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                  {language === "ar" ? "بدون أي رسوم تسجيل" : "No registration fee"}
+                  {language === "ar" ? "استشارة أولى مجانية — ثم 5$ لكل استشارة" : "First consultation free — then $5 each"}
                 </p>
               </div>
 
               <ul className="space-y-3 flex-1">
                 {[
-                  language === "ar" ? "استشارة طبية مجانية واحدة" : "1 free medical consultation",
+                  language === "ar" ? "استشارة طبية مجانية واحدة عند التسجيل" : "1 free medical consultation on signup",
                   language === "ar" ? "تحليل بالذكاء الاصطناعي" : "AI-powered analysis",
-                  language === "ar" ? "تقرير طبي شامل" : "Comprehensive medical report",
+                  language === "ar" ? "تقرير طبي + إنفوجرافيك + شرائح" : "Medical report + infographic + slides",
                   language === "ar" ? "مراجعة من متخصص" : "Specialist review",
-                  language === "ar" ? "استشارات إضافية بـ 5$ لكل استشارة" : "Additional consultations at $5 each",
+                  language === "ar" ? "ملف طبي شخصي" : "Personal medical profile",
+                  language === "ar" ? "كل استشارة إضافية بـ 5$ فقط" : "Each additional consultation only $5",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
@@ -385,60 +397,9 @@ export default function Home() {
                 ))}
               </ul>
 
-              <Button size="lg" variant="outline" className="w-full" asChild>
-                <Link href="/register">
-                  {language === "ar" ? "سجّل مجاناً" : "Register for Free"}
-                </Link>
-              </Button>
-            </div>
-
-            {/* ── Premium Plan ── */}
-            <div className="relative rounded-2xl border-2 border-blue-500 bg-white dark:bg-slate-900 p-8 flex flex-col gap-6 shadow-lg">
-              {/* Popular badge */}
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="inline-flex items-center gap-1 bg-blue-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow">
-                  <Star className="w-3 h-3" />
-                  {language === "ar" ? "الأكثر قيمة" : "Best Value"}
-                </span>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="w-5 h-5 text-blue-500" />
-                  <span className="text-sm font-semibold uppercase tracking-wide text-blue-500">
-                    {language === "ar" ? "الخطة المميزة" : "Premium Plan"}
-                  </span>
-                </div>
-                <div className="flex items-end gap-1 mb-1">
-                  <span className="text-5xl font-extrabold">$1</span>
-                  <span className="text-muted-foreground mb-2">
-                    {language === "ar" ? "/ مرة واحدة" : "/ one-time"}
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  {language === "ar" ? "رسوم تسجيل رمزية" : "One-time registration fee"}
-                </p>
-              </div>
-
-              <ul className="space-y-3 flex-1">
-                {[
-                  language === "ar" ? "10 استشارات طبية مجانية" : "10 free medical consultations",
-                  language === "ar" ? "تحليل بالذكاء الاصطناعي" : "AI-powered analysis",
-                  language === "ar" ? "تقارير + فيديوهات + إنفوجرافيك" : "Reports + videos + infographics",
-                  language === "ar" ? "مراجعة من متخصص" : "Specialist review",
-                  language === "ar" ? "ملف طبي شخصي" : "Personal medical profile",
-                  language === "ar" ? "استشارات إضافية بـ 5$ لكل استشارة" : "Additional consultations at $5 each",
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-
               <Button size="lg" className="w-full bg-blue-500 hover:bg-blue-600 text-white" asChild>
-                <Link href="/register?plan=premium">
-                  {language === "ar" ? "سجّل بـ 1$ واحصل على 10 استشارات" : "Register for $1 — Get 10 Consultations"}
+                <Link href="/register">
+                  {language === "ar" ? "سجّل مجاناً الآن" : "Register for Free Now"}
                 </Link>
               </Button>
             </div>

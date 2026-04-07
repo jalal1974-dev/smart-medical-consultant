@@ -2,10 +2,9 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Zap, CreditCard, CheckCircle, Loader2, AlertTriangle, Star } from "lucide-react";
+import { Zap, CreditCard, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 declare global {
@@ -15,42 +14,7 @@ declare global {
 }
 
 const PAYPAL_CLIENT_ID = "ASf2uGtL-Pbz9991-fnuAJCG1vT_7q5KtZcYO8WMwgvSVz7GMBQ7GpTF_me500piU8CKe7nrB25i-Ssn";
-
-const PLANS = [
-  {
-    id: "basic" as const,
-    name: "Basic",
-    nameAr: "الأساسي",
-    consultations: 5,
-    amount: 5,
-    pricePerConsultation: "$1.00",
-    popular: false,
-    features: ["5 consultations", "AI analysis", "Infographic report"],
-    featuresAr: ["5 استشارات", "تحليل بالذكاء الاصطناعي", "تقرير إنفوجرافيك"],
-  },
-  {
-    id: "standard" as const,
-    name: "Standard",
-    nameAr: "القياسي",
-    consultations: 15,
-    amount: 12,
-    pricePerConsultation: "$0.80",
-    popular: true,
-    features: ["15 consultations", "AI analysis", "Infographic + slides", "Priority processing"],
-    featuresAr: ["15 استشارة", "تحليل بالذكاء الاصطناعي", "إنفوجرافيك + شرائح", "معالجة ذات أولوية"],
-  },
-  {
-    id: "premium" as const,
-    name: "Premium",
-    nameAr: "المميز",
-    consultations: 30,
-    amount: 20,
-    pricePerConsultation: "$0.67",
-    popular: false,
-    features: ["30 consultations", "AI analysis", "All materials", "Priority processing", "Deep research"],
-    featuresAr: ["30 استشارة", "تحليل بالذكاء الاصطناعي", "جميع المواد", "معالجة ذات أولوية", "بحث معمق"],
-  },
-];
+const CONSULTATION_PRICE = 5;
 
 interface ConsultationCounterProps {
   language: "en" | "ar";
@@ -58,7 +22,6 @@ interface ConsultationCounterProps {
 
 export function ConsultationCounter({ language }: ConsultationCounterProps) {
   const [open, setOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<typeof PLANS[0] | null>(null);
   const [paypalLoading, setPaypalLoading] = useState(false);
   const [paypalReady, setPaypalReady] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
@@ -70,45 +33,45 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
       refetch();
       toast.success(
         language === "ar"
-          ? `تم إضافة ${data.consultationsGranted} استشارة إلى حسابك!`
-          : `${data.consultationsGranted} consultations added to your account!`
+          ? `تمت إضافة ${data.consultationsGranted} استشارة إلى حسابك!`
+          : `${data.consultationsGranted} consultation added to your account!`
       );
     },
     onError: (err) => {
-      toast.error(err.message || (language === "ar" ? "فشل الشراء" : "Purchase failed"));
+      toast.error(err.message || (language === "ar" ? "فشل الدفع" : "Payment failed"));
     },
   });
 
   const remaining = status?.consultationsRemaining ?? 0;
-  const isLow = remaining <= 2;
+  const isLow = remaining <= 1;
   const isEmpty = remaining === 0;
+  const isAr = language === "ar";
 
-  const loadPayPal = (plan: typeof PLANS[0]) => {
-    setSelectedPlan(plan);
-    setPaypalReady(false);
+  const handleOpen = () => {
+    setOpen(true);
     setPurchaseComplete(false);
-
-    // Load PayPal SDK if not already loaded
+    setPaypalReady(false);
+    // Load PayPal SDK
     if (!window.paypal) {
       const script = document.createElement("script");
       script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
-      script.onload = () => renderPayPalButton(plan);
+      script.onload = () => renderPayPalButton();
       document.body.appendChild(script);
     } else {
-      renderPayPalButton(plan);
+      setTimeout(() => renderPayPalButton(), 200);
     }
   };
 
-  const renderPayPalButton = (plan: typeof PLANS[0]) => {
+  const renderPayPalButton = () => {
     setPaypalReady(true);
     setTimeout(() => {
-      const container = document.getElementById(`paypal-button-${plan.id}`);
+      const container = document.getElementById("paypal-single-consultation");
       if (!container || !window.paypal) return;
       container.innerHTML = "";
       window.paypal.Buttons({
         createOrder: (_data: any, actions: any) => {
           return actions.order.create({
-            purchase_units: [{ amount: { value: plan.amount.toFixed(2) } }],
+            purchase_units: [{ amount: { value: CONSULTATION_PRICE.toFixed(2) } }],
           });
         },
         onApprove: async (data: any) => {
@@ -117,7 +80,7 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
             await purchaseMutation.mutateAsync({
               paypalOrderId: data.orderID,
               paypalPayerId: data.payerID,
-              plan: plan.id,
+              plan: "basic",
             });
           } finally {
             setPaypalLoading(false);
@@ -125,13 +88,11 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
         },
         onError: (err: any) => {
           console.error("PayPal error:", err);
-          toast.error(language === "ar" ? "خطأ في الدفع" : "Payment error");
+          toast.error(isAr ? "خطأ في الدفع" : "Payment error");
         },
-      }).render(`#paypal-button-${plan.id}`);
+      }).render("#paypal-single-consultation");
     }, 100);
   };
-
-  const isAr = language === "ar";
 
   return (
     <>
@@ -144,7 +105,7 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
             ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/50"
             : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/50"
         }`}
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
       >
         {isEmpty ? (
           <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -154,27 +115,27 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
           <Zap className="w-4 h-4 text-blue-500" />
         )}
         <span className={`text-sm font-medium ${isEmpty ? "text-red-700 dark:text-red-300" : isLow ? "text-amber-700 dark:text-amber-300" : "text-blue-700 dark:text-blue-300"}`}>
-          {isAr ? `${remaining} استشارة متبقية` : `${remaining} consultations left`}
+          {isAr ? `${remaining} استشارة متبقية` : `${remaining} consultation${remaining !== 1 ? "s" : ""} left`}
         </span>
         {(isEmpty || isLow) && (
           <Badge variant="outline" className={`text-xs ${isEmpty ? "border-red-400 text-red-600" : "border-amber-400 text-amber-600"}`}>
-            {isAr ? "اشحن الآن" : "Top up"}
+            {isAr ? "أضف استشارة" : "Add one"}
           </Badge>
         )}
       </div>
 
-      {/* Upgrade Dialog */}
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setSelectedPlan(null); setPurchaseComplete(false); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Purchase Dialog */}
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setPurchaseComplete(false); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-blue-500" />
-              {isAr ? "شراء استشارات إضافية" : "Purchase More Consultations"}
+              {isAr ? "إضافة استشارة طبية" : "Add a Medical Consultation"}
             </DialogTitle>
             <DialogDescription>
               {isAr
-                ? `لديك ${remaining} استشارة متبقية. اختر خطة لإضافة المزيد.`
-                : `You have ${remaining} consultations remaining. Choose a plan to add more.`}
+                ? `لديك ${remaining} استشارة متبقية. أضف استشارة جديدة مقابل $${CONSULTATION_PRICE}.`
+                : `You have ${remaining} consultation${remaining !== 1 ? "s" : ""} remaining. Add one for $${CONSULTATION_PRICE}.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -186,36 +147,38 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
                 {remaining} {isAr ? "متبقية" : "remaining"}
               </span>
             </div>
-            <Progress value={Math.min((remaining / 10) * 100, 100)} className="h-2" />
+            <Progress value={Math.min((remaining / 5) * 100, 100)} className="h-2" />
           </div>
 
           {purchaseComplete ? (
-            <div className="text-center py-8 space-y-4">
-              <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+            <div className="text-center py-6 space-y-4">
+              <CheckCircle className="w-14 h-14 text-green-500 mx-auto" />
               <h3 className="text-xl font-bold text-green-700 dark:text-green-300">
-                {isAr ? "تم الشراء بنجاح!" : "Purchase Successful!"}
+                {isAr ? "تمت الإضافة بنجاح!" : "Consultation Added!"}
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {isAr
-                  ? "تمت إضافة الاستشارات إلى حسابك."
-                  : "Consultations have been added to your account."}
+                  ? "تمت إضافة استشارة واحدة إلى حسابك."
+                  : "One consultation has been added to your account."}
               </p>
               <Button onClick={() => setOpen(false)} className="bg-green-600 hover:bg-green-700">
                 {isAr ? "رائع، شكراً!" : "Great, thanks!"}
               </Button>
             </div>
-          ) : selectedPlan ? (
+          ) : (
             <div className="space-y-4">
+              {/* Pricing summary */}
               <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div>
-                  <p className="font-semibold">{isAr ? selectedPlan.nameAr : selectedPlan.name} Plan</p>
+                  <p className="font-semibold">{isAr ? "استشارة طبية واحدة" : "1 Medical Consultation"}</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedPlan.consultations} {isAr ? "استشارة" : "consultations"} — ${selectedPlan.amount}
+                    {isAr ? "تحليل بالذكاء الاصطناعي + تقرير كامل" : "AI analysis + full report"}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedPlan(null)}>
-                  {isAr ? "تغيير" : "Change"}
-                </Button>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-blue-600">${CONSULTATION_PRICE}</p>
+                  <p className="text-xs text-muted-foreground">{isAr ? "دفعة واحدة" : "one-time"}</p>
+                </div>
               </div>
 
               {paypalLoading ? (
@@ -231,54 +194,13 @@ export function ConsultationCounter({ language }: ConsultationCounterProps) {
                       <span className="text-sm text-muted-foreground">{isAr ? "جاري تحميل PayPal..." : "Loading PayPal..."}</span>
                     </div>
                   )}
-                  <div id={`paypal-button-${selectedPlan.id}`} className="min-h-[50px]" />
+                  <div id="paypal-single-consultation" className="min-h-[50px]" />
+                  <p className="text-xs text-center text-muted-foreground mt-3">
+                    <CreditCard className="w-3 h-3 inline mr-1" />
+                    {isAr ? "دفع آمن عبر PayPal" : "Secure payment via PayPal"}
+                  </p>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {PLANS.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${plan.popular ? "border-blue-400 dark:border-blue-600 ring-1 ring-blue-400" : ""}`}
-                  onClick={() => loadPayPal(plan)}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {plan.popular && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-                        {isAr ? plan.nameAr : plan.name}
-                        {plan.popular && (
-                          <Badge className="bg-blue-500 text-white text-xs">
-                            {isAr ? "الأكثر شيوعاً" : "Most Popular"}
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">${plan.amount}</p>
-                        <p className="text-xs text-muted-foreground">{plan.pricePerConsultation}/{isAr ? "استشارة" : "consultation"}</p>
-                      </div>
-                    </div>
-                    <CardDescription>
-                      {plan.consultations} {isAr ? "استشارة طبية" : "medical consultations"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <ul className="space-y-1">
-                      {(isAr ? plan.featuresAr : plan.features).map((f, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="w-3 h-3 text-green-500 shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button className="w-full mt-3 bg-blue-600 hover:bg-blue-700">
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      {isAr ? `اشتر الآن — $${plan.amount}` : `Buy Now — $${plan.amount}`}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           )}
         </DialogContent>

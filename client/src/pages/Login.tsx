@@ -143,7 +143,7 @@ export default function Login() {
               <p className="text-center text-slate-400 text-sm">
                 Don't have an account?{" "}
                 <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium">
-                  Create one for $1
+                  Register for free
                 </Link>
               </p>
             </form>

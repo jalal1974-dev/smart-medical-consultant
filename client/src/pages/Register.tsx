@@ -1,16 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle, User, Mail, Lock, CreditCard, Upload, ArrowRight, ArrowLeft, Shield, Gift, FolderHeart } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, User, Mail, Lock, ArrowRight, Shield, FolderHeart, Zap, Gift } from "lucide-react";
 
-type Step = "account" | "payment" | "upload" | "success";
+type Step = "account" | "success";
 
 interface AccountData {
   username: string;
@@ -20,22 +18,11 @@ interface AccountData {
   confirmPassword: string;
 }
 
-declare global {
-  interface Window {
-    paypal?: any;
-  }
-}
-
 export default function Register() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState<Step>("account");
-  const [userId, setUserId] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [paypalLoaded, setPaypalLoaded] = useState(false);
-  const [paypalError, setPaypalError] = useState<string | null>(null);
-  const paypalContainerRef = useRef<HTMLDivElement>(null);
-  const paypalRendered = useRef(false);
 
   const [accountData, setAccountData] = useState<AccountData>({
     username: "",
@@ -47,81 +34,7 @@ export default function Register() {
   const [errors, setErrors] = useState<Partial<AccountData>>({});
 
   const registerMutation = trpc.auth.register.useMutation();
-  const confirmPaymentMutation = trpc.auth.confirmPaypalPayment.useMutation();
   const utils = trpc.useUtils();
-
-  // Load PayPal SDK
-  useEffect(() => {
-    if (step !== "payment") return;
-    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-    if (!clientId) {
-      setPaypalError("PayPal is not configured. Please contact support.");
-      return;
-    }
-    if (window.paypal) {
-      setPaypalLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
-    script.async = true;
-    script.onload = () => setPaypalLoaded(true);
-    script.onerror = () => setPaypalError("Failed to load PayPal. Please refresh and try again.");
-    document.body.appendChild(script);
-    return () => {
-      // Don't remove script to avoid re-loading
-    };
-  }, [step]);
-
-  // Render PayPal buttons
-  useEffect(() => {
-    if (!paypalLoaded || !paypalContainerRef.current || paypalRendered.current || !userId) return;
-    paypalRendered.current = true;
-
-    window.paypal.Buttons({
-      style: {
-        layout: "vertical",
-        color: "blue",
-        shape: "rect",
-        label: "pay",
-        height: 50,
-      },
-      createOrder: (_data: any, actions: any) => {
-        return actions.order.create({
-          purchase_units: [{
-            amount: { value: "1.00", currency_code: "USD" },
-            description: "Smart Medical Consultant – Registration (10 consultations)",
-          }],
-          application_context: {
-            brand_name: "Smart Medical Consultant",
-            user_action: "PAY_NOW",
-          },
-        });
-      },
-      onApprove: async (data: any, actions: any) => {
-        try {
-          const order = await actions.order.capture();
-          await confirmPaymentMutation.mutateAsync({
-            userId: userId!,
-            paypalOrderId: order.id,
-            paypalPayerId: order.payer?.payer_id,
-          });
-          await utils.auth.me.invalidate();
-          setStep("upload");
-          toast.success("Payment successful! You now have 10 free consultations.");
-        } catch (err: any) {
-          toast.error(err.message || "Payment confirmation failed. Please contact support.");
-        }
-      },
-      onError: (err: any) => {
-        console.error("PayPal error:", err);
-        toast.error("Payment failed. Please try again.");
-      },
-      onCancel: () => {
-        toast.info("Payment cancelled. You can try again when ready.");
-      },
-    }).render(paypalContainerRef.current);
-  }, [paypalLoaded, userId]);
 
   const validateAccount = (): boolean => {
     const newErrors: Partial<AccountData> = {};
@@ -150,14 +63,15 @@ export default function Register() {
     e.preventDefault();
     if (!validateAccount()) return;
     try {
-      const result = await registerMutation.mutateAsync({
+      await registerMutation.mutateAsync({
         username: accountData.username,
         email: accountData.email,
         name: accountData.name,
         password: accountData.password,
       });
-      setUserId(result.userId);
-      setStep("payment");
+      await utils.auth.me.invalidate();
+      setStep("success");
+      toast.success("Account created! Your free consultation is ready.");
     } catch (err: any) {
       const msg = err?.data?.message || err?.message || "Registration failed";
       if (msg.toLowerCase().includes("username")) {
@@ -170,57 +84,16 @@ export default function Register() {
     }
   };
 
-  const handleSkipUpload = () => {
-    setStep("success");
-  };
-
-  const steps = [
-    { id: "account", label: "Account", icon: User },
-    { id: "payment", label: "Payment", icon: CreditCard },
-    { id: "upload", label: "Upload", icon: Upload },
-    { id: "success", label: "Done", icon: CheckCircle },
-  ];
-
-  const currentStepIndex = steps.findIndex(s => s.id === step);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/">
-            <img src="/logo.png" alt="Smart Medical Consultant" className="h-14 mx-auto mb-3 cursor-pointer" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src="/logo.jpeg" alt="Smart Medical Consultant" className="h-14 mx-auto mb-3 cursor-pointer rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </Link>
-          <h1 className="text-2xl font-bold text-white">Create Your Account</h1>
-          <p className="text-slate-400 text-sm mt-1">Join Smart Medical Consultant today</p>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center mb-8 gap-0">
-          {steps.map((s, idx) => {
-            const Icon = s.icon;
-            const isCompleted = idx < currentStepIndex;
-            const isCurrent = idx === currentStepIndex;
-            return (
-              <div key={s.id} className="flex items-center">
-                <div className={`flex flex-col items-center gap-1`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                    isCompleted ? "bg-green-500 border-green-500 text-white" :
-                    isCurrent ? "bg-blue-600 border-blue-500 text-white" :
-                    "bg-slate-800 border-slate-600 text-slate-400"
-                  }`}>
-                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <span className={`text-xs font-medium ${isCurrent ? "text-blue-400" : isCompleted ? "text-green-400" : "text-slate-500"}`}>
-                    {s.label}
-                  </span>
-                </div>
-                {idx < steps.length - 1 && (
-                  <div className={`w-12 h-0.5 mb-5 mx-1 ${idx < currentStepIndex ? "bg-green-500" : "bg-slate-700"}`} />
-                )}
-              </div>
-            );
-          })}
+          <h1 className="text-2xl font-bold text-white">Create Your Free Account</h1>
+          <p className="text-slate-400 text-sm mt-1">Register now — your first consultation is on us</p>
         </div>
 
         {/* Step 1: Account Info */}
@@ -230,9 +103,18 @@ export default function Register() {
               <CardTitle className="text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-blue-400" /> Account Information
               </CardTitle>
-              <CardDescription className="text-slate-400">Create your secure account credentials</CardDescription>
+              <CardDescription className="text-slate-400">Create your secure account — completely free</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Free consultation banner */}
+              <div className="flex items-center gap-3 p-3 bg-green-900/30 border border-green-700/50 rounded-lg mb-5">
+                <Gift className="w-5 h-5 text-green-400 shrink-0" />
+                <div>
+                  <p className="text-green-300 font-medium text-sm">1 Free Consultation Included</p>
+                  <p className="text-slate-400 text-xs">Register today and get your first AI-powered medical consultation at no cost. Each additional consultation is $5.</p>
+                </div>
+              </div>
+
               <form onSubmit={handleAccountSubmit} className="space-y-4">
                 <div>
                   <Label className="text-slate-300">Full Name</Label>
@@ -313,7 +195,7 @@ export default function Register() {
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={registerMutation.isPending}>
                   {registerMutation.isPending ? "Creating Account..." : (
-                    <span className="flex items-center gap-2">Continue to Payment <ArrowRight className="w-4 h-4" /></span>
+                    <span className="flex items-center gap-2">Create Free Account <ArrowRight className="w-4 h-4" /></span>
                   )}
                 </Button>
 
@@ -326,106 +208,7 @@ export default function Register() {
           </Card>
         )}
 
-        {/* Step 2: Payment */}
-        {step === "payment" && (
-          <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-blue-400" /> Complete Registration
-              </CardTitle>
-              <CardDescription className="text-slate-400">One-time $1 fee to activate your account</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {/* What you get */}
-              <div className="bg-gradient-to-r from-green-900/40 to-blue-900/40 border border-green-700/50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Gift className="w-5 h-5 text-green-400" />
-                  <span className="font-semibold text-white">What you get for $1</span>
-                </div>
-                <ul className="space-y-2">
-                  {[
-                    "10 AI-powered medical consultations",
-                    "Detailed medical analysis reports",
-                    "Visual infographics of your health data",
-                    "Specialist review of your case",
-                    "Bilingual support (English & Arabic)",
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                <span className="text-slate-300 font-medium">Registration Fee</span>
-                <Badge className="bg-blue-600 text-white text-base px-3 py-1">$1.00 USD</Badge>
-              </div>
-
-              {paypalError && (
-                <Alert className="border-red-700 bg-red-900/30">
-                  <AlertDescription className="text-red-300">{paypalError}</AlertDescription>
-                </Alert>
-              )}
-
-              {!paypalLoaded && !paypalError && (
-                <div className="text-center py-6 text-slate-400">
-                  <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  Loading PayPal...
-                </div>
-              )}
-
-              <div ref={paypalContainerRef} className={paypalLoaded ? "block" : "hidden"} />
-
-              <button
-                onClick={() => setStep("account")}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-300 mx-auto"
-              >
-                <ArrowLeft className="w-3 h-3" /> Back to account details
-              </button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 3: Upload Medical Report */}
-        {step === "upload" && (
-          <Card className="bg-slate-800/80 border-slate-700 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Upload className="w-5 h-5 text-blue-400" /> Upload Medical Report (Optional)
-              </CardTitle>
-              <CardDescription className="text-slate-400">
-                Upload your existing medical reports to get started faster
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-400 shrink-0" />
-                <div>
-                  <p className="text-green-300 font-medium text-sm">Payment Successful!</p>
-                  <p className="text-slate-400 text-xs">10 consultations have been added to your account.</p>
-                </div>
-              </div>
-
-              <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 text-center">
-                <Upload className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-                <p className="text-slate-300 font-medium">You can upload medical reports</p>
-                <p className="text-slate-500 text-sm mt-1">PDF, images, or Word documents up to 10MB</p>
-                <p className="text-slate-500 text-xs mt-3">You can also upload reports when submitting a consultation</p>
-              </div>
-
-              <Button onClick={() => setStep("success")} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                <span className="flex items-center gap-2">Continue to Dashboard <ArrowRight className="w-4 h-4" /></span>
-              </Button>
-              <button onClick={handleSkipUpload} className="w-full text-sm text-slate-400 hover:text-slate-300">
-                Skip for now
-              </button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 4: Success */}
+        {/* Step 2: Success */}
         {step === "success" && (
           <Card className="bg-slate-800/80 border-slate-700 shadow-2xl text-center">
             <CardContent className="pt-10 pb-8 space-y-5">
@@ -434,24 +217,28 @@ export default function Register() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">Welcome aboard!</h2>
-                <p className="text-slate-400 mt-2">Your account is ready with 10 free consultations</p>
+                <p className="text-slate-400 mt-2">Your account is ready with 1 free consultation</p>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-slate-700/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-blue-400">10</p>
-                  <p className="text-slate-400">Consultations</p>
+                  <p className="text-2xl font-bold text-green-400">1</p>
+                  <p className="text-slate-400">Free Consultation</p>
                 </div>
                 <div className="bg-slate-700/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-green-400">AI</p>
-                  <p className="text-slate-400">Powered Analysis</p>
+                  <p className="text-2xl font-bold text-blue-400">$5</p>
+                  <p className="text-slate-400">Each Additional</p>
                 </div>
               </div>
+              <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-left">
+                <Zap className="w-4 h-4 text-blue-400 shrink-0" />
+                <p className="text-xs text-slate-400">Submit your first consultation now. Our AI will analyze your case and generate a full medical report, infographic, and slide deck.</p>
+              </div>
               <div className="flex flex-col gap-2">
-                <Button onClick={() => navigate("/my-profile")} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-5">
-                  <span className="flex items-center gap-2"><FolderHeart className="w-5 h-5" /> View My Medical Profile</span>
+                <Button onClick={() => navigate("/consultations")} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base py-5">
+                  <span className="flex items-center gap-2"><Zap className="w-5 h-5" /> Start My Free Consultation</span>
                 </Button>
-                <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
-                  Go to Dashboard
+                <Button onClick={() => navigate("/my-profile")} variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
+                  <FolderHeart className="w-4 h-4 mr-2" /> View My Medical Profile
                 </Button>
               </div>
             </CardContent>
