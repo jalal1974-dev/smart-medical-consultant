@@ -109,6 +109,15 @@ export default function Footer() {
             © {currentYear} {language === 'ar' ? 'مستشارك الطبي الذكي' : 'Smart Medical Consultant'}.{' '}
             {language === 'ar' ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
           </p>
+          <div className="flex justify-center gap-4 mt-3 text-xs">
+            <a href="/terms" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
+              {language === 'ar' ? 'شروط الخدمة' : 'Terms of Service'}
+            </a>
+            <span>·</span>
+            <a href="/privacy" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
+              {language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}
+            </a>
+          </div>
           <p className="mt-2 text-xs">
             {language === 'ar' 
               ? 'للطوارئ الطبية، يرجى الاتصال بالرقم 997 أو زيارة أقرب قسم طوارئ.'

@@ -25,6 +25,8 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -79,6 +81,8 @@ function Router() {
         <Route path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/terms" component={TermsOfService} />
+        <Route path="/privacy" component={PrivacyPolicy} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>

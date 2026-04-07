@@ -628,3 +628,10 @@
 - [x] Fix $1 reference in Login.tsx
 - [x] Update deprecated confirmPaypalPayment route to grant 1 (not 10) for backward compat
 - [x] TypeScript compiles with 0 errors
+
+## Terms of Service & Privacy Policy Pages (Session Apr 7)
+- [x] Create TermsOfService.tsx page with bilingual content (correct pricing: 1 free + $5 each)
+- [x] Create PrivacyPolicy.tsx page with bilingual content
+- [x] Wire /terms and /privacy routes in App.tsx
+- [x] Add Terms and Privacy links to Footer bottom bar (visible on all pages)
+- [x] TypeScript 0 errors
