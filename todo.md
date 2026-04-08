@@ -635,3 +635,9 @@
 - [x] Wire /terms and /privacy routes in App.tsx
 - [x] Add Terms and Privacy links to Footer bottom bar (visible on all pages)
 - [x] TypeScript 0 errors
+
+## Registration Terms Checkbox
+- [x] Add "I agree to Terms of Service and Privacy Policy" checkbox to Register.tsx
+- [x] Block form submission if checkbox is not checked
+- [x] Links open /terms and /privacy in new tab
+- [x] Bilingual (Arabic/English)

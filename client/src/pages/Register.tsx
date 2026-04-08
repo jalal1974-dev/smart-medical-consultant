@@ -23,6 +23,8 @@ export default function Register() {
   const [step, setStep] = useState<Step>("account");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsError, setTermsError] = useState(false);
 
   const [accountData, setAccountData] = useState<AccountData>({
     username: "",
@@ -61,7 +63,12 @@ export default function Register() {
 
   const handleAccountSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateAccount()) return;
+    const validForm = validateAccount();
+    if (!agreedToTerms) {
+      setTermsError(true);
+    }
+    if (!validForm || !agreedToTerms) return;
+    setTermsError(false);
     try {
       await registerMutation.mutateAsync({
         username: accountData.username,
@@ -191,6 +198,29 @@ export default function Register() {
                 <div className="flex items-start gap-2 p-3 bg-blue-950/50 rounded-lg border border-blue-800/50">
                   <Shield className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
                   <p className="text-xs text-slate-400">Your password is encrypted with bcrypt (12 rounds) — industry-standard security used by banks.</p>
+                </div>
+
+                {/* Terms & Privacy checkbox */}
+                <div className="space-y-1">
+                  <label className={`flex items-start gap-3 cursor-pointer group ${termsError ? 'text-red-400' : 'text-slate-300'}`}>
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={e => { setAgreedToTerms(e.target.checked); if (e.target.checked) setTermsError(false); }}
+                      className="mt-0.5 w-4 h-4 rounded border-slate-500 bg-slate-700 accent-blue-500 shrink-0 cursor-pointer"
+                    />
+                    <span className="text-sm leading-snug">
+                      I agree to the{" "}
+                      <Link href="/terms" target="_blank" className="text-blue-400 hover:text-blue-300 underline underline-offset-2" onClick={e => e.stopPropagation()}>Terms of Service</Link>
+                      {" "}and{" "}
+                      <Link href="/privacy" target="_blank" className="text-blue-400 hover:text-blue-300 underline underline-offset-2" onClick={e => e.stopPropagation()}>Privacy Policy</Link>
+                      {" "}—{" "}
+                      <span className="text-slate-500 text-xs">أوافق على شروط الخدمة وسياسة الخصوصية</span>
+                    </span>
+                  </label>
+                  {termsError && (
+                    <p className="text-red-400 text-xs pr-7">You must agree to the Terms of Service and Privacy Policy to register.</p>
+                  )}
                 </div>
 
                 <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={registerMutation.isPending}>
