@@ -117,6 +117,10 @@ export default function Footer() {
             <a href="/privacy" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
               {language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}
             </a>
+            <span>·</span>
+            <a href="/contact" className="hover:text-foreground transition-colors hover:underline underline-offset-2">
+              {language === 'ar' ? 'اتصل بنا' : 'Contact Us'}
+            </a>
           </div>
           <p className="mt-2 text-xs">
             {language === 'ar' 

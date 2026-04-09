@@ -1611,6 +1611,24 @@ export const appRouter = router({
       }));
     }),
   }),
+
+  // ── Contact ──
+  contact: router({
+    sendMessage: publicProcedure
+      .input(z.object({
+        name: z.string().min(1, 'Name is required').max(100),
+        email: z.string().email('Valid email required'),
+        message: z.string().min(10, 'Message must be at least 10 characters').max(2000),
+      }))
+      .mutation(async ({ input }) => {
+        const { notifyOwner } = await import('./_core/notification');
+        await notifyOwner({
+          title: `New Contact Message from ${input.name}`,
+          content: `Name: ${input.name}\nEmail: ${input.email}\n\nMessage:\n${input.message}`,
+        });
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

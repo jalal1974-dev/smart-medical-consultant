@@ -35,6 +35,7 @@ export function Header() {
     { path: "/videos", label: t("videos") },
     { path: "/podcasts", label: t("podcasts") },
     { path: "/consultations", label: t("consultations") },
+    { path: "/contact", label: language === "ar" ? "اتصل بنا" : "Contact" },
   ];
 
   if (isAuthenticated) {

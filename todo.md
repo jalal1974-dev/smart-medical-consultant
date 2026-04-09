@@ -641,3 +641,15 @@
 - [x] Block form submission if checkbox is not checked
 - [x] Links open /terms and /privacy in new tab
 - [x] Bilingual (Arabic/English)
+
+## Contact Us Page
+- [x] Create client/src/pages/Contact.tsx with bilingual content
+- [x] WhatsApp button (green, opens wa.me/962777066005 in new tab)
+- [x] Contact form (name, email, message) with tRPC backend + admin notification
+- [x] Business hours section
+- [x] FAQ accordion section
+- [x] Quick links section
+- [x] Wire /contact route in App.tsx
+- [x] Add Contact link to Header navigation (desktop + mobile)
+- [x] Add Contact link to Footer
+- [x] Fix outdated FAQ pricing ($1=10 consultations → free + $5 each)
