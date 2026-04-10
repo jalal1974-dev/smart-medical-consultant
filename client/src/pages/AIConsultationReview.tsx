@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 // ─── Attached Records sub-component for admin ───────────────────────────────
@@ -73,6 +73,49 @@ export default function AIConsultationReview() {
   const [selectedConsultation, setSelectedConsultation] = useState<number | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+
+  // ── Regeneration mutations ──────────────────────────────────────────────────
+  const regenInfographic = trpc.admin.regenerateInfographic.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم إعادة توليد الإنفوجرافيك بنجاح" : "Infographic regenerated successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
+
+  const regenPdf = trpc.admin.regeneratePdf.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم إعادة توليد تقرير PDF بنجاح" : "PDF report regenerated successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
+
+  const regenSlides = trpc.admin.regenerateSlides.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم إعادة توليد العرض التقديمي بنجاح" : "Slide deck regenerated successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
+
+  const regenMindMap = trpc.admin.regenerateMindMap.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم إعادة توليد الخريطة الذهنية بنجاح" : "Mind map regenerated successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
+
+  const regenAll = trpc.admin.regenerateAllReports.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم إعادة توليد جميع التقارير بنجاح" : "All reports regenerated successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
+
+  const isAnyRegenPending = regenInfographic.isPending || regenPdf.isPending || regenSlides.isPending || regenMindMap.isPending || regenAll.isPending;
 
   const approveAIContent = trpc.admin.approveAIContent.useMutation({
     onSuccess: () => {
@@ -349,57 +392,129 @@ export default function AIConsultationReview() {
                   </CardContent>
                 </Card>
 
-                {/* Generated Content */}
+                {/* Generated Content — with per-report regenerate buttons */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>{language === "ar" ? "المحتوى المُنشأ" : "Generated Content"}</CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>{language === "ar" ? "التقارير المُنشأة" : "Generated Reports"}</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isAnyRegenPending || !selected.aiAnalysis}
+                        onClick={() => {
+                          if (confirm(language === "ar" ? "إعادة توليد جميع التقارير؟ قد يستغرق هذا دقيقة." : "Regenerate ALL reports? This may take a minute.")) {
+                            regenAll.mutate({ consultationId: selected.id });
+                          }
+                        }}
+                        className="gap-1.5"
+                      >
+                        {regenAll.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        {language === "ar" ? "إعادة توليد الكل" : "Regenerate All"}
+                      </Button>
+                    </div>
+                    {!selected.aiAnalysis && (
+                      <p className="text-xs text-destructive mt-1">
+                        {language === "ar" ? "التحليل الطبي غير متاح — لا يمكن إعادة التوليد" : "AI analysis unavailable — regeneration disabled"}
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selected.aiReportUrl && (
-                        <a
-                          href={selected.aiReportUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-4 border rounded-lg hover:bg-accent transition-colors"
+                    <div className="space-y-3">
+                      {/* PDF Report row */}
+                      <div className="flex items-center gap-3 p-3 border rounded-lg">
+                        <FileText className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{language === "ar" ? "تقرير PDF" : "PDF Report"}</p>
+                          {selected.aiReportUrl
+                            ? <a href={selected.aiReportUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                              </a>
+                            : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
+                          }
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regenPdf.isPending || !selected.aiAnalysis}
+                          onClick={() => regenPdf.mutate({ consultationId: selected.id })}
+                          className="gap-1.5 shrink-0"
                         >
-                          <FileText className="w-5 h-5 text-primary" />
-                          <span className="font-medium">{language === "ar" ? "تقرير PDF" : "PDF Report"}</span>
-                        </a>
-                      )}
-                      {selected.aiInfographicUrl && (
-                        <a
-                          href={selected.aiInfographicUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-4 border rounded-lg hover:bg-accent transition-colors"
+                          {regenPdf.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                        </Button>
+                      </div>
+
+                      {/* Infographic row */}
+                      <div className="flex items-center gap-3 p-3 border rounded-lg">
+                        <Image className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{language === "ar" ? "إنفوجرافيك" : "Infographic"}</p>
+                          {selected.aiInfographicUrl
+                            ? <a href={selected.aiInfographicUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                              </a>
+                            : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
+                          }
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regenInfographic.isPending || !selected.aiAnalysis}
+                          onClick={() => regenInfographic.mutate({ consultationId: selected.id })}
+                          className="gap-1.5 shrink-0"
                         >
-                          <Image className="w-5 h-5 text-primary" />
-                          <span className="font-medium">{language === "ar" ? "إنفوجرافيك" : "Infographic"}</span>
-                        </a>
-                      )}
-                      {selected.aiSlideDeckUrl && (
-                        <a
-                          href={selected.aiSlideDeckUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-4 border rounded-lg hover:bg-accent transition-colors"
+                          {regenInfographic.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                        </Button>
+                      </div>
+
+                      {/* Slide Deck row */}
+                      <div className="flex items-center gap-3 p-3 border rounded-lg">
+                        <Presentation className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{language === "ar" ? "عرض تقديمي" : "Slide Deck"}</p>
+                          {selected.aiSlideDeckUrl
+                            ? <a href={selected.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                              </a>
+                            : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
+                          }
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regenSlides.isPending || !selected.aiAnalysis}
+                          onClick={() => regenSlides.mutate({ consultationId: selected.id })}
+                          className="gap-1.5 shrink-0"
                         >
-                          <Presentation className="w-5 h-5 text-primary" />
-                          <span className="font-medium">{language === "ar" ? "عرض تقديمي" : "Slide Deck"}</span>
-                        </a>
-                      )}
-                      {selected.aiMindMapUrl && (
-                        <a
-                          href={selected.aiMindMapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-4 border rounded-lg hover:bg-accent transition-colors"
+                          {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                        </Button>
+                      </div>
+
+                      {/* Mind Map row */}
+                      <div className="flex items-center gap-3 p-3 border rounded-lg">
+                        <Network className="w-5 h-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{language === "ar" ? "خريطة ذهنية" : "Mind Map"}</p>
+                          {selected.aiMindMapUrl
+                            ? <a href={selected.aiMindMapUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                              </a>
+                            : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
+                          }
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regenMindMap.isPending || !selected.aiAnalysis}
+                          onClick={() => regenMindMap.mutate({ consultationId: selected.id })}
+                          className="gap-1.5 shrink-0"
                         >
-                          <Network className="w-5 h-5 text-primary" />
-                          <span className="font-medium">{language === "ar" ? "خريطة ذهنية" : "Mind Map"}</span>
-                        </a>
-                      )}
+                          {regenMindMap.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

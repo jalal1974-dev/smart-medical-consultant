@@ -349,6 +349,69 @@ async function generateMindMap(
 }
 
 /**
+ * Regenerate PDF report for a consultation (exported for manual regeneration)
+ */
+export async function regeneratePdfForConsultation(
+  consultationId: number,
+  aiAnalysis: string,
+  patientName: string,
+  language: "en" | "ar"
+): Promise<string | null> {
+  try {
+    console.log(`[PDF Regeneration] Starting for consultation #${consultationId}`);
+    const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
+    const pdfUrl = await generatePDFReport(analysisResult, patientName, consultationId, language);
+    console.log(`[PDF Regeneration] ${pdfUrl ? 'Success' : 'Failed'} for consultation #${consultationId}`);
+    return pdfUrl;
+  } catch (error) {
+    console.error(`[PDF Regeneration] Error for consultation #${consultationId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Regenerate slide deck for a consultation (exported for manual regeneration)
+ */
+export async function regenerateSlidesForConsultation(
+  consultationId: number,
+  aiAnalysis: string,
+  patientName: string,
+  language: "en" | "ar"
+): Promise<string | null> {
+  try {
+    console.log(`[Slides Regeneration] Starting for consultation #${consultationId}`);
+    const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
+    const slidesUrl = await generateSlides(analysisResult, patientName, language);
+    console.log(`[Slides Regeneration] ${slidesUrl ? 'Success' : 'Failed'} for consultation #${consultationId}`);
+    return slidesUrl;
+  } catch (error) {
+    console.error(`[Slides Regeneration] Error for consultation #${consultationId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Regenerate mind map for a consultation (exported for manual regeneration)
+ */
+export async function regenerateMindMapForConsultation(
+  consultationId: number,
+  aiAnalysis: string,
+  symptoms: string,
+  language: "en" | "ar"
+): Promise<string | null> {
+  try {
+    console.log(`[MindMap Regeneration] Starting for consultation #${consultationId}`);
+    const analysisResult: MedicalAnalysisResult = JSON.parse(aiAnalysis);
+    const mindMapUrl = await generateMindMap(analysisResult, symptoms, language);
+    console.log(`[MindMap Regeneration] ${mindMapUrl ? 'Success' : 'Failed'} for consultation #${consultationId}`);
+    return mindMapUrl;
+  } catch (error) {
+    console.error(`[MindMap Regeneration] Error for consultation #${consultationId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Main function to generate all content types
  */
 export async function generateAllContent(

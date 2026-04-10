@@ -784,6 +784,124 @@ export const appRouter = router({
         };
       }),
 
+    // Regenerate PDF report for a consultation
+    regeneratePdf: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        if (!consultation.aiAnalysis) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AI analysis not available. Cannot regenerate PDF.' });
+        }
+        const { regeneratePdfForConsultation } = await import('./contentGeneration');
+        const newPdfUrl = await regeneratePdfForConsultation(
+          consultation.id,
+          consultation.aiAnalysis,
+          consultation.patientName,
+          consultation.preferredLanguage as 'en' | 'ar'
+        );
+        if (!newPdfUrl) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate PDF report' });
+        }
+        await db.updateConsultation(input.consultationId, { aiReportUrl: newPdfUrl });
+        return { success: true, pdfUrl: newPdfUrl };
+      }),
+
+    // Regenerate slide deck for a consultation
+    regenerateSlides: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        if (!consultation.aiAnalysis) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AI analysis not available. Cannot regenerate slides.' });
+        }
+        const { regenerateSlidesForConsultation } = await import('./contentGeneration');
+        const newSlidesUrl = await regenerateSlidesForConsultation(
+          consultation.id,
+          consultation.aiAnalysis,
+          consultation.patientName,
+          consultation.preferredLanguage as 'en' | 'ar'
+        );
+        if (!newSlidesUrl) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate slide deck' });
+        }
+        await db.updateConsultation(input.consultationId, { aiSlideDeckUrl: newSlidesUrl });
+        return { success: true, slidesUrl: newSlidesUrl };
+      }),
+
+    // Regenerate mind map for a consultation
+    regenerateMindMap: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        if (!consultation.aiAnalysis) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AI analysis not available. Cannot regenerate mind map.' });
+        }
+        const { regenerateMindMapForConsultation } = await import('./contentGeneration');
+        const newMindMapUrl = await regenerateMindMapForConsultation(
+          consultation.id,
+          consultation.aiAnalysis,
+          consultation.symptoms,
+          consultation.preferredLanguage as 'en' | 'ar'
+        );
+        if (!newMindMapUrl) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate mind map' });
+        }
+        await db.updateConsultation(input.consultationId, { aiMindMapUrl: newMindMapUrl });
+        return { success: true, mindMapUrl: newMindMapUrl };
+      }),
+
+    // Regenerate ALL reports at once
+    regenerateAllReports: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        if (!consultation.aiAnalysis) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AI analysis not available. Cannot regenerate reports.' });
+        }
+        const {
+          regenerateInfographicForConsultation,
+          regeneratePdfForConsultation,
+          regenerateSlidesForConsultation,
+          regenerateMindMapForConsultation,
+        } = await import('./contentGeneration');
+        const lang = consultation.preferredLanguage as 'en' | 'ar';
+        const [infographicUrl, pdfUrl, slidesUrl, mindMapUrl] = await Promise.all([
+          regenerateInfographicForConsultation(consultation.id, consultation.aiAnalysis, consultation.patientName, lang),
+          regeneratePdfForConsultation(consultation.id, consultation.aiAnalysis, consultation.patientName, lang),
+          regenerateSlidesForConsultation(consultation.id, consultation.aiAnalysis, consultation.patientName, lang),
+          regenerateMindMapForConsultation(consultation.id, consultation.aiAnalysis, consultation.symptoms, lang),
+        ]);
+        await db.updateConsultation(input.consultationId, {
+          aiInfographicUrl: infographicUrl ?? undefined,
+          aiReportUrl: pdfUrl ?? undefined,
+          aiSlideDeckUrl: slidesUrl ?? undefined,
+          aiMindMapUrl: mindMapUrl ?? undefined,
+          materialsRegeneratedAt: new Date(),
+          materialsRegeneratedCount: (consultation.materialsRegeneratedCount || 0) + 1,
+        });
+        return { success: true, infographicUrl, pdfUrl, slidesUrl, mindMapUrl };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({

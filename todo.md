@@ -653,3 +653,12 @@
 - [x] Add Contact link to Header navigation (desktop + mobile)
 - [x] Add Contact link to Footer
 - [x] Fix outdated FAQ pricing ($1=10 consultations → free + $5 each)
+
+## Admin: Regenerate / Replace Reports
+- [x] Read schema, db, routers, AIConsultationReview to understand current report fields
+- [x] Add tRPC adminProcedure: regenerateReport (type: infographic | pdf | slides | mindmap)
+- [x] Each type calls the appropriate existing AI helper and overwrites the DB field + S3 key
+- [x] Add per-report "Regenerate" button in AIConsultationReview with loading state
+- [x] Bilingual success/error toasts (AR + EN)
+- [ ] PPTX regeneration calls PYTHON_API_URL (guarded: skip if URL not set) — pending Python backend
+- [x] Invalidate consultation query after regeneration so UI updates immediately
