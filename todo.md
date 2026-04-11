@@ -662,3 +662,15 @@
 - [x] Bilingual success/error toasts (AR + EN)
 - [ ] PPTX regeneration calls PYTHON_API_URL (guarded: skip if URL not set) — pending Python backend
 - [x] Invalidate consultation query after regeneration so UI updates immediately
+
+## Admin: Replace Infographic / PPTX (Upload)
+- [x] Add tRPC adminProcedure: uploadReplaceInfographic — accepts base64 image, uploads to S3, updates DB
+- [x] Add tRPC adminProcedure: uploadReplacePptx — accepts base64 file, uploads to S3, updates DB
+- [x] Update AIConsultationReview: "Replace" button opens file picker (image/* for infographic, .pptx for PPTX)
+- [x] Show current infographic thumbnail in admin panel
+- [x] Bilingual success/error toasts
+
+## Test Consultation Seed
+- [x] Create seed script that inserts 1 realistic Arabic test consultation with completed AI analysis
+- [x] Seed includes: patient info, symptoms, aiAnalysis JSON (urgent hypertension case)
+- [x] Run seed so admin panel shows data immediately (id=450001, patient: أحمد خليل)

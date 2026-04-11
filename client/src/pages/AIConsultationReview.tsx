@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink, Upload } from "lucide-react";
 import { format } from "date-fns";
 
 // ─── Attached Records sub-component for admin ───────────────────────────────
@@ -116,6 +116,70 @@ export default function AIConsultationReview() {
   });
 
   const isAnyRegenPending = regenInfographic.isPending || regenPdf.isPending || regenSlides.isPending || regenMindMap.isPending || regenAll.isPending;
+
+  // ── Upload-replace mutations ──────────────────────────────────────────────────
+  const uploadInfographic = trpc.admin.uploadReplaceInfographic.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم استبدال الإنفوجرافيك بنجاح" : "Infographic replaced successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
+  const uploadPptx = trpc.admin.uploadReplacePptx.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم استبدال ملف PPTX بنجاح" : "PPTX replaced successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
+  // Helper: read file as base64
+  const readFileAsBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleInfographicUpload = (consultationId: number) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/png,image/jpeg,image/webp,image/gif';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(language === "ar" ? "حجم الملف يتجاوز 10 ميغابايت" : "File exceeds 10 MB limit");
+        return;
+      }
+      try {
+        const base64 = await readFileAsBase64(file);
+        uploadInfographic.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name });
+      } catch { toast.error(language === "ar" ? "فشل قراءة الملف" : "Failed to read file"); }
+    };
+    inp.click();
+  };
+
+  const handlePptxUpload = (consultationId: number) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(language === "ar" ? "حجم الملف يتجاوز 50 ميغابايت" : "File exceeds 50 MB limit");
+        return;
+      }
+      try {
+        const base64 = await readFileAsBase64(file);
+        uploadPptx.mutate({ consultationId, fileBase64: base64, fileName: file.name });
+      } catch { toast.error(language === "ar" ? "فشل قراءة الملف" : "Failed to read file"); }
+    };
+    inp.click();
+  };
 
   const approveAIContent = trpc.admin.approveAIContent.useMutation({
     onSuccess: () => {
@@ -446,7 +510,14 @@ export default function AIConsultationReview() {
 
                       {/* Infographic row */}
                       <div className="flex items-center gap-3 p-3 border rounded-lg">
-                        <Image className="w-5 h-5 text-primary shrink-0" />
+                        <div className="shrink-0">
+                          {selected.aiInfographicUrl
+                            ? <a href={selected.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                                <img src={selected.aiInfographicUrl} alt="infographic" className="w-12 h-12 object-cover rounded border" />
+                              </a>
+                            : <Image className="w-5 h-5 text-primary" />
+                          }
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{language === "ar" ? "إنفوجرافيك" : "Infographic"}</p>
                           {selected.aiInfographicUrl
@@ -456,40 +527,66 @@ export default function AIConsultationReview() {
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={regenInfographic.isPending || !selected.aiAnalysis}
-                          onClick={() => regenInfographic.mutate({ consultationId: selected.id })}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {regenInfographic.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
-                        </Button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadInfographic.isPending}
+                            onClick={() => handleInfographicUpload(selected.id)}
+                            className="gap-1.5"
+                            title={language === "ar" ? "استبدال بصورة مخصصة" : "Replace with custom image"}
+                          >
+                            {uploadInfographic.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "استبدال" : "Replace"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={regenInfographic.isPending || !selected.aiAnalysis}
+                            onClick={() => regenInfographic.mutate({ consultationId: selected.id })}
+                            className="gap-1.5"
+                          >
+                            {regenInfographic.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                          </Button>
+                        </div>
                       </div>
 
-                      {/* Slide Deck row */}
+                      {/* Slide Deck / PPTX row */}
                       <div className="flex items-center gap-3 p-3 border rounded-lg">
                         <Presentation className="w-5 h-5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{language === "ar" ? "عرض تقديمي" : "Slide Deck"}</p>
+                          <p className="text-sm font-medium">{language === "ar" ? "عرض تقديمي / PPTX" : "Slide Deck / PPTX"}</p>
                           {selected.aiSlideDeckUrl
                             ? <a href={selected.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
-                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح / تحميل" : "Open / Download"}
                               </a>
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={regenSlides.isPending || !selected.aiAnalysis}
-                          onClick={() => regenSlides.mutate({ consultationId: selected.id })}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
-                        </Button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadPptx.isPending}
+                            onClick={() => handlePptxUpload(selected.id)}
+                            className="gap-1.5"
+                            title={language === "ar" ? "رفع PPTX مخصص" : "Upload custom PPTX"}
+                          >
+                            {uploadPptx.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "رفع PPTX" : "Upload PPTX"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={regenSlides.isPending || !selected.aiAnalysis}
+                            onClick={() => regenSlides.mutate({ consultationId: selected.id })}
+                            className="gap-1.5"
+                          >
+                            {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Mind Map row */}

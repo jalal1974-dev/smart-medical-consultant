@@ -902,6 +902,48 @@ export const appRouter = router({
         return { success: true, infographicUrl, pdfUrl, slidesUrl, mindMapUrl };
       }),
 
+    // Upload and replace infographic with a custom image (base64)
+    uploadReplaceInfographic: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(), // base64-encoded image data
+        mimeType: z.string().default('image/png'), // e.g. image/png, image/jpeg
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        // Decode base64 and upload to S3
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const ext = input.mimeType.split('/')[1] || 'png';
+        const key = `infographics/custom-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        await db.updateConsultation(input.consultationId, { aiInfographicUrl: url });
+        return { success: true, infographicUrl: url };
+      }),
+
+    // Upload and replace PPTX with a custom file (base64)
+    uploadReplacePptx: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(), // base64-encoded PPTX data
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const key = `pptx/custom-${input.consultationId}-${nanoid()}.pptx`;
+        const { url } = await storagePut(key, buffer, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+        // Store in aiSlideDeckUrl (reusing the slide deck field for PPTX)
+        await db.updateConsultation(input.consultationId, { aiSlideDeckUrl: url });
+        return { success: true, pptxUrl: url };
+      }),
+
     // Get analytics data
     analytics: adminProcedure
       .input(z.object({
