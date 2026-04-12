@@ -685,3 +685,9 @@
 - [x] Add "Generate PPTX" + "Upload PPTX" buttons to admin review page (dedicated PPTX Report row)
 - [x] Auto-download PPTX after generation
 - [x] Bilingual toasts + loading state
+
+## Patient Dashboard: Download Professional Report Button
+- [x] Expose pptxReportUrl in patient-facing consultation query (already included via ...spread in list procedure)
+- [x] Add "Download Professional Report" button to patient dashboard (visible only when pptxReportUrl is set)
+- [x] Button opens pptxReportUrl in new tab / triggers download
+- [x] Bilingual label (AR + EN)

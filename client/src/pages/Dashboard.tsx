@@ -430,6 +430,28 @@ export default function Dashboard() {
                           </Button>
                         )}
                       </div>
+                      {/* Download Professional PPTX Report — only shown when available */}
+                      {(consultation as any).pptxReportUrl && (
+                        <div className="mt-3">
+                          <Button
+                            size="sm"
+                            asChild
+                            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            <a
+                              href={(consultation as any).pptxReportUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download
+                            >
+                              <Download className="w-4 h-4" />
+                              {language === "ar"
+                                ? "تحميل التقرير الاحترافي (PPTX)"
+                                : "Download Professional Report (PPTX)"}
+                            </a>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                   {consultation.followUpNotes && (
