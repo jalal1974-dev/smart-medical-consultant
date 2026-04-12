@@ -674,3 +674,14 @@
 - [x] Create seed script that inserts 1 realistic Arabic test consultation with completed AI analysis
 - [x] Seed includes: patient info, symptoms, aiAnalysis JSON (urgent hypertension case)
 - [x] Run seed so admin panel shows data immediately (id=450001, patient: أحمد خليل)
+
+## PPTX Generation via Manus LLM (pptxgenjs)
+- [x] Add pptxReportUrl column to consultations schema (separate from aiSlideDeckUrl)
+- [x] Run migration via direct SQL script (pnpm db:push was interactive, used mysql2 directly)
+- [x] Install pptxgenjs 4.0.1
+- [x] Create server/pptxGeneration.ts helper (invokeLLM + pptxgenjs, 5 slides, Arabic/English)
+- [x] Add admin.generatePptxReport tRPC procedure (uses new helper, saves to S3 + pptxReportUrl)
+- [x] Update uploadReplacePptx to store in pptxReportUrl instead of aiSlideDeckUrl
+- [x] Add "Generate PPTX" + "Upload PPTX" buttons to admin review page (dedicated PPTX Report row)
+- [x] Auto-download PPTX after generation
+- [x] Bilingual toasts + loading state

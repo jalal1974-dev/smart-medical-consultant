@@ -939,9 +939,32 @@ export const appRouter = router({
         const buffer = Buffer.from(input.fileBase64, 'base64');
         const key = `pptx/custom-${input.consultationId}-${nanoid()}.pptx`;
         const { url } = await storagePut(key, buffer, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
-        // Store in aiSlideDeckUrl (reusing the slide deck field for PPTX)
-        await db.updateConsultation(input.consultationId, { aiSlideDeckUrl: url });
+        // Store in dedicated pptxReportUrl column
+        await db.updateConsultation(input.consultationId, { pptxReportUrl: url });
         return { success: true, pptxUrl: url };
+      }),
+
+    // Generate PPTX report using Manus LLM + pptxgenjs
+    generatePptxReport: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        }
+        const { generatePptxForConsultation } = await import('./pptxGeneration');
+        const pptxUrl = await generatePptxForConsultation({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          symptoms: consultation.symptoms,
+          medicalHistory: consultation.medicalHistory ?? null,
+          aiAnalysis: consultation.aiAnalysis ?? null,
+          preferredLanguage: (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar',
+        });
+        await db.updateConsultation(input.consultationId, { pptxReportUrl: pptxUrl });
+        return { success: true, pptxUrl };
       }),
 
     // Get analytics data

@@ -128,10 +128,25 @@ export default function AIConsultationReview() {
 
   const uploadPptx = trpc.admin.uploadReplacePptx.useMutation({
     onSuccess: () => {
-      toast.success(language === "ar" ? "تم استبدال ملف PPTX بنجاح" : "PPTX replaced successfully");
+      toast.success(language === "ar" ? "تم رفع PPTX بنجاح" : "PPTX uploaded successfully");
       utils.admin.consultations.invalidate();
     },
     onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
+  const generatePptx = trpc.admin.generatePptxReport.useMutation({
+    onSuccess: (data) => {
+      toast.success(language === "ar" ? "تم توليد PPTX بنجاح" : "PPTX generated successfully");
+      utils.admin.consultations.invalidate();
+      // Auto-download
+      if (data?.pptxUrl) {
+        const a = document.createElement('a');
+        a.href = data.pptxUrl;
+        a.download = `consultation-${Date.now()}.pptx`;
+        a.click();
+      }
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل التوليد: ${e.message}` : `Generation failed: ${e.message}`),
   });
 
   // Helper: read file as base64
@@ -552,14 +567,38 @@ export default function AIConsultationReview() {
                         </div>
                       </div>
 
-                      {/* Slide Deck / PPTX row */}
+                      {/* Slide Deck row */}
                       <div className="flex items-center gap-3 p-3 border rounded-lg">
                         <Presentation className="w-5 h-5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{language === "ar" ? "عرض تقديمي / PPTX" : "Slide Deck / PPTX"}</p>
+                          <p className="text-sm font-medium">{language === "ar" ? "عرض تقديمي (AI)" : "Slide Deck (AI)"}</p>
                           {selected.aiSlideDeckUrl
                             ? <a href={selected.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
-                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح / تحميل" : "Open / Download"}
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "فتح" : "Open"}
+                              </a>
+                            : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
+                          }
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={regenSlides.isPending || !selected.aiAnalysis}
+                          onClick={() => regenSlides.mutate({ consultationId: selected.id })}
+                          className="gap-1.5 shrink-0"
+                        >
+                          {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                        </Button>
+                      </div>
+
+                      {/* PPTX Report row */}
+                      <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                        <FileText className="w-5 h-5 text-emerald-600 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{language === "ar" ? "تقرير PPTX" : "PPTX Report"}</p>
+                          {(selected as any).pptxReportUrl
+                            ? <a href={(selected as any).pptxReportUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                                <ExternalLink className="w-3 h-3" />{language === "ar" ? "تحميل" : "Download"}
                               </a>
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
@@ -574,17 +613,17 @@ export default function AIConsultationReview() {
                             title={language === "ar" ? "رفع PPTX مخصص" : "Upload custom PPTX"}
                           >
                             {uploadPptx.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                            {language === "ar" ? "رفع PPTX" : "Upload PPTX"}
+                            {language === "ar" ? "رفع" : "Upload"}
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
-                            disabled={regenSlides.isPending || !selected.aiAnalysis}
-                            onClick={() => regenSlides.mutate({ consultationId: selected.id })}
-                            className="gap-1.5"
+                            variant="default"
+                            disabled={generatePptx.isPending}
+                            onClick={() => generatePptx.mutate({ consultationId: selected.id })}
+                            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
                           >
-                            {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                            {generatePptx.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "توليد PPTX" : "Generate PPTX"}
                           </Button>
                         </div>
                       </div>

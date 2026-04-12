@@ -70,6 +70,7 @@ export const consultations = mysqlTable("consultations", {
   aiSlideDeckUrl: varchar("aiSlideDeckUrl", { length: 500 }), // Slide presentation URL (manus-slides://)
   aiSlideDeckContent: text("aiSlideDeckContent"), // JSON content for slide deck generation
   aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
+  pptxReportUrl: varchar("pptxReportUrl", { length: 500 }), // Dedicated PPTX report URL (separate from AI slide deck)
   aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts
   aiLastProcessedAt: timestamp("aiLastProcessedAt"), // Last AI processing timestamp
   materialsRegeneratedAt: timestamp("materialsRegeneratedAt"), // Last material regeneration timestamp
