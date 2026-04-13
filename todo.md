@@ -691,3 +691,13 @@
 - [x] Add "Download Professional Report" button to patient dashboard (visible only when pptxReportUrl is set)
 - [x] Button opens pptxReportUrl in new tab / triggers download
 - [x] Bilingual label (AR + EN)
+
+## Admin: Report Generation Log
+- [x] Add report_generation_logs table to schema (id, consultationId, adminId, adminName, reportType, status, errorMessage, createdAt)
+- [x] Run SQL migration to create the table
+- [x] Add insertReportLog and getReportLogs db helpers
+- [x] Wire log insertion into: generatePptxReport, regenerateInfographic, regeneratePdf, regenerateSlides, regenerateMindMap, regenerateAllReports, uploadReplaceInfographic, uploadReplacePptx
+- [x] Add admin.getReportLogs tRPC procedure (admin-only, paginated, filterable by type/date)
+- [x] Create client/src/pages/AdminReportLog.tsx with sortable table (date, admin, type, consultation, status)
+- [x] Register /admin/report-log route in App.tsx
+- [x] Add "Report Log" / "سجل التقارير" nav link in admin navigation

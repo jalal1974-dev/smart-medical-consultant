@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1488,4 +1488,61 @@ export async function updateUserProfile(
         .join(', ')
     )} WHERE id = ${userId}`
   );
+}
+
+
+// ==================== Report Generation Log Functions ====================
+
+export async function insertReportLog(entry: InsertReportGenerationLog): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot insert report log: database not available");
+    return;
+  }
+  try {
+    await db.insert(reportGenerationLogs).values(entry);
+  } catch (err) {
+    // Never let logging break the main flow
+    console.error("[ReportLog] Failed to insert log entry:", err);
+  }
+}
+
+export async function getReportLogs(opts?: {
+  limit?: number;
+  offset?: number;
+  reportType?: string;
+  adminId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { logs: [], total: 0 };
+
+  const limit = opts?.limit ?? 50;
+  const offset = opts?.offset ?? 0;
+
+  const conditions: any[] = [];
+  if (opts?.reportType) {
+    conditions.push(sql`report_type = ${opts.reportType}`);
+  }
+  if (opts?.adminId) {
+    conditions.push(eq(reportGenerationLogs.adminId, opts.adminId));
+  }
+
+  const baseQuery = conditions.length > 0
+    ? db.select().from(reportGenerationLogs).where(and(...conditions))
+    : db.select().from(reportGenerationLogs);
+
+  const logs = await db
+    .select()
+    .from(reportGenerationLogs)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(reportGenerationLogs.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const countResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(reportGenerationLogs)
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+  return { logs, total: Number(countResult[0]?.count ?? 0) };
 }

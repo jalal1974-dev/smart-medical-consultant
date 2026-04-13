@@ -741,7 +741,7 @@ export const appRouter = router({
         consultationId: z.number(),
         customPrompt: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -778,6 +778,17 @@ export const appRouter = router({
           aiInfographicUrl: newInfographicUrl,
         });
 
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'infographic',
+          action: 'regenerate',
+          status: 'success',
+          outputUrl: newInfographicUrl,
+        });
+
         return { 
           success: true, 
           infographicUrl: newInfographicUrl 
@@ -789,7 +800,7 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -808,6 +819,16 @@ export const appRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate PDF report' });
         }
         await db.updateConsultation(input.consultationId, { aiReportUrl: newPdfUrl });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'pdf',
+          action: 'regenerate',
+          status: 'success',
+          outputUrl: newPdfUrl,
+        });
         return { success: true, pdfUrl: newPdfUrl };
       }),
 
@@ -816,7 +837,7 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -835,6 +856,16 @@ export const appRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate slide deck' });
         }
         await db.updateConsultation(input.consultationId, { aiSlideDeckUrl: newSlidesUrl });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'slides',
+          action: 'regenerate',
+          status: 'success',
+          outputUrl: newSlidesUrl,
+        });
         return { success: true, slidesUrl: newSlidesUrl };
       }),
 
@@ -843,7 +874,7 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -862,6 +893,16 @@ export const appRouter = router({
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to regenerate mind map' });
         }
         await db.updateConsultation(input.consultationId, { aiMindMapUrl: newMindMapUrl });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'mindmap',
+          action: 'regenerate',
+          status: 'success',
+          outputUrl: newMindMapUrl,
+        });
         return { success: true, mindMapUrl: newMindMapUrl };
       }),
 
@@ -870,7 +911,7 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -899,6 +940,15 @@ export const appRouter = router({
           materialsRegeneratedAt: new Date(),
           materialsRegeneratedCount: (consultation.materialsRegeneratedCount || 0) + 1,
         });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'all',
+          action: 'regenerate',
+          status: 'success',
+        });
         return { success: true, infographicUrl, pdfUrl, slidesUrl, mindMapUrl };
       }),
 
@@ -910,7 +960,7 @@ export const appRouter = router({
         mimeType: z.string().default('image/png'), // e.g. image/png, image/jpeg
         fileName: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -921,6 +971,16 @@ export const appRouter = router({
         const key = `infographics/custom-${input.consultationId}-${nanoid()}.${ext}`;
         const { url } = await storagePut(key, buffer, input.mimeType);
         await db.updateConsultation(input.consultationId, { aiInfographicUrl: url });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'upload_infographic',
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
         return { success: true, infographicUrl: url };
       }),
 
@@ -931,7 +991,7 @@ export const appRouter = router({
         fileBase64: z.string(), // base64-encoded PPTX data
         fileName: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -941,6 +1001,16 @@ export const appRouter = router({
         const { url } = await storagePut(key, buffer, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
         // Store in dedicated pptxReportUrl column
         await db.updateConsultation(input.consultationId, { pptxReportUrl: url });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'upload_pptx',
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
         return { success: true, pptxUrl: url };
       }),
 
@@ -949,7 +1019,7 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
@@ -964,7 +1034,34 @@ export const appRouter = router({
           preferredLanguage: (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar',
         });
         await db.updateConsultation(input.consultationId, { pptxReportUrl: pptxUrl });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'pptx',
+          action: 'generate',
+          status: 'success',
+          outputUrl: pptxUrl,
+        });
         return { success: true, pptxUrl };
+      }),
+
+    // Get report generation audit log
+    getReportLogs: adminProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(200).default(50),
+        offset: z.number().min(0).default(0),
+        reportType: z.string().optional(),
+        adminId: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        return db.getReportLogs({
+          limit: input.limit,
+          offset: input.offset,
+          reportType: input.reportType,
+          adminId: input.adminId,
+        });
       }),
 
     // Get analytics data

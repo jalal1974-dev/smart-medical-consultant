@@ -322,6 +322,35 @@ export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = typeof blogPosts.$inferInsert;
 
 /**
+ * Report generation logs table - audit trail for all admin-triggered report actions
+ */
+export const reportGenerationLogs = mysqlTable("report_generation_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultation_id").notNull(),
+  patientName: varchar("patient_name", { length: 255 }).notNull(),
+  adminId: int("admin_id").notNull(),
+  adminName: varchar("admin_name", { length: 255 }).notNull(),
+  reportType: mysqlEnum("report_type", [
+    "infographic",
+    "pdf",
+    "slides",
+    "mindmap",
+    "pptx",
+    "all",
+    "upload_infographic",
+    "upload_pptx"
+  ]).notNull(),
+  action: mysqlEnum("action", ["generate", "regenerate", "upload"]).default("generate").notNull(),
+  status: mysqlEnum("status", ["success", "failed"]).default("success").notNull(),
+  errorMessage: text("error_message"),
+  outputUrl: varchar("output_url", { length: 500 }), // S3 URL of the generated file
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReportGenerationLog = typeof reportGenerationLogs.$inferSelect;
+export type InsertReportGenerationLog = typeof reportGenerationLogs.$inferInsert;
+
+/**
  * User medical records table - personal health file vault for each registered user
  */
 export const userMedicalRecords = mysqlTable("user_medical_records", {
