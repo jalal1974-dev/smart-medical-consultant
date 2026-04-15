@@ -714,7 +714,9 @@ export default function AdminPanel() {
                                         sendReportToPatient.mutate({ consultationId: consultation.id, sendSlides: true });
                                       }}
                                     >
-                                      {sendingKey === slideKey ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Sending...</> : <><Send className="h-3 w-3 mr-1" />Send</> }
+                                      {sendingKey === slideKey
+                                        ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Sending...</>
+                                        : <><Send className="h-3 w-3 mr-1" />Send to Patient</>}
                                     </Button>
                                   )}
                                 </div>
