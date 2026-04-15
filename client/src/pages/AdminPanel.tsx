@@ -17,8 +17,8 @@ import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, Extern
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
-import { RequestSlideGenerationButton } from "@/components/RequestSlideGenerationButton";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
+import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -465,7 +465,7 @@ export default function AdminPanel() {
                             return (
                               <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
                                 <span className="text-sm">📈 Infographic (Content Prepared)</span>
-                                <RequestSlideGenerationButton consultationId={consultation.id} type="infographic" />
+                                <RegenerateInfographicButton consultationId={consultation.id} />
                               </div>
                             );
                           }
@@ -493,7 +493,7 @@ export default function AdminPanel() {
                             return (
                               <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
                                 <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
-                                <RequestSlideGenerationButton consultationId={consultation.id} type="slideDeck" />
+                                <RegenerateSlidesButton consultationId={consultation.id} />
                               </div>
                             );
                           }

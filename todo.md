@@ -758,3 +758,11 @@
 - [x] Cancel button added to each active progress banner (aborts fetch + clears progress)
 - [x] Clicking Cancel shows 'Operation cancelled' toast
 - [x] Replace buttons for infographic and slide deck confirmed present and working
+
+## Bug Fix: Infographic + Slide Deck Stuck "Pending Agent Generation"
+- [x] Root cause: RequestSlideGenerationButton created a DB record + owner notification, never called AI directly
+- [x] Replaced RequestSlideGenerationButton with RegenerateInfographicButton (already calls admin.regenerateInfographic)
+- [x] Created RegenerateSlidesButton component that calls admin.regenerateSlides directly via tRPC
+- [x] Removed RequestSlideGenerationButton import from AdminPanel.tsx
+- [x] Both buttons now show a confirmation dialog then call the AI generation procedure immediately
+- [x] TypeScript: 0 errors
