@@ -782,3 +782,11 @@
 - [ ] Add Replace button (hidden file input) to Slide Deck row — calls uploadReplaceSlides
 - [ ] Add View button to Slide Deck row (always visible when URL exists)
 - [ ] Each row layout: View | Replace | Regenerate | Upload Link
+
+## Send to Patient Approval System
+- [x] Add 5 sentToPatient boolean columns to consultations table (pdf, infographic, slides, mindmap, pptx)
+- [x] Run DB migration (pnpm db:push)
+- [x] Add admin.sendReportToPatient tRPC procedure
+- [x] Add Send to Patient buttons per report row in Admin Panel
+- [x] Update patient Dashboard to only show reports where sentToPatient = true
+- [x] Wire sendReportReadyNotification when report is sent to patient

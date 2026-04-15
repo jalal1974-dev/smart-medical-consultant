@@ -71,6 +71,15 @@ export const consultations = mysqlTable("consultations", {
   aiSlideDeckContent: text("aiSlideDeckContent"), // JSON content for slide deck generation
   aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
   pptxReportUrl: varchar("pptxReportUrl", { length: 500 }), // Dedicated PPTX report URL (separate from AI slide deck)
+
+  // Admin "Send to Patient" approval flags — each report is hidden from patient until explicitly sent
+  sentPdfToPatient: boolean("sentPdfToPatient").default(false).notNull(),
+  sentInfographicToPatient: boolean("sentInfographicToPatient").default(false).notNull(),
+  sentSlidesToPatient: boolean("sentSlidesToPatient").default(false).notNull(),
+  sentMindMapToPatient: boolean("sentMindMapToPatient").default(false).notNull(),
+  sentPptxToPatient: boolean("sentPptxToPatient").default(false).notNull(),
+  sentToPatientAt: timestamp("sentToPatientAt"), // timestamp of most recent send action
+  sentToPatientBy: int("sentToPatientBy"), // admin user ID who last sent
   aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts
   aiLastProcessedAt: timestamp("aiLastProcessedAt"), // Last AI processing timestamp
   materialsRegeneratedAt: timestamp("materialsRegeneratedAt"), // Last material regeneration timestamp

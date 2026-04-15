@@ -19,7 +19,7 @@ import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
-import { Link2, Copy, Check } from "lucide-react";
+import { Link2, Copy, Check, Send, SendHorizonal } from "lucide-react";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -111,6 +111,27 @@ export default function AdminPanel() {
     onError: (err) => {
       toast.error(`Replace failed: ${err.message}`);
       setReplacingKey(null);
+    },
+  });
+
+  // Send to Patient
+  const [sendingKey, setSendingKey] = useState<string | null>(null);
+  const sendReportToPatient = trpc.admin.sendReportToPatient.useMutation({
+    onSuccess: (_, vars) => {
+      const types = [
+        vars.sendPdf && 'PDF',
+        vars.sendInfographic && 'Infographic',
+        vars.sendSlides && 'Slide Deck',
+        vars.sendMindMap && 'Mind Map',
+        vars.sendPptx && 'PPTX',
+      ].filter(Boolean).join(', ');
+      toast.success(`Sent to patient: ${types}`);
+      utils.admin.consultations.invalidate();
+      setSendingKey(null);
+    },
+    onError: (err) => {
+      toast.error(`Send failed: ${err.message}`);
+      setSendingKey(null);
     },
   });
 
@@ -512,25 +533,48 @@ export default function AdminPanel() {
                       <div className="mt-4 p-4 bg-muted rounded-lg space-y-3">
                         <h4 className="font-semibold text-sm">Generated Materials for Review</h4>
                         
-                        {consultation.aiReportUrl && (
-                          <div className="flex items-center justify-between p-2 bg-background rounded">
-                            <span className="text-sm">📄 Medical Report</span>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" asChild>
-                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
-                                  View
-                                </a>
-                              </Button>
+                        {/* PDF Report row */}
+                        {consultation.aiReportUrl && (() => {
+                          const pdfKey = `${consultation.id}-pdf`;
+                          const sent = (consultation as any).sentPdfToPatient;
+                          return (
+                            <div className={`flex items-center justify-between p-2 rounded ${sent ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : 'bg-background'}`}>
+                              <span className="text-sm flex items-center gap-1">
+                                📄 Medical Report
+                                {sent && <span className="text-xs text-green-600 font-medium ml-1">✓ Sent</span>}
+                              </span>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" asChild>
+                                  <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">View</a>
+                                </Button>
+                                {!sent && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    disabled={sendingKey === pdfKey}
+                                    onClick={() => {
+                                      setSendingKey(pdfKey);
+                                      sendReportToPatient.mutate({ consultationId: consultation.id, sendPdf: true });
+                                    }}
+                                  >
+                                    {sendingKey === pdfKey ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Sending...</> : <><Send className="h-3 w-3 mr-1" />Send to Patient</>}
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                         
                         {(() => {
                           const infKey = `${consultation.id}-infographic`;
+                          const infSent = (consultation as any).sentInfographicToPatient;
                           return (
                             <div className="space-y-1">
-                              <div className={`flex items-center justify-between p-2 rounded ${consultation.aiInfographicUrl ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
-                                <span className="text-sm">📈 {consultation.aiInfographicUrl ? 'Infographic' : 'Infographic (Not Generated)'}</span>
+                              <div className={`flex items-center justify-between p-2 rounded ${infSent ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : consultation.aiInfographicUrl ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
+                                <span className="text-sm flex items-center gap-1">
+                                  📈 {consultation.aiInfographicUrl ? 'Infographic' : 'Infographic (Not Generated)'}
+                                  {infSent && <span className="text-xs text-green-600 font-medium ml-1">✓ Sent</span>}
+                                </span>
                                 <div className="flex gap-1 flex-wrap justify-end">
                                   {/* Hidden file input for Replace */}
                                   <input
@@ -576,6 +620,19 @@ export default function AdminPanel() {
                                       <><Link2 className="h-3 w-3 mr-1" />Upload Link</>
                                     )}
                                   </Button>
+                                  {consultation.aiInfographicUrl && !infSent && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                      disabled={sendingKey === infKey}
+                                      onClick={() => {
+                                        setSendingKey(infKey);
+                                        sendReportToPatient.mutate({ consultationId: consultation.id, sendInfographic: true });
+                                      }}
+                                    >
+                                      {sendingKey === infKey ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Sending...</> : <><Send className="h-3 w-3 mr-1" />Send</> }
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               {uploadLinks[infKey] && (
@@ -594,10 +651,14 @@ export default function AdminPanel() {
                           const slideKey = `${consultation.id}-slides`;
                           const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
                           const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          const slidesSent = (consultation as any).sentSlidesToPatient;
                           return (
                             <div className="space-y-1">
-                              <div className={`flex items-center justify-between p-2 rounded ${hasGeneratedSlides ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
-                                <span className="text-sm">📽️ {hasGeneratedSlides ? 'Slide Deck' : 'Slide Deck (Not Generated)'}</span>
+                              <div className={`flex items-center justify-between p-2 rounded ${slidesSent ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : hasGeneratedSlides ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
+                                <span className="text-sm flex items-center gap-1">
+                                  🏗️ {hasGeneratedSlides ? 'Slide Deck' : 'Slide Deck (Not Generated)'}
+                                  {slidesSent && <span className="text-xs text-green-600 font-medium ml-1">✓ Sent</span>}
+                                </span>
                                 <div className="flex gap-1 flex-wrap justify-end">
                                   {/* Hidden file input for Replace */}
                                   <input
@@ -643,6 +704,19 @@ export default function AdminPanel() {
                                       <><Link2 className="h-3 w-3 mr-1" />Upload Link</>
                                     )}
                                   </Button>
+                                  {hasGeneratedSlides && !slidesSent && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                      disabled={sendingKey === slideKey}
+                                      onClick={() => {
+                                        setSendingKey(slideKey);
+                                        sendReportToPatient.mutate({ consultationId: consultation.id, sendSlides: true });
+                                      }}
+                                    >
+                                      {sendingKey === slideKey ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Sending...</> : <><Send className="h-3 w-3 mr-1" />Send</> }
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               {uploadLinks[slideKey] && (

@@ -396,62 +396,61 @@ export default function Dashboard() {
                     <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <p className="text-sm font-medium mb-2">{language === "ar" ? "التحليل الطبي" : "Medical Analysis"}</p>
                       <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {consultation.aiReportUrl && (
-                          <Button size="sm" variant="outline" asChild className="justify-start">
-                            <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
-                              <Download className="w-4 h-4 mr-2" />
-                              {language === "ar" ? "التقرير الطبي" : "Medical Report"}
-                            </a>
-                          </Button>
-                        )}
-                        {consultation.aiInfographicUrl && (
-                          <Button size="sm" variant="outline" asChild className="justify-start">
-                            <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                              <FileText className="w-4 h-4 mr-2" />
-                              {language === "ar" ? "الإنفوجرافيك" : "Infographic"}
-                            </a>
-                          </Button>
-                        )}
-                        {consultation.aiSlideDeckUrl && (
-                          <Button size="sm" variant="outline" asChild className="justify-start">
-                            <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
-                              <Presentation className="w-4 h-4 mr-2" />
-                              {language === "ar" ? "العرض التقديمي" : "Slide Deck"}
-                            </a>
-                          </Button>
-                        )}
-                        {consultation.aiMindMapUrl && (
-                          <Button size="sm" variant="outline" asChild className="justify-start">
-                            <a href={consultation.aiMindMapUrl} target="_blank" rel="noopener noreferrer">
-                              <Map className="w-4 h-4 mr-2" />
-                              {language === "ar" ? "الخريطة الذهنية" : "Mind Map"}
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                      {/* Download Professional PPTX Report — only shown when available */}
-                      {(consultation as any).pptxReportUrl && (
-                        <div className="mt-3">
-                          <Button
-                            size="sm"
-                            asChild
-                            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-                          >
-                            <a
-                              href={(consultation as any).pptxReportUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download
-                            >
-                              <Download className="w-4 h-4" />
-                              {language === "ar"
-                                ? "تحميل التقرير الاحترافي (PPTX)"
-                                : "Download Professional Report (PPTX)"}
-                            </a>
-                          </Button>
-                        </div>
-                      )}
+                      {/* Only show reports that admin has explicitly sent to patient */}
+                      {(() => {
+                        const c = consultation as any;
+                        const hasSentAny = c.sentPdfToPatient || c.sentInfographicToPatient || c.sentSlidesToPatient || c.sentMindMapToPatient || c.sentPptxToPatient;
+                        if (!hasSentAny) return (
+                          <p className="text-xs text-muted-foreground italic">
+                            {language === "ar" ? "جاري مراجعة تقاريرك من قبل الفريق الطبي. ستصلك إشعار عند جاهزيتها." : "Your reports are being reviewed by our medical team. You will be notified when they are ready."}
+                          </p>
+                        );
+                        return (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {c.sentPdfToPatient && consultation.aiReportUrl && (
+                              <Button size="sm" variant="outline" asChild className="justify-start">
+                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
+                                  <Download className="w-4 h-4 mr-2" />
+                                  {language === "ar" ? "التقرير الطبي" : "Medical Report"}
+                                </a>
+                              </Button>
+                            )}
+                            {c.sentInfographicToPatient && consultation.aiInfographicUrl && (
+                              <Button size="sm" variant="outline" asChild className="justify-start">
+                                <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  {language === "ar" ? "الإنفوجرافيك" : "Infographic"}
+                                </a>
+                              </Button>
+                            )}
+                            {c.sentSlidesToPatient && consultation.aiSlideDeckUrl && (
+                              <Button size="sm" variant="outline" asChild className="justify-start">
+                                <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
+                                  <Presentation className="w-4 h-4 mr-2" />
+                                  {language === "ar" ? "العرض التقديمي" : "Slide Deck"}
+                                </a>
+                              </Button>
+                            )}
+                            {c.sentMindMapToPatient && consultation.aiMindMapUrl && (
+                              <Button size="sm" variant="outline" asChild className="justify-start">
+                                <a href={consultation.aiMindMapUrl} target="_blank" rel="noopener noreferrer">
+                                  <Map className="w-4 h-4 mr-2" />
+                                  {language === "ar" ? "الخريطة الذهنية" : "Mind Map"}
+                                </a>
+                              </Button>
+                            )}
+                            {/* Download Professional PPTX Report — only shown when sent */}
+                            {c.sentPptxToPatient && c.pptxReportUrl && (
+                              <Button size="sm" asChild className="col-span-2 md:col-span-3 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white justify-center">
+                                <a href={c.pptxReportUrl} target="_blank" rel="noopener noreferrer" download>
+                                  <Download className="w-4 h-4" />
+                                  {language === "ar" ? "تحميل التقرير الاحترافي (PPTX)" : "Download Professional Report (PPTX)"}
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                   {consultation.followUpNotes && (

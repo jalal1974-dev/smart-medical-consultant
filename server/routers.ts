@@ -1153,6 +1153,56 @@ export const appRouter = router({
         return { success: true, mindMapUrl: url };
       }),
 
+    // Send one or more reports to the patient — sets the sentXxxToPatient flags
+    sendReportToPatient: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        // Which reports to send (at least one must be true)
+        sendPdf: z.boolean().default(false),
+        sendInfographic: z.boolean().default(false),
+        sendSlides: z.boolean().default(false),
+        sendMindMap: z.boolean().default(false),
+        sendPptx: z.boolean().default(false),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+
+        const updates: Record<string, any> = {
+          sentToPatientAt: new Date(),
+          sentToPatientBy: ctx.user.id,
+        };
+        if (input.sendPdf) updates.sentPdfToPatient = true;
+        if (input.sendInfographic) updates.sentInfographicToPatient = true;
+        if (input.sendSlides) updates.sentSlidesToPatient = true;
+        if (input.sendMindMap) updates.sentMindMapToPatient = true;
+        if (input.sendPptx) updates.sentPptxToPatient = true;
+
+        await db.updateConsultation(input.consultationId, updates);
+
+        // Fire-and-forget email notification
+        const sentCount = [input.sendPdf, input.sendInfographic, input.sendSlides, input.sendMindMap, input.sendPptx].filter(Boolean).length;
+        if (sentCount > 0 && consultation.patientEmail) {
+          // Pick the most prominent URL to link in the email
+          const reportUrl =
+            (input.sendPptx && consultation.pptxReportUrl) ||
+            (input.sendPdf && consultation.aiReportUrl) ||
+            (input.sendInfographic && consultation.aiInfographicUrl) ||
+            (input.sendSlides && consultation.aiSlideDeckUrl) ||
+            (input.sendMindMap && consultation.aiMindMapUrl) ||
+            null;
+          sendReportReadyNotification(
+            consultation.patientEmail,
+            consultation.patientName,
+            consultation.id,
+            (reportUrl as string | null) ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
+          ).catch(err => console.error('[Email] sendReportToPatient notification failed:', err));
+        }
+
+        return { success: true, updatedFields: Object.keys(updates) };
+      }),
+
     // Get report generation audit log
     getReportLogs: adminProcedure
       .input(z.object({
