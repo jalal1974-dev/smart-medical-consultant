@@ -338,7 +338,10 @@ export const reportGenerationLogs = mysqlTable("report_generation_logs", {
     "pptx",
     "all",
     "upload_infographic",
-    "upload_pptx"
+    "upload_pptx",
+    "upload_pdf",
+    "upload_slides",
+    "upload_mindmap"
   ]).notNull(),
   action: mysqlEnum("action", ["generate", "regenerate", "upload"]).default("generate").notNull(),
   status: mysqlEnum("status", ["success", "failed"]).default("success").notNull(),

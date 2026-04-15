@@ -709,3 +709,14 @@
 - [x] Wire into regenerateAllReports: send email after all reports are saved
 - [x] Bilingual email body (AR + EN based on patient preferredLanguage)
 - [x] Include direct download link in email
+
+## Admin: Upload/Replace Any Report (PDF, Infographic, Slides, MindMap, PPTX)
+- [x] Add uploadReplacePdf procedure (accepts base64 PDF, uploads to S3, updates aiReportUrl)
+- [x] Add uploadReplaceSlides procedure (accepts base64 PPTX/PDF, uploads to S3, updates aiSlideDeckUrl)
+- [x] Add uploadReplaceMindMap procedure (accepts base64 image, uploads to S3, updates aiMindMapUrl)
+- [x] Update AIConsultationReview: add Upload/Replace button to PDF row
+- [x] Update AIConsultationReview: add Upload/Replace button to Slide Deck row
+- [x] Update AIConsultationReview: add Upload/Replace button to Mind Map row
+- [x] Infographic and PPTX already have Upload buttons — verified still work
+- [x] Bilingual toasts + loading states for all new upload buttons
+- [x] Extended report_type enum in schema + DB migration applied

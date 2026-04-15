@@ -1067,6 +1067,92 @@ export const appRouter = router({
         return { success: true, pptxUrl };
       }),
 
+    // Upload and replace PDF report with a custom file (base64)
+    uploadReplacePdf: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const key = `reports/custom-pdf-${input.consultationId}-${nanoid()}.pdf`;
+        const { url } = await storagePut(key, buffer, 'application/pdf');
+        await db.updateConsultation(input.consultationId, { aiReportUrl: url });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'upload_pdf',
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
+        return { success: true, pdfUrl: url };
+      }),
+
+    // Upload and replace slide deck with a custom file (base64 PDF or PPTX)
+    uploadReplaceSlides: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        mimeType: z.string().default('application/pdf'),
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const isPptx = input.mimeType.includes('presentationml');
+        const ext = isPptx ? 'pptx' : 'pdf';
+        const key = `slides/custom-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        await db.updateConsultation(input.consultationId, { aiSlideDeckUrl: url });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'upload_slides',
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
+        return { success: true, slidesUrl: url };
+      }),
+
+    // Upload and replace mind map with a custom image (base64)
+    uploadReplaceMindMap: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        mimeType: z.string().default('image/png'),
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const ext = input.mimeType.split('/')[1] || 'png';
+        const key = `mindmaps/custom-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        await db.updateConsultation(input.consultationId, { aiMindMapUrl: url });
+        await db.insertReportLog({
+          consultationId: consultation.id,
+          patientName: consultation.patientName,
+          adminId: ctx.user.id,
+          adminName: ctx.user.name ?? 'Admin',
+          reportType: 'upload_mindmap',
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
+        return { success: true, mindMapUrl: url };
+      }),
+
     // Get report generation audit log
     getReportLogs: adminProcedure
       .input(z.object({

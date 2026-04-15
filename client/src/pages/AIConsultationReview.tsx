@@ -118,6 +118,30 @@ export default function AIConsultationReview() {
   const isAnyRegenPending = regenInfographic.isPending || regenPdf.isPending || regenSlides.isPending || regenMindMap.isPending || regenAll.isPending;
 
   // ── Upload-replace mutations ──────────────────────────────────────────────────
+  const uploadPdf = trpc.admin.uploadReplacePdf.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم استبدال تقرير PDF بنجاح" : "PDF report replaced successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
+  const uploadSlides = trpc.admin.uploadReplaceSlides.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم استبدال العرض التقديمي بنجاح" : "Slide deck replaced successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
+  const uploadMindMap = trpc.admin.uploadReplaceMindMap.useMutation({
+    onSuccess: () => {
+      toast.success(language === "ar" ? "تم استبدال الخريطة الذهنية بنجاح" : "Mind map replaced successfully");
+      utils.admin.consultations.invalidate();
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل الرفع: ${e.message}` : `Upload failed: ${e.message}`),
+  });
+
   const uploadInfographic = trpc.admin.uploadReplaceInfographic.useMutation({
     onSuccess: () => {
       toast.success(language === "ar" ? "تم استبدال الإنفوجرافيك بنجاح" : "Infographic replaced successfully");
@@ -157,6 +181,63 @@ export default function AIConsultationReview() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+
+  const handlePdfUpload = (consultationId: number) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'application/pdf';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(language === "ar" ? "حجم الملف يتجاوز 50 ميغابايت" : "File exceeds 50 MB limit");
+        return;
+      }
+      try {
+        const base64 = await readFileAsBase64(file);
+        uploadPdf.mutate({ consultationId, fileBase64: base64, fileName: file.name });
+      } catch { toast.error(language === "ar" ? "فشل قراءة الملف" : "Failed to read file"); }
+    };
+    inp.click();
+  };
+
+  const handleSlidesUpload = (consultationId: number) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'application/pdf,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(language === "ar" ? "حجم الملف يتجاوز 50 ميغابايت" : "File exceeds 50 MB limit");
+        return;
+      }
+      try {
+        const base64 = await readFileAsBase64(file);
+        uploadSlides.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name });
+      } catch { toast.error(language === "ar" ? "فشل قراءة الملف" : "Failed to read file"); }
+    };
+    inp.click();
+  };
+
+  const handleMindMapUpload = (consultationId: number) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/png,image/jpeg,image/webp,image/gif,image/svg+xml';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(language === "ar" ? "حجم الملف يتجاوز 10 ميغابايت" : "File exceeds 10 MB limit");
+        return;
+      }
+      try {
+        const base64 = await readFileAsBase64(file);
+        uploadMindMap.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name });
+      } catch { toast.error(language === "ar" ? "فشل قراءة الملف" : "Failed to read file"); }
+    };
+    inp.click();
+  };
 
   const handleInfographicUpload = (consultationId: number) => {
     const inp = document.createElement('input');
@@ -511,16 +592,29 @@ export default function AIConsultationReview() {
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={regenPdf.isPending || !selected.aiAnalysis}
-                          onClick={() => regenPdf.mutate({ consultationId: selected.id })}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {regenPdf.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
-                        </Button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadPdf.isPending}
+                            onClick={() => handlePdfUpload(selected.id)}
+                            className="gap-1.5"
+                            title={language === "ar" ? "استبدال بملف PDF مخصص" : "Replace with custom PDF"}
+                          >
+                            {uploadPdf.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "استبدال" : "Replace"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={regenPdf.isPending || !selected.aiAnalysis}
+                            onClick={() => regenPdf.mutate({ consultationId: selected.id })}
+                            className="gap-1.5"
+                          >
+                            {regenPdf.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Infographic row */}
@@ -579,16 +673,29 @@ export default function AIConsultationReview() {
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={regenSlides.isPending || !selected.aiAnalysis}
-                          onClick={() => regenSlides.mutate({ consultationId: selected.id })}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
-                        </Button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadSlides.isPending}
+                            onClick={() => handleSlidesUpload(selected.id)}
+                            className="gap-1.5"
+                            title={language === "ar" ? "استبدال بملف PDF أو PPTX مخصص" : "Replace with custom PDF or PPTX"}
+                          >
+                            {uploadSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "استبدال" : "Replace"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={regenSlides.isPending || !selected.aiAnalysis}
+                            onClick={() => regenSlides.mutate({ consultationId: selected.id })}
+                            className="gap-1.5"
+                          >
+                            {regenSlides.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                          </Button>
+                        </div>
                       </div>
 
                       {/* PPTX Report row */}
@@ -640,16 +747,29 @@ export default function AIConsultationReview() {
                             : <p className="text-xs text-muted-foreground">{language === "ar" ? "غير متاح" : "Not generated"}</p>
                           }
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={regenMindMap.isPending || !selected.aiAnalysis}
-                          onClick={() => regenMindMap.mutate({ consultationId: selected.id })}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {regenMindMap.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {language === "ar" ? "إعادة توليد" : "Regenerate"}
-                        </Button>
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploadMindMap.isPending}
+                            onClick={() => handleMindMapUpload(selected.id)}
+                            className="gap-1.5"
+                            title={language === "ar" ? "استبدال بصورة مخصصة" : "Replace with custom image"}
+                          >
+                            {uploadMindMap.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "استبدال" : "Replace"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={regenMindMap.isPending || !selected.aiAnalysis}
+                            onClick={() => regenMindMap.mutate({ consultationId: selected.id })}
+                            className="gap-1.5"
+                          >
+                            {regenMindMap.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "إعادة توليد" : "Regenerate"}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
