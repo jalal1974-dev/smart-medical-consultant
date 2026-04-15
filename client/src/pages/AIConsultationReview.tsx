@@ -75,6 +75,26 @@ export default function AIConsultationReview() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [uploadLink, setUploadLink] = useState<{ url: string; reportType: string; expiresAt: number } | null>(null);
 
+  // ── Progress tracking for long AI operations ─────────────────────────────────
+  type ProgressState = { step: string; detail?: string } | null;
+  const [progress, setProgress] = useState<Record<string, ProgressState>>({});
+
+  const setStep = (key: string, step: string, detail?: string) =>
+    setProgress(p => ({ ...p, [key]: { step, detail } }));
+  const clearStep = (key: string) =>
+    setProgress(p => { const n = { ...p }; delete n[key]; return n; });
+
+  // Retry-in-toast helper
+  const toastError = (msg: string, retryFn?: () => void) => {
+    toast.error(msg, {
+      duration: 8000,
+      action: retryFn ? {
+        label: language === "ar" ? "إعادة المحاولة" : "Retry",
+        onClick: retryFn,
+      } : undefined,
+    });
+  };
+
   const generateUploadToken = trpc.uploadToken.generate.useMutation({
     onSuccess: (data, vars) => {
       const url = `${window.location.origin}/upload/${data.token}`;
@@ -85,43 +105,45 @@ export default function AIConsultationReview() {
 
   // ── Regeneration mutations ──────────────────────────────────────────────────
   const regenInfographic = trpc.admin.regenerateInfographic.useMutation({
-    onSuccess: () => {
-      toast.success(language === "ar" ? "تم إعادة توليد الإنفوجرافيك بنجاح" : "Infographic regenerated successfully");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+    onMutate: () => setStep('infographic', language === 'ar' ? 'جاري توليد الصورة…' : 'Generating image…', language === 'ar' ? 'قد يستغرق حتى 90 ثانية' : 'May take up to 90 seconds'),
+    onSuccess: () => { clearStep('infographic'); toast.success(language === 'ar' ? 'تم إعادة توليد الإنفوجرافيك بنجاح' : 'Infographic regenerated successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e, vars) => { clearStep('infographic'); toastError(language === 'ar' ? `فشل: ${e.message}` : `Failed: ${e.message}`, () => regenInfographic.mutate(vars)); },
   });
 
   const regenPdf = trpc.admin.regeneratePdf.useMutation({
-    onSuccess: () => {
-      toast.success(language === "ar" ? "تم إعادة توليد تقرير PDF بنجاح" : "PDF report regenerated successfully");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+    onMutate: () => setStep('pdf', language === 'ar' ? 'جاري توليد تقرير PDF…' : 'Generating PDF report…'),
+    onSuccess: () => { clearStep('pdf'); toast.success(language === 'ar' ? 'تم إعادة توليد تقرير PDF بنجاح' : 'PDF report regenerated successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e, vars) => { clearStep('pdf'); toastError(language === 'ar' ? `فشل: ${e.message}` : `Failed: ${e.message}`, () => regenPdf.mutate(vars)); },
   });
 
   const regenSlides = trpc.admin.regenerateSlides.useMutation({
-    onSuccess: () => {
-      toast.success(language === "ar" ? "تم إعادة توليد العرض التقديمي بنجاح" : "Slide deck regenerated successfully");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+    onMutate: () => setStep('slides', language === 'ar' ? 'جاري توليد العرض التقديمي…' : 'Generating slide deck…', language === 'ar' ? 'قد يستغرق حتى 60 ثانية' : 'May take up to 60 seconds'),
+    onSuccess: () => { clearStep('slides'); toast.success(language === 'ar' ? 'تم إعادة توليد العرض التقديمي بنجاح' : 'Slide deck regenerated successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e, vars) => { clearStep('slides'); toastError(language === 'ar' ? `فشل: ${e.message}` : `Failed: ${e.message}`, () => regenSlides.mutate(vars)); },
   });
 
   const regenMindMap = trpc.admin.regenerateMindMap.useMutation({
-    onSuccess: () => {
-      toast.success(language === "ar" ? "تم إعادة توليد الخريطة الذهنية بنجاح" : "Mind map regenerated successfully");
-      utils.admin.consultations.invalidate();
-    },
-    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+    onMutate: () => setStep('mindmap', language === 'ar' ? 'جاري توليد الخريطة الذهنية…' : 'Generating mind map…'),
+    onSuccess: () => { clearStep('mindmap'); toast.success(language === 'ar' ? 'تم إعادة توليد الخريطة الذهنية بنجاح' : 'Mind map regenerated successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e, vars) => { clearStep('mindmap'); toastError(language === 'ar' ? `فشل: ${e.message}` : `Failed: ${e.message}`, () => regenMindMap.mutate(vars)); },
   });
 
   const regenAll = trpc.admin.regenerateAllReports.useMutation({
+    onMutate: () => {
+      setStep('infographic', language === 'ar' ? 'جاري توليد الإنفوجرافيك…' : 'Generating infographic…');
+      setStep('pdf', language === 'ar' ? 'جاري توليد PDF…' : 'Generating PDF…');
+      setStep('slides', language === 'ar' ? 'جاري توليد العرض…' : 'Generating slides…');
+      setStep('mindmap', language === 'ar' ? 'جاري توليد الخريطة…' : 'Generating mind map…');
+    },
     onSuccess: () => {
-      toast.success(language === "ar" ? "تم إعادة توليد جميع التقارير بنجاح" : "All reports regenerated successfully");
+      ['infographic','pdf','slides','mindmap'].forEach(clearStep);
+      toast.success(language === 'ar' ? 'تم إعادة توليد جميع التقارير بنجاح' : 'All reports regenerated successfully');
       utils.admin.consultations.invalidate();
     },
-    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+    onError: (e, vars) => {
+      ['infographic','pdf','slides','mindmap'].forEach(clearStep);
+      toastError(language === 'ar' ? `فشل: ${e.message}` : `Failed: ${e.message}`, () => regenAll.mutate(vars));
+    },
   });
 
   const isAnyRegenPending = regenInfographic.isPending || regenPdf.isPending || regenSlides.isPending || regenMindMap.isPending || regenAll.isPending;
@@ -168,10 +190,11 @@ export default function AIConsultationReview() {
   });
 
   const generatePptx = trpc.admin.generatePptxReport.useMutation({
-    onSuccess: (data) => {
-      toast.success(language === "ar" ? "تم توليد PPTX بنجاح" : "PPTX generated successfully");
+    onMutate: () => setStep('pptx', language === 'ar' ? 'جاري توليد تقرير PPTX…' : 'Generating PPTX report…', language === 'ar' ? 'قد يستغرق حتى 90 ثانية' : 'May take up to 90 seconds'),
+    onSuccess: (data, vars) => {
+      clearStep('pptx');
+      toast.success(language === 'ar' ? 'تم توليد PPTX بنجاح' : 'PPTX generated successfully');
       utils.admin.consultations.invalidate();
-      // Auto-download
       if (data?.pptxUrl) {
         const a = document.createElement('a');
         a.href = data.pptxUrl;
@@ -179,7 +202,7 @@ export default function AIConsultationReview() {
         a.click();
       }
     },
-    onError: (e) => toast.error(language === "ar" ? `فشل التوليد: ${e.message}` : `Generation failed: ${e.message}`),
+    onError: (e, vars) => { clearStep('pptx'); toastError(language === 'ar' ? `فشل التوليد: ${e.message}` : `Generation failed: ${e.message}`, () => generatePptx.mutate(vars)); },
   });
 
   // Helper: read file as base64
@@ -589,6 +612,17 @@ export default function AIConsultationReview() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
+                      {/* ── Active progress banners ── */}
+                      {Object.entries(progress).map(([key, state]) => state && (
+                        <div key={key} className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{state.step}</span>
+                            {state.detail && <span className="ml-2 text-xs opacity-70">{state.detail}</span>}
+                          </div>
+                        </div>
+                      ))}
+
                       {/* PDF Report row */}
                       <div className="flex items-center gap-3 p-3 border rounded-lg">
                         <FileText className="w-5 h-5 text-primary shrink-0" />

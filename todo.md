@@ -741,3 +741,11 @@
 - [x] Fix: Added AbortSignal.timeout(180_000) to tRPC fetch client in main.tsx
 - [x] Verified: Upload (Replace) buttons exist for Infographic and Slide Deck rows — already present
 - [x] Upload buttons confirmed: Upload Link + Replace + Regenerate all present on each row
+
+## Admin: Progress Indicator + Retry Toast + Upload/Replace Buttons
+- [x] Add step-by-step progress state (Generating... Uploading... Done) for each generation mutation
+- [x] Show live blue progress banner inside Generated Reports card while generation is running
+- [x] Add Retry button in error toasts for each report type (duration 8s, action button)
+- [x] Confirmed Upload and Replace buttons visible for all 5 report types
+- [x] generatePptx also gets progress tracking + retry
+- [x] regenAll sets progress on all 4 rows simultaneously
