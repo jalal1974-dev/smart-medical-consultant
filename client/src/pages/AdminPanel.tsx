@@ -19,6 +19,7 @@ import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
+import { Link2, Copy, Check } from "lucide-react";
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -52,6 +53,37 @@ export default function AdminPanel() {
   const thumbnailFileRef = useRef<HTMLInputElement>(null);
 
   const uploadFile = trpc.upload.file.useMutation();
+
+  // Upload link state for infographic/slides
+  const [uploadLinks, setUploadLinks] = useState<Record<string, string>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState<string | null>(null);
+
+  const generateUploadToken = trpc.uploadToken.generate.useMutation({
+    onError: (error) => {
+      toast.error(`Failed to generate upload link: ${error.message}`);
+      setGeneratingLink(null);
+    },
+  });
+
+  const handleGenerateUploadLink = async (consultationId: number, reportType: 'infographic' | 'slides', patientName: string) => {
+    const key = `${consultationId}-${reportType}`;
+    setGeneratingLink(key);
+    try {
+      const result = await generateUploadToken.mutateAsync({ consultationId, reportType });
+      const fullUrl = `${window.location.origin}/upload/${result.token}`;
+      setUploadLinks(prev => ({ ...prev, [key]: fullUrl }));
+      toast.success('Upload link generated! Share it with the designer.');
+    } finally {
+      setGeneratingLink(null);
+    }
+  };
+
+  const handleCopyLink = (key: string, url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const updateConsultationStatus = trpc.admin.updateStatus.useMutation({
     onSuccess: () => {
@@ -447,56 +479,85 @@ export default function AdminPanel() {
                         
                         {(() => {
                           // Infographic is always an image (not JSON), so show View button when available
-                          if (consultation.aiInfographicUrl) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📈 Infographic</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                                      View
-                                    </a>
-                                  </Button>
+                          const infKey = `${consultation.id}-infographic`;
+                          return (
+                            <div className="space-y-1">
+                              <div className={`flex items-center justify-between p-2 rounded ${consultation.aiInfographicUrl ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
+                                <span className="text-sm">📈 {consultation.aiInfographicUrl ? 'Infographic' : 'Infographic (Not Generated)'}</span>
+                                <div className="flex gap-1 flex-wrap justify-end">
+                                  {consultation.aiInfographicUrl && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">View</a>
+                                    </Button>
+                                  )}
                                   <RegenerateInfographicButton consultationId={consultation.id} />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                    disabled={generatingLink === infKey}
+                                    onClick={() => handleGenerateUploadLink(consultation.id, 'infographic', consultation.patientName)}
+                                  >
+                                    {generatingLink === infKey ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                                    ) : (
+                                      <><Link2 className="h-3 w-3 mr-1" />Upload Link</>
+                                    )}
+                                  </Button>
                                 </div>
                               </div>
-                            );
-                          } else {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                                <span className="text-sm">📈 Infographic (Content Prepared)</span>
-                                <RegenerateInfographicButton consultationId={consultation.id} />
-                              </div>
-                            );
-                          }
+                              {uploadLinks[infKey] && (
+                                <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 text-xs">
+                                  <span className="flex-1 truncate text-blue-700 dark:text-blue-300 font-mono">{uploadLinks[infKey]}</span>
+                                  <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleCopyLink(infKey, uploadLinks[infKey])}>
+                                    {copiedKey === infKey ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
                         })()}
                         
                         {(() => {
-                          // Check if slide deck is a JSON file (content structure) or actual slides
+                          const slideKey = `${consultation.id}-slides`;
                           const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
                           const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
-                          
-                          if (hasGeneratedSlides) {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-background rounded">
-                                <span className="text-sm">📽️ Slide Deck</span>
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" asChild>
-                                    <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">
-                                      View
-                                    </a>
+                          return (
+                            <div className="space-y-1">
+                              <div className={`flex items-center justify-between p-2 rounded ${hasGeneratedSlides ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
+                                <span className="text-sm">📽️ {hasGeneratedSlides ? 'Slide Deck' : 'Slide Deck (Not Generated)'}</span>
+                                <div className="flex gap-1 flex-wrap justify-end">
+                                  {hasGeneratedSlides && (
+                                    <Button size="sm" variant="outline" asChild>
+                                      <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">View</a>
+                                    </Button>
+                                  )}
+                                  <RegenerateSlidesButton consultationId={consultation.id} />
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                    disabled={generatingLink === slideKey}
+                                    onClick={() => handleGenerateUploadLink(consultation.id, 'slides', consultation.patientName)}
+                                  >
+                                    {generatingLink === slideKey ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                                    ) : (
+                                      <><Link2 className="h-3 w-3 mr-1" />Upload Link</>
+                                    )}
                                   </Button>
                                 </div>
                               </div>
-                            );
-                          } else {
-                            return (
-                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-950 rounded border border-amber-200 dark:border-amber-800">
-                                <span className="text-sm">📽️ Slide Deck (Content Prepared)</span>
-                                <RegenerateSlidesButton consultationId={consultation.id} />
-                              </div>
-                            );
-                          }
+                              {uploadLinks[slideKey] && (
+                                <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800 text-xs">
+                                  <span className="flex-1 truncate text-blue-700 dark:text-blue-300 font-mono">{uploadLinks[slideKey]}</span>
+                                  <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleCopyLink(slideKey, uploadLinks[slideKey])}>
+                                    {copiedKey === slideKey ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
                         })()}
                         
                         {consultation.specialistApprovalStatus === "pending_review" && (

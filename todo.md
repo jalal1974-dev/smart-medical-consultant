@@ -766,3 +766,12 @@
 - [x] Removed RequestSlideGenerationButton import from AdminPanel.tsx
 - [x] Both buttons now show a confirmation dialog then call the AI generation procedure immediately
 - [x] TypeScript: 0 errors
+
+## Admin: External Upload (Outside Website) — Full Implementation
+- [x] Verified consumeUploadToken saves to correct DB column per reportType (infographic→aiInfographicUrl, slides→aiSlideDeckUrl)
+- [x] Added Upload Link button to Infographic row in Admin Panel compact cards
+- [x] Added Upload Link button to Slide Deck row in Admin Panel compact cards
+- [x] Generated link appears inline below the row in a blue copyable panel
+- [x] Copy button with checkmark feedback
+- [x] ExternalUpload page already shows correct accepted file types per report type
+- [x] TypeScript: 0 errors
