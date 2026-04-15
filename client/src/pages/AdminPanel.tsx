@@ -649,14 +649,14 @@ export default function AdminPanel() {
                         
                         {(() => {
                           const slideKey = `${consultation.id}-slides`;
-                          const isJsonContent = consultation.aiSlideDeckUrl?.endsWith('.json');
-                          const hasGeneratedSlides = consultation.aiSlideDeckUrl && !isJsonContent;
+                          // Show View/Send for ANY existing URL (including manus-slides:// and .json content)
+                          const hasSlidesUrl = !!consultation.aiSlideDeckUrl;
                           const slidesSent = (consultation as any).sentSlidesToPatient;
                           return (
                             <div className="space-y-1">
-                              <div className={`flex items-center justify-between p-2 rounded ${slidesSent ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : hasGeneratedSlides ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
+                              <div className={`flex items-center justify-between p-2 rounded ${slidesSent ? 'bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800' : hasSlidesUrl ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
                                 <span className="text-sm flex items-center gap-1">
-                                  🏗️ {hasGeneratedSlides ? 'Slide Deck' : 'Slide Deck (Not Generated)'}
+                                  📄 {hasSlidesUrl ? 'Slide Deck' : 'Slide Deck (Not Generated)'}
                                   {slidesSent && <span className="text-xs text-green-600 font-medium ml-1">✓ Sent</span>}
                                 </span>
                                 <div className="flex gap-1 flex-wrap justify-end">
@@ -672,7 +672,7 @@ export default function AdminPanel() {
                                       e.target.value = '';
                                     }}
                                   />
-                                  {hasGeneratedSlides && (
+                                  {hasSlidesUrl && (
                                     <Button size="sm" variant="outline" asChild>
                                       <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">View</a>
                                     </Button>
@@ -704,7 +704,7 @@ export default function AdminPanel() {
                                       <><Link2 className="h-3 w-3 mr-1" />Upload Link</>
                                     )}
                                   </Button>
-                                  {hasGeneratedSlides && !slidesSent && (
+                                  {hasSlidesUrl && !slidesSent && (
                                     <Button
                                       size="sm"
                                       className="bg-green-600 hover:bg-green-700 text-white"
