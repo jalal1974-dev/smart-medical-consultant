@@ -701,3 +701,11 @@
 - [x] Create client/src/pages/AdminReportLog.tsx with sortable table (date, admin, type, consultation, status)
 - [x] Register /admin/report-log route in App.tsx
 - [x] Add "Report Log" / "سجل التقارير" nav link in admin navigation
+
+## Patient Email: Report Ready Notification
+- [x] Read emailNotifications.ts to understand existing send patterns
+- [x] Add sendReportReadyNotification(patientEmail, patientName, downloadUrl, lang) helper
+- [x] Wire into generatePptxReport: send email after pptxUrl is saved
+- [x] Wire into regenerateAllReports: send email after all reports are saved
+- [x] Bilingual email body (AR + EN based on patient preferredLanguage)
+- [x] Include direct download link in email

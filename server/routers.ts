@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
-import { sendConsultationReceipt, sendConsultationStatusUpdate, sendNewQuestionNotification, sendQuestionAnsweredNotification } from "./emailNotifications";
+import { sendConsultationReceipt, sendConsultationStatusUpdate, sendNewQuestionNotification, sendQuestionAnsweredNotification, sendReportReadyNotification } from "./emailNotifications";
 import { sendConsultationWhatsAppNotification } from "./whatsappNotification";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -949,6 +949,16 @@ export const appRouter = router({
           action: 'regenerate',
           status: 'success',
         });
+        // Notify patient by email that their reports are ready
+        if (consultation.patientEmail) {
+          sendReportReadyNotification(
+            consultation.patientEmail,
+            consultation.patientName,
+            consultation.id,
+            pdfUrl ?? `${ctx.req.headers.origin ?? 'https://smartmedcon-jsnymp6w.manus.space'}/dashboard`,
+            lang
+          ).catch(err => console.error('[Email] Failed to send report-ready notification:', err));
+        }
         return { success: true, infographicUrl, pdfUrl, slidesUrl, mindMapUrl };
       }),
 
@@ -1044,6 +1054,16 @@ export const appRouter = router({
           status: 'success',
           outputUrl: pptxUrl,
         });
+        // Notify patient by email that their professional report is ready
+        if (consultation.patientEmail) {
+          sendReportReadyNotification(
+            consultation.patientEmail,
+            consultation.patientName,
+            consultation.id,
+            pptxUrl,
+            (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
+          ).catch(err => console.error('[Email] Failed to send report-ready notification:', err));
+        }
         return { success: true, pptxUrl };
       }),
 

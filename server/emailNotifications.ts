@@ -322,6 +322,95 @@ ${teamLabel}
 }
 
 /**
+ * Send report-ready notification email to patient
+ * Triggered when admin generates or regenerates the professional PPTX report.
+ */
+export async function sendReportReadyNotification(
+  patientEmail: string,
+  patientName: string,
+  consultationId: number,
+  downloadUrl: string,
+  preferredLanguage: "en" | "ar"
+): Promise<boolean> {
+  const isArabic = preferredLanguage === "ar";
+
+  const title = isArabic
+    ? `تقريرك الاحترافي جاهز للتحميل - استشارة #${consultationId}`
+    : `Your Professional Report is Ready - Consultation #${consultationId}`;
+
+  const content = isArabic
+    ? `
+عزيزي/عزيزتي ${patientName}،
+
+يسعدنا إخبارك بأن تقريرك الطبي الاحترافي قد اكتمل وأصبح جاهزاً للتحميل.
+
+تفاصيل الاستشارة:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• رقم الاستشارة: #${consultationId}
+• نوع الملف: تقرير PPTX احترافي
+
+رابط التحميل المباشر:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${downloadUrl}
+
+يمكنك أيضاً تحميل التقرير في أي وقت من خلال لوحة التحكم الخاصة بك على موقعنا.
+
+يحتوي التقرير على:
+• ملخص شامل لحالتك الصحية
+• التشخيص والتوصيات الطبية
+• خطة العلاج المقترحة
+• معلومات مبنية على أحدث الأبحاث الطبية
+
+ننصحك بمشاركة هذا التقرير مع طبيبك المعالج لمناقشة خطة العلاج المناسبة.
+
+مع أطيب التمنيات بالصحة والعافية،
+فريق مستشارك الطبي الذكي
+
+ملاحظة: هذا البريد الإلكتروني تم إرساله تلقائياً، يرجى عدم الرد عليه.
+    `
+    : `
+Dear ${patientName},
+
+We are pleased to inform you that your professional medical report has been completed and is now ready for download.
+
+Consultation Details:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Consultation ID: #${consultationId}
+• File Type: Professional PPTX Report
+
+Direct Download Link:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${downloadUrl}
+
+You can also download the report at any time through your dashboard on our website.
+
+The report includes:
+• Comprehensive summary of your health condition
+• Diagnosis and medical recommendations
+• Proposed treatment plan
+• Information based on the latest medical research
+
+We recommend sharing this report with your treating physician to discuss the appropriate treatment plan.
+
+Best wishes for your health and wellness,
+Smart Medical Consultant Team
+
+Note: This email was sent automatically, please do not reply to it.
+    `;
+
+  try {
+    await notifyOwner({
+      title: `[Patient Email] ${title}`,
+      content: `To: ${patientEmail}\n\n${content}`,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send report ready notification:", error);
+    return false;
+  }
+}
+
+/**
  * Send password reset email to user
  * Uses the owner notification system as a relay since direct SMTP is not configured.
  * The owner/admin receives the reset link and can forward it to the user.
