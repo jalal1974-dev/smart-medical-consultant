@@ -85,6 +85,54 @@ export default function AdminPanel() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Replace (direct upload) for infographic and slide deck
+  const [replacingKey, setReplacingKey] = useState<string | null>(null);
+  const infographicReplaceRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const slidesReplaceRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const uploadReplaceInfographic = trpc.admin.uploadReplaceInfographic.useMutation({
+    onSuccess: () => {
+      toast.success('Infographic replaced successfully!');
+      utils.admin.consultations.invalidate();
+      setReplacingKey(null);
+    },
+    onError: (err) => {
+      toast.error(`Replace failed: ${err.message}`);
+      setReplacingKey(null);
+    },
+  });
+
+  const uploadReplaceSlides = trpc.admin.uploadReplaceSlides.useMutation({
+    onSuccess: () => {
+      toast.success('Slide deck replaced successfully!');
+      utils.admin.consultations.invalidate();
+      setReplacingKey(null);
+    },
+    onError: (err) => {
+      toast.error(`Replace failed: ${err.message}`);
+      setReplacingKey(null);
+    },
+  });
+
+  const handleReplaceFile = async (
+    file: File,
+    consultationId: number,
+    type: 'infographic' | 'slides'
+  ) => {
+    const key = `${consultationId}-${type}`;
+    setReplacingKey(key);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      if (type === 'infographic') {
+        await uploadReplaceInfographic.mutateAsync({ consultationId, fileBase64: base64, mimeType: file.type });
+      } else {
+        await uploadReplaceSlides.mutateAsync({ consultationId, fileBase64: base64, mimeType: file.type });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const updateConsultationStatus = trpc.admin.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Consultation updated");
@@ -478,18 +526,42 @@ export default function AdminPanel() {
                         )}
                         
                         {(() => {
-                          // Infographic is always an image (not JSON), so show View button when available
                           const infKey = `${consultation.id}-infographic`;
                           return (
                             <div className="space-y-1">
                               <div className={`flex items-center justify-between p-2 rounded ${consultation.aiInfographicUrl ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
                                 <span className="text-sm">📈 {consultation.aiInfographicUrl ? 'Infographic' : 'Infographic (Not Generated)'}</span>
                                 <div className="flex gap-1 flex-wrap justify-end">
+                                  {/* Hidden file input for Replace */}
+                                  <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    className="hidden"
+                                    ref={el => { infographicReplaceRefs.current[consultation.id] = el; }}
+                                    onChange={e => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleReplaceFile(file, consultation.id, 'infographic');
+                                      e.target.value = '';
+                                    }}
+                                  />
                                   {consultation.aiInfographicUrl && (
                                     <Button size="sm" variant="outline" asChild>
                                       <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">View</a>
                                     </Button>
                                   )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                    disabled={replacingKey === infKey}
+                                    onClick={() => infographicReplaceRefs.current[consultation.id]?.click()}
+                                  >
+                                    {replacingKey === infKey ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Replacing...</>
+                                    ) : (
+                                      <><Upload className="h-3 w-3 mr-1" />Replace</>
+                                    )}
+                                  </Button>
                                   <RegenerateInfographicButton consultationId={consultation.id} />
                                   <Button
                                     size="sm"
@@ -527,11 +599,36 @@ export default function AdminPanel() {
                               <div className={`flex items-center justify-between p-2 rounded ${hasGeneratedSlides ? 'bg-background' : 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800'}`}>
                                 <span className="text-sm">📽️ {hasGeneratedSlides ? 'Slide Deck' : 'Slide Deck (Not Generated)'}</span>
                                 <div className="flex gap-1 flex-wrap justify-end">
+                                  {/* Hidden file input for Replace */}
+                                  <input
+                                    type="file"
+                                    accept="application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                    className="hidden"
+                                    ref={el => { slidesReplaceRefs.current[consultation.id] = el; }}
+                                    onChange={e => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleReplaceFile(file, consultation.id, 'slides');
+                                      e.target.value = '';
+                                    }}
+                                  />
                                   {hasGeneratedSlides && (
                                     <Button size="sm" variant="outline" asChild>
                                       <a href={consultation.aiSlideDeckUrl || '#'} target="_blank" rel="noopener noreferrer">View</a>
                                     </Button>
                                   )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                    disabled={replacingKey === slideKey}
+                                    onClick={() => slidesReplaceRefs.current[consultation.id]?.click()}
+                                  >
+                                    {replacingKey === slideKey ? (
+                                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Replacing...</>
+                                    ) : (
+                                      <><Upload className="h-3 w-3 mr-1" />Replace</>
+                                    )}
+                                  </Button>
                                   <RegenerateSlidesButton consultationId={consultation.id} />
                                   <Button
                                     size="sm"

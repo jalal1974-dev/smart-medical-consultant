@@ -775,3 +775,10 @@
 - [x] Copy button with checkmark feedback
 - [x] ExternalUpload page already shows correct accepted file types per report type
 - [x] TypeScript: 0 errors
+
+## Admin Panel: Replace + View Buttons for Infographic & Slide Deck
+- [ ] Add Replace button (hidden file input) to Infographic row — calls uploadReplaceInfographic
+- [ ] Add View button to Infographic row (always visible when URL exists)
+- [ ] Add Replace button (hidden file input) to Slide Deck row — calls uploadReplaceSlides
+- [ ] Add View button to Slide Deck row (always visible when URL exists)
+- [ ] Each row layout: View | Replace | Regenerate | Upload Link
