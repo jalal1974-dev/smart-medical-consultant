@@ -43,9 +43,12 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        // Use 3-minute timeout for long-running AI generation mutations
+        const signal = init?.signal ?? AbortSignal.timeout(180_000);
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          signal,
         });
       },
     }),

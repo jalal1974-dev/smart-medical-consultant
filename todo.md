@@ -733,3 +733,11 @@
 - [x] Add "Upload Link" button to Infographic, Slide Deck, PPTX rows in AIConsultationReview
 - [x] Show generated link in copyable panel below reports card
 - [x] All uploads logged in report_generation_logs table
+
+## Bug Fix: Infographic/Slide Deck Generation Hang + Missing Upload Buttons
+- [x] Diagnose: tRPC client had no timeout (default browser fetch = no timeout) + server had no timeout set
+- [x] Fix: Added withTimeout() wrapper in contentGeneration.ts (90s for image gen, 60s for slides LLM)
+- [x] Fix: Set server.timeout = 180s, keepAliveTimeout = 185s, headersTimeout = 190s in server/_core/index.ts
+- [x] Fix: Added AbortSignal.timeout(180_000) to tRPC fetch client in main.tsx
+- [x] Verified: Upload (Replace) buttons exist for Infographic and Slide Deck rows — already present
+- [x] Upload buttons confirmed: Upload Link + Replace + Regenerate all present on each row

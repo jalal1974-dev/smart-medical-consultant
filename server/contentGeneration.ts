@@ -115,6 +115,16 @@ async function generatePDFReport(
 }
 
 /**
+ * Timeout wrapper — rejects after `ms` milliseconds
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+    promise.then((v) => { clearTimeout(timer); resolve(v); }).catch((e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
+/**
  * Generate infographic image from medical analysis
  */
 async function generateInfographic(
@@ -152,7 +162,7 @@ Language: All text must be in English only, no Arabic words.${
       }`;
     }
 
-    const result = await generateImage({ prompt });
+    const result = await withTimeout(generateImage({ prompt }), 90_000, 'generateImage');
     
     if (!result.url) {
       return null;
@@ -288,7 +298,11 @@ async function generateSlides(
   language: "en" | "ar"
 ): Promise<string | null> {
   try {
-    const slideContent = await generateSlideDeckContent(analysisResult, patientName, language);
+    const slideContent = await withTimeout(
+      generateSlideDeckContent(analysisResult, patientName, language),
+      60_000,
+      'generateSlideDeckContent'
+    );
     
     if (!slideContent.success || !slideContent.slides) {
       return null;

@@ -57,6 +57,11 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Allow long-running AI generation requests (3 minutes)
+  server.timeout = 180_000;
+  server.keepAliveTimeout = 185_000;
+  server.headersTimeout = 190_000;
+
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
