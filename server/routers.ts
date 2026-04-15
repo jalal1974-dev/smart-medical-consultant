@@ -1998,6 +1998,120 @@ export const appRouter = router({
     }),
   }),
 
+  // ── External Upload Tokens ──
+  uploadToken: router({
+    // Admin: generate a single-use upload link for a specific consultation report
+    generate: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        reportType: z.enum(['infographic', 'slides', 'pdf', 'mindmap', 'pptx']),
+        expiresInHours: z.number().min(1).max(168).default(48),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const { nanoid } = await import('nanoid');
+        const token = nanoid(48);
+        const expiresAt = Date.now() + input.expiresInHours * 60 * 60 * 1000;
+        await db.insertUploadToken({
+          token,
+          consultationId: input.consultationId,
+          patientName: consultation.patientName,
+          reportType: input.reportType,
+          createdByAdminId: ctx.user.id,
+          createdByAdminName: ctx.user.name ?? 'Admin',
+          expiresAt,
+        });
+        return { token, expiresAt };
+      }),
+
+    // Public: validate a token and return its metadata (no auth required)
+    validate: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const record = await db.getUploadToken(input.token);
+        if (!record) throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired link' });
+        if (record.usedAt) throw new TRPCError({ code: 'FORBIDDEN', message: 'This link has already been used' });
+        if (Date.now() > record.expiresAt) throw new TRPCError({ code: 'FORBIDDEN', message: 'This link has expired' });
+        return {
+          consultationId: record.consultationId,
+          patientName: record.patientName,
+          reportType: record.reportType,
+          expiresAt: record.expiresAt,
+        };
+      }),
+
+    // Public: consume a token — upload file, save to DB, notify patient
+    consume: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        fileBase64: z.string(),
+        mimeType: z.string(),
+        fileName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const record = await db.getUploadToken(input.token);
+        if (!record) throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired link' });
+        if (record.usedAt) throw new TRPCError({ code: 'FORBIDDEN', message: 'This link has already been used' });
+        if (Date.now() > record.expiresAt) throw new TRPCError({ code: 'FORBIDDEN', message: 'This link has expired' });
+
+        const { storagePut } = await import('./storage');
+        const { nanoid } = await import('nanoid');
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+
+        // Determine S3 key by report type
+        const extMap: Record<string, string> = {
+          'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp',
+          'application/pdf': 'pdf',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+        };
+        const ext = extMap[input.mimeType] ?? 'bin';
+        const key = `external-uploads/${record.reportType}-${record.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+
+        // Map reportType to DB column
+        const colMap: Record<string, string> = {
+          infographic: 'aiInfographicUrl',
+          slides: 'aiSlideDeckUrl',
+          pdf: 'aiReportUrl',
+          mindmap: 'aiMindMapUrl',
+          pptx: 'pptxReportUrl',
+        };
+        await db.updateConsultation(record.consultationId, { [colMap[record.reportType]]: url });
+        await db.markTokenUsed(input.token, url);
+
+        // Log the upload
+        await db.insertReportLog({
+          consultationId: record.consultationId,
+          patientName: record.patientName,
+          adminId: record.createdByAdminId,
+          adminName: record.createdByAdminName,
+          reportType: `upload_${record.reportType}` as any,
+          action: 'upload',
+          status: 'success',
+          outputUrl: url,
+        });
+
+        // Notify patient if PPTX or infographic
+        const consultation = await db.getConsultationById(record.consultationId);
+        if (consultation) {
+          const user = await db.getUserById(consultation.userId);
+          if (user?.email && (record.reportType === 'pptx' || record.reportType === 'infographic' || record.reportType === 'slides')) {
+            const { sendReportReadyNotification } = await import('./emailNotifications');
+            await sendReportReadyNotification(
+              user.email,
+              user.name || consultation.patientName,
+              record.consultationId,
+              url,
+              (consultation.preferredLanguage as 'en' | 'ar') ?? 'ar'
+            ).catch(() => {});
+          }
+        }
+
+        return { success: true, fileUrl: url };
+      }),
+  }),
+
   // ── Contact ──
   contact: router({
     sendMessage: publicProcedure

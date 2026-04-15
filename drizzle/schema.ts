@@ -420,6 +420,26 @@ export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 /**
+ * External upload tokens - secure single-use tokens for uploading reports from outside the website
+ */
+export const uploadTokens = mysqlTable("upload_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  consultationId: int("consultation_id").notNull(),
+  patientName: varchar("patient_name", { length: 255 }).notNull(),
+  reportType: mysqlEnum("report_type", ["infographic", "slides", "pdf", "mindmap", "pptx"]).notNull(),
+  createdByAdminId: int("created_by_admin_id").notNull(),
+  createdByAdminName: varchar("created_by_admin_name", { length: 255 }).notNull(),
+  expiresAt: int("expires_at").notNull(), // Unix timestamp ms
+  usedAt: int("used_at"),                  // null = not yet used
+  uploadedFileUrl: varchar("uploaded_file_url", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UploadToken = typeof uploadTokens.$inferSelect;
+export type InsertUploadToken = typeof uploadTokens.$inferInsert;
+
+/**
  * Consultation attached records - links existing user medical records to a consultation
  */
 export const consultationAttachedRecords = mysqlTable("consultation_attached_records", {

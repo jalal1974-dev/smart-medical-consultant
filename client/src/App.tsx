@@ -29,6 +29,7 @@ import ResetPassword from "./pages/ResetPassword";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Contact from "./pages/Contact";
+import ExternalUpload from "./pages/ExternalUpload";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -87,6 +88,7 @@ function Router() {
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
         <Route path="/contact" component={Contact} />
+        <Route path="/upload/:token" component={ExternalUpload} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>

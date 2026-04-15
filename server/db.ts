@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1545,4 +1545,25 @@ export async function getReportLogs(opts?: {
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
   return { logs, total: Number(countResult[0]?.count ?? 0) };
+}
+
+// ── Upload Tokens ─────────────────────────────────────────────────────────────
+
+export async function insertUploadToken(data: InsertUploadToken) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(uploadTokens).values(data);
+}
+
+export async function getUploadToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(uploadTokens).where(eq(uploadTokens.token, token)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function markTokenUsed(token: string, uploadedFileUrl: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(uploadTokens).set({ usedAt: Date.now(), uploadedFileUrl }).where(eq(uploadTokens.token, token));
 }

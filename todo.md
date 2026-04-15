@@ -720,3 +720,16 @@
 - [x] Infographic and PPTX already have Upload buttons — verified still work
 - [x] Bilingual toasts + loading states for all new upload buttons
 - [x] Extended report_type enum in schema + DB migration applied
+
+## Admin: External Upload Link (Outside Website)
+- [x] Add upload_tokens table (token, consultationId, reportType, expiresAt, usedAt, createdByAdminId)
+- [x] Run SQL migration to create upload_tokens table
+- [x] Add uploadToken.generate admin tRPC procedure (creates 48h single-use token, returns URL)
+- [x] Add uploadToken.validate public tRPC query (validates token, returns metadata)
+- [x] Add uploadToken.consume public tRPC mutation (validates token, uploads to S3, updates DB)
+- [x] Build /upload/:token public page with bilingual drag-and-drop (AR + EN, no login required)
+- [x] Token expires after 48 hours and is single-use
+- [x] After successful upload, send patient email notification
+- [x] Add "Upload Link" button to Infographic, Slide Deck, PPTX rows in AIConsultationReview
+- [x] Show generated link in copyable panel below reports card
+- [x] All uploads logged in report_generation_logs table

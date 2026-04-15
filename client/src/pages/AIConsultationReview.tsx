@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink, Upload } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink, Upload, Link, Copy } from "lucide-react";
 import { format } from "date-fns";
 
 // ─── Attached Records sub-component for admin ───────────────────────────────
@@ -73,6 +73,15 @@ export default function AIConsultationReview() {
   const [selectedConsultation, setSelectedConsultation] = useState<number | null>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [uploadLink, setUploadLink] = useState<{ url: string; reportType: string; expiresAt: number } | null>(null);
+
+  const generateUploadToken = trpc.uploadToken.generate.useMutation({
+    onSuccess: (data, vars) => {
+      const url = `${window.location.origin}/upload/${data.token}`;
+      setUploadLink({ url, reportType: vars.reportType, expiresAt: data.expiresAt });
+    },
+    onError: (e) => toast.error(language === "ar" ? `فشل: ${e.message}` : `Failed: ${e.message}`),
+  });
 
   // ── Regeneration mutations ──────────────────────────────────────────────────
   const regenInfographic = trpc.admin.regenerateInfographic.useMutation({
@@ -640,6 +649,17 @@ export default function AIConsultationReview() {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={generateUploadToken.isPending}
+                            onClick={() => generateUploadToken.mutate({ consultationId: selected.id, reportType: 'infographic' })}
+                            className="gap-1.5"
+                            title={language === "ar" ? "إنشاء رابط رفع خارجي" : "Generate external upload link"}
+                          >
+                            {generateUploadToken.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "رابط رفع" : "Upload Link"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             disabled={uploadInfographic.isPending}
                             onClick={() => handleInfographicUpload(selected.id)}
                             className="gap-1.5"
@@ -677,6 +697,17 @@ export default function AIConsultationReview() {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={generateUploadToken.isPending}
+                            onClick={() => generateUploadToken.mutate({ consultationId: selected.id, reportType: 'slides' })}
+                            className="gap-1.5"
+                            title={language === "ar" ? "إنشاء رابط رفع خارجي" : "Generate external upload link"}
+                          >
+                            {generateUploadToken.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "رابط رفع" : "Upload Link"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             disabled={uploadSlides.isPending}
                             onClick={() => handleSlidesUpload(selected.id)}
                             className="gap-1.5"
@@ -711,6 +742,17 @@ export default function AIConsultationReview() {
                           }
                         </div>
                         <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={generateUploadToken.isPending}
+                            onClick={() => generateUploadToken.mutate({ consultationId: selected.id, reportType: 'pptx' })}
+                            className="gap-1.5"
+                            title={language === "ar" ? "إنشاء رابط رفع خارجي" : "Generate external upload link"}
+                          >
+                            {generateUploadToken.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link className="w-3.5 h-3.5" />}
+                            {language === "ar" ? "رابط رفع" : "Upload Link"}
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -772,6 +814,37 @@ export default function AIConsultationReview() {
                         </div>
                       </div>
                     </div>
+
+                    {/* External Upload Link panel */}
+                    {uploadLink && (
+                      <div className="mt-4 p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                            <Link className="w-4 h-4" />
+                            {language === "ar" ? "رابط الرفع الخارجي" : "External Upload Link"}
+                          </p>
+                          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setUploadLink(null)}>✕</button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {language === "ar" ? `نوع الملف: ${uploadLink.reportType} — صالح حتى: ${new Date(uploadLink.expiresAt).toLocaleString()}` : `Type: ${uploadLink.reportType} — Expires: ${new Date(uploadLink.expiresAt).toLocaleString()}`}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <input readOnly value={uploadLink.url} className="flex-1 text-xs border rounded px-2 py-1 bg-background font-mono" />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 shrink-0"
+                            onClick={() => { navigator.clipboard.writeText(uploadLink.url); toast.success(language === "ar" ? "تم نسخ الرابط" : "Link copied!"); }}
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            {language === "ar" ? "نسخ" : "Copy"}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-amber-600">
+                          {language === "ar" ? "⚠️ هذا الرابط للاستخدام مرة واحدة فقط — شاركه مع الشخص المسؤول عن رفع الملف." : "⚠️ Single-use link — share it with whoever will upload the file."}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
