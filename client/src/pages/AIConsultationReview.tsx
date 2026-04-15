@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink, Upload, Link, Copy } from "lucide-react";
+import { CheckCircle, XCircle, FileText, Image, Presentation, Network, Loader2, AlertCircle, Paperclip, File, FlaskConical, RefreshCw, ExternalLink, Upload, Link, Copy, X as XIcon } from "lucide-react";
 import { format } from "date-fns";
 
 // ─── Attached Records sub-component for admin ───────────────────────────────
@@ -75,14 +75,28 @@ export default function AIConsultationReview() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [uploadLink, setUploadLink] = useState<{ url: string; reportType: string; expiresAt: number } | null>(null);
 
-  // ── Progress tracking for long AI operations ─────────────────────────────────
+  // ── Progress tracking + AbortController for long AI operations ─────────────────
   type ProgressState = { step: string; detail?: string } | null;
   const [progress, setProgress] = useState<Record<string, ProgressState>>({});
+  // Store one AbortController per operation key so Cancel can abort the fetch
+  const abortRefs = useRef<Record<string, AbortController>>({});
 
-  const setStep = (key: string, step: string, detail?: string) =>
+  const setStep = (key: string, step: string, detail?: string) => {
+    // Create a fresh AbortController for this operation
+    const ac = new AbortController();
+    abortRefs.current[key] = ac;
     setProgress(p => ({ ...p, [key]: { step, detail } }));
-  const clearStep = (key: string) =>
+    return ac.signal;
+  };
+  const clearStep = (key: string) => {
+    delete abortRefs.current[key];
     setProgress(p => { const n = { ...p }; delete n[key]; return n; });
+  };
+  const cancelStep = (key: string) => {
+    abortRefs.current[key]?.abort();
+    clearStep(key);
+    toast.info(language === 'ar' ? 'تم إلغاء العملية' : 'Operation cancelled');
+  };
 
   // Retry-in-toast helper
   const toastError = (msg: string, retryFn?: () => void) => {
@@ -612,7 +626,7 @@ export default function AIConsultationReview() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {/* ── Active progress banners ── */}
+                      {/* ── Active progress banners with Cancel button ── */}
                       {Object.entries(progress).map(([key, state]) => state && (
                         <div key={key} className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
                           <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -620,6 +634,14 @@ export default function AIConsultationReview() {
                             <span className="font-medium">{state.step}</span>
                             {state.detail && <span className="ml-2 text-xs opacity-70">{state.detail}</span>}
                           </div>
+                          <button
+                            onClick={() => cancelStep(key)}
+                            className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/40 dark:hover:text-red-400 transition-colors border border-blue-200 dark:border-blue-700"
+                            title={language === 'ar' ? 'إلغاء' : 'Cancel'}
+                          >
+                            <XIcon className="w-3 h-3" />
+                            {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                          </button>
                         </div>
                       ))}
 

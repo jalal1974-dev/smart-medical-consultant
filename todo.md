@@ -749,3 +749,12 @@
 - [x] Confirmed Upload and Replace buttons visible for all 5 report types
 - [x] generatePptx also gets progress tracking + retry
 - [x] regenAll sets progress on all 4 rows simultaneously
+
+## Admin: External Upload + Cancel Button
+- [x] Rewrote ExternalUpload page with better UX (image preview, clear file type hints, accepted formats shown)
+- [x] Drag-and-drop zone with X button to clear selected file
+- [x] Image preview thumbnail shown for infographic after selection and after upload success
+- [x] Added AbortController refs (abortRefs) to all 6 generation mutations in AIConsultationReview
+- [x] Cancel button added to each active progress banner (aborts fetch + clears progress)
+- [x] Clicking Cancel shows 'Operation cancelled' toast
+- [x] Replace buttons for infographic and slide deck confirmed present and working
