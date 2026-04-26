@@ -51,11 +51,13 @@ export const consultations = mysqlTable("consultations", {
   // Priority level for case triage
   priority: mysqlEnum("priority", ["routine", "urgent", "critical"]).default("routine").notNull(),
   
-  // Status workflow: submitted → ai_processing → specialist_review → completed → follow_up
+  // Status workflow: submitted → ai_processing → ai_processing_complete → specialist_review → doctor_reviewed → completed → follow_up
   status: mysqlEnum("status", [
     "submitted",
     "ai_processing",
+    "ai_processing_complete",
     "specialist_review",
+    "doctor_reviewed",
     "completed",
     "follow_up"
   ]).default("submitted").notNull(),
@@ -94,6 +96,8 @@ export const consultations = mysqlTable("consultations", {
   ]).default("pending_review"),
   specialistNotes: text("specialistNotes"), // Specialist feedback
   specialistRejectionReason: text("specialistRejectionReason"), // Why content was rejected
+  doctorNotes: text("doctorNotes"), // Doctor's notes added during Edit & Approve flow
+  doctorReviewedAt: timestamp("doctorReviewedAt"), // When doctor approved/rejected AI materials
   reviewedBy: int("reviewedBy"), // Admin user ID who reviewed
   reviewedAt: timestamp("reviewedAt"),
   

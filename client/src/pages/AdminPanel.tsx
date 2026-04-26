@@ -160,6 +160,188 @@ function AIHistoryCard({ consultationId }: { consultationId: number }) {
   );
 }
 
+// ─── Doctor AI Materials Review Panel ───────────────────────────────────────
+function DoctorReviewPanel({ consultation }: { consultation: any }) {
+  const utils = trpc.useUtils();
+  const [editOpen, setEditOpen] = useState(false);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [doctorNotes, setDoctorNotes] = useState('');
+  const [overrideUrls, setOverrideUrls] = useState({ report: '', infographic: '', slides: '' });
+
+  const approveAll = trpc.doctorReview.approveAIMaterials.useMutation({
+    onSuccess: () => { toast.success('All materials approved and sent to patient'); utils.admin.consultations.invalidate(); setEditOpen(false); },
+    onError: (e) => toast.error(e.message),
+  });
+  const editAndApprove = trpc.doctorReview.editAndApprove.useMutation({
+    onSuccess: () => { toast.success('Materials approved with notes and sent to patient'); utils.admin.consultations.invalidate(); setEditOpen(false); },
+    onError: (e) => toast.error(e.message),
+  });
+  const requestRevision = trpc.doctorReview.requestRevision.useMutation({
+    onSuccess: () => { toast.success('Revision requested — patient notified'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const overrideManual = trpc.doctorReview.overrideWithManual.useMutation({
+    onSuccess: () => { toast.success('Manual materials saved'); utils.admin.consultations.invalidate(); setOverrideOpen(false); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const hasAnyMaterial = consultation.aiReportUrl || consultation.aiInfographicUrl || consultation.aiSlideDeckUrl;
+  const isReviewed = consultation.specialistApprovalStatus === 'approved' || consultation.status === 'doctor_reviewed';
+
+  if (!['specialist_review', 'ai_processing_complete', 'doctor_reviewed'].includes(consultation.status)) return null;
+
+  return (
+    <div className="mt-4 rounded-lg border-2 border-blue-300 dark:border-blue-700 bg-blue-50/60 dark:bg-blue-950/20 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+          <Brain className="h-4 w-4" /> AI Materials Review
+        </h4>
+        {isReviewed && (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">✓ Approved by Doctor</Badge>
+        )}
+      </div>
+
+      {consultation.doctorNotes && (
+        <div className="p-2 rounded bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 text-sm">
+          <strong>Doctor Notes:</strong> {consultation.doctorNotes}
+        </div>
+      )}
+
+      {!isReviewed && (
+        <div className="flex flex-wrap gap-2">
+          {/* APPROVE ALL */}
+          <Button
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            disabled={!hasAnyMaterial || approveAll.isPending}
+            onClick={() => {
+              if (confirm('Approve all AI materials and send to patient?')) {
+                approveAll.mutate({ consultationId: consultation.id });
+              }
+            }}
+          >
+            {approveAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+            ✓ Approve All
+          </Button>
+
+          {/* EDIT & APPROVE */}
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="border-blue-400 text-blue-700 dark:text-blue-300" disabled={!hasAnyMaterial}>
+                ✏️ Edit & Approve
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit & Approve AI Materials</DialogTitle>
+                <DialogDescription>Add doctor notes before sending materials to the patient.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <Label>Doctor Notes (required)</Label>
+                <Textarea
+                  value={doctorNotes}
+                  onChange={(e) => setDoctorNotes(e.target.value)}
+                  placeholder="Add your clinical notes, recommendations, or modifications..."
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={!doctorNotes.trim() || editAndApprove.isPending}
+                  onClick={() => editAndApprove.mutate({ consultationId: consultation.id, doctorNotes })}
+                >
+                  {editAndApprove.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Approve & Send
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* REQUEST REVISION */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-400 text-amber-700 dark:text-amber-300"
+            disabled={requestRevision.isPending}
+            onClick={() => {
+              const reason = prompt('Reason for requesting revision (will be noted):');
+              if (reason && reason.trim().length >= 10) {
+                requestRevision.mutate({ consultationId: consultation.id, revisionReason: reason.trim() });
+              } else if (reason !== null) {
+                toast.error('Please provide at least 10 characters for the revision reason.');
+              }
+            }}
+          >
+            {requestRevision.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+            ↩ Request Revision
+          </Button>
+
+          {/* OVERRIDE WITH MANUAL */}
+          <Dialog open={overrideOpen} onOpenChange={setOverrideOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline" className="border-purple-400 text-purple-700 dark:text-purple-300">
+                🔧 Override with Manual
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Override with Manual Materials</DialogTitle>
+                <DialogDescription>Replace AI-generated URLs with your own. Leave blank to keep existing.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="space-y-1">
+                  <Label>Manual Report URL</Label>
+                  <Input value={overrideUrls.report} onChange={(e) => setOverrideUrls(u => ({ ...u, report: e.target.value }))} placeholder="https://..." />
+                </div>
+                <div className="space-y-1">
+                  <Label>Manual Infographic URL</Label>
+                  <Input value={overrideUrls.infographic} onChange={(e) => setOverrideUrls(u => ({ ...u, infographic: e.target.value }))} placeholder="https://..." />
+                </div>
+                <div className="space-y-1">
+                  <Label>Manual Slide Deck URL</Label>
+                  <Input value={overrideUrls.slides} onChange={(e) => setOverrideUrls(u => ({ ...u, slides: e.target.value }))} placeholder="https://..." />
+                </div>
+                <div className="space-y-1">
+                  <Label>Doctor Notes</Label>
+                  <Textarea value={doctorNotes} onChange={(e) => setDoctorNotes(e.target.value)} placeholder="Optional notes..." rows={2} />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setOverrideOpen(false)}>Cancel</Button>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={overrideManual.isPending}
+                  onClick={() => overrideManual.mutate({
+                    consultationId: consultation.id,
+                    manualReportUrl: overrideUrls.report || undefined,
+                    manualInfographicUrl: overrideUrls.infographic || undefined,
+                    manualSlideDeckUrl: overrideUrls.slides || undefined,
+                    doctorNotes: doctorNotes || undefined,
+                  })}
+                >
+                  {overrideManual.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Save Manual Materials
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+
+      {/* AI Material Previews inside the review panel */}
+      {hasAnyMaterial && (
+        <div className="space-y-3 pt-2 border-t border-blue-200 dark:border-blue-800">
+          {consultation.aiReportUrl && <MedicalReportBriefViewer url={consultation.aiReportUrl} generatedAt={consultation.updatedAt} compact={true} />}
+          {consultation.aiInfographicUrl && <MedicalInfographicViewer url={consultation.aiInfographicUrl} generatedAt={consultation.updatedAt} compact={true} />}
+          {consultation.aiSlideDeckUrl && <MedicalSlideDeckViewer url={consultation.aiSlideDeckUrl} generatedAt={consultation.updatedAt} compact={true} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
@@ -664,6 +846,9 @@ export default function AdminPanel() {
                     
                     {/* AI Processing Section */}
                     <AIProcessingSection consultation={consultation} />
+
+                    {/* Doctor AI Materials Review Panel */}
+                    <DoctorReviewPanel consultation={consultation} />
 
                     {/* Mind Map for Research */}
                     {(consultation.status === "ai_processing" || consultation.status === "specialist_review") && (

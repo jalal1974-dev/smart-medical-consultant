@@ -2180,6 +2180,160 @@ export const appRouter = router({
       }),
   }),
 
+  // ── Doctor AI Materials Review ─────────────────────────────────────────────
+  doctorReview: router({
+    // Approve all AI-generated materials and send to patient
+    approveAIMaterials: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        doctorNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+
+        // Mark all available materials as sent to patient
+        const updates: Record<string, unknown> = {
+          status: 'doctor_reviewed',
+          specialistApprovalStatus: 'approved',
+          doctorNotes: input.doctorNotes ?? null,
+          doctorReviewedAt: new Date(),
+          reviewedBy: ctx.user.id,
+          reviewedAt: new Date(),
+        };
+        if (consultation.aiReportUrl) updates.sentPdfToPatient = true;
+        if (consultation.aiInfographicUrl) updates.sentInfographicToPatient = true;
+        if (consultation.aiSlideDeckUrl) updates.sentSlidesToPatient = true;
+        if ((consultation as any).aiMindMapUrl) updates.sentMindMapToPatient = true;
+        if ((consultation as any).pptxReportUrl) updates.sentPptxToPatient = true;
+        updates.sentToPatientAt = new Date();
+        updates.sentToPatientBy = ctx.user.id;
+
+        await db.updateConsultation(input.consultationId, updates);
+
+        // Notify patient
+        const patient = await db.getUserById(consultation.userId);
+        if (patient?.email) {
+          const { sendReportReadyNotification } = await import('./emailNotifications');
+          await sendReportReadyNotification(
+            patient.email,
+            patient.name || 'Patient',
+            consultation.id,
+            consultation.aiReportUrl ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
+          ).catch((err: unknown) => console.error('[Email] approveAIMaterials notification failed:', err));
+        }
+
+        return { success: true };
+      }),
+
+    // Edit notes and approve — updates doctorNotes then sends all materials
+    editAndApprove: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        doctorNotes: z.string().min(1),
+        overrideReportUrl: z.string().url().optional(),
+        overrideInfographicUrl: z.string().url().optional(),
+        overrideSlideDeckUrl: z.string().url().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+
+        const updates: Record<string, unknown> = {
+          status: 'doctor_reviewed',
+          specialistApprovalStatus: 'approved',
+          doctorNotes: input.doctorNotes,
+          doctorReviewedAt: new Date(),
+          reviewedBy: ctx.user.id,
+          reviewedAt: new Date(),
+          sentToPatientAt: new Date(),
+          sentToPatientBy: ctx.user.id,
+        };
+        // Apply URL overrides if provided
+        if (input.overrideReportUrl) { updates.aiReportUrl = input.overrideReportUrl; updates.sentPdfToPatient = true; }
+        else if (consultation.aiReportUrl) updates.sentPdfToPatient = true;
+        if (input.overrideInfographicUrl) { updates.aiInfographicUrl = input.overrideInfographicUrl; updates.sentInfographicToPatient = true; }
+        else if (consultation.aiInfographicUrl) updates.sentInfographicToPatient = true;
+        if (input.overrideSlideDeckUrl) { updates.aiSlideDeckUrl = input.overrideSlideDeckUrl; updates.sentSlidesToPatient = true; }
+        else if (consultation.aiSlideDeckUrl) updates.sentSlidesToPatient = true;
+
+        await db.updateConsultation(input.consultationId, updates);
+
+        // Notify patient
+        const patient = await db.getUserById(consultation.userId);
+        if (patient?.email) {
+          const { sendReportReadyNotification } = await import('./emailNotifications');
+          await sendReportReadyNotification(
+            patient.email,
+            patient.name || 'Patient',
+            consultation.id,
+            (updates.aiReportUrl as string | undefined) ?? consultation.aiReportUrl ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
+          ).catch((err: unknown) => console.error('[Email] editAndApprove notification failed:', err));
+        }
+
+        return { success: true };
+      }),
+
+    // Request revision — sends consultation back to patient for more info
+    requestRevision: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        revisionReason: z.string().min(10),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+
+        await db.updateConsultation(input.consultationId, {
+          status: 'submitted',
+          specialistApprovalStatus: 'needs_deep_analysis',
+          specialistRejectionReason: input.revisionReason,
+          reviewedBy: ctx.user.id,
+          reviewedAt: new Date(),
+        });
+
+        // Notify patient
+        const patient = await db.getUserById(consultation.userId);
+        if (patient?.email) {
+          const { notifyOwner } = await import('./_core/notification');
+          await notifyOwner({
+            title: `Revision Requested for Consultation #${consultation.id}`,
+            content: `Doctor requested revision for ${consultation.patientName}. Reason: ${input.revisionReason}`,
+          }).catch(() => {});
+        }
+
+        return { success: true };
+      }),
+
+    // Override with manual — doctor sets their own URLs for any material
+    overrideWithManual: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        manualReportUrl: z.string().url().optional(),
+        manualInfographicUrl: z.string().url().optional(),
+        manualSlideDeckUrl: z.string().url().optional(),
+        doctorNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+
+        const updates: Record<string, unknown> = {
+          doctorNotes: input.doctorNotes ?? null,
+          reviewedBy: ctx.user.id,
+          reviewedAt: new Date(),
+        };
+        if (input.manualReportUrl) updates.aiReportUrl = input.manualReportUrl;
+        if (input.manualInfographicUrl) updates.aiInfographicUrl = input.manualInfographicUrl;
+        if (input.manualSlideDeckUrl) updates.aiSlideDeckUrl = input.manualSlideDeckUrl;
+
+        await db.updateConsultation(input.consultationId, updates);
+        return { success: true, updatedFields: Object.keys(updates) };
+      }),
+  }),
+
   // ── Medical History Collection ──────────────────────────────────────────────
   symptomChecker: router({
     chat: publicProcedure

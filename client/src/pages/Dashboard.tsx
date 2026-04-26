@@ -198,10 +198,30 @@ export default function Dashboard() {
       confirmed: "default",
       completed: "outline",
       cancelled: "destructive",
+      submitted: "secondary",
+      ai_processing: "secondary",
+      ai_processing_complete: "default",
+      specialist_review: "secondary",
+      doctor_reviewed: "default",
+    };
+    const labels: Record<string, string> = {
+      submitted: language === 'ar' ? 'تم الإرسال' : 'Submitted',
+      ai_processing: language === 'ar' ? 'قيد المعالجة بالذكاء الاصطناعي' : 'AI Processing...',
+      ai_processing_complete: language === 'ar' ? 'اكتملت المعالجة — قيد مراجعة الطبيب' : 'AI Complete — Doctor Review',
+      specialist_review: language === 'ar' ? 'قيد مراجعة الطبيب' : 'Under Doctor Review',
+      doctor_reviewed: language === 'ar' ? 'تمت مراجعة الطبيب ✓' : 'Doctor Reviewed ✓',
+      pending: language === 'ar' ? 'معلق' : 'Pending',
+      confirmed: language === 'ar' ? 'مؤكد' : 'Confirmed',
+      completed: language === 'ar' ? 'مكتمل' : 'Completed',
+      cancelled: language === 'ar' ? 'ملغى' : 'Cancelled',
+    };
+    const extraClass: Record<string, string> = {
+      ai_processing_complete: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      doctor_reviewed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
     };
     return (
-      <Badge variant={variants[status] || "default"}>
-        {t(status as any)}
+      <Badge variant={variants[status] || 'default'} className={extraClass[status] || ''}>
+        {labels[status] || t(status as any)}
       </Badge>
     );
   };
@@ -403,11 +423,28 @@ export default function Dashboard() {
                       {(() => {
                         const c = consultation as any;
                         const hasSentAny = c.sentPdfToPatient || c.sentInfographicToPatient || c.sentSlidesToPatient || c.sentMindMapToPatient || c.sentPptxToPatient;
-                        if (!hasSentAny) return (
-                          <p className="text-xs text-muted-foreground italic">
-                            {language === "ar" ? "جاري مراجعة تقاريرك من قبل الفريق الطبي. ستصلك إشعار عند جاهزيتها." : "Your reports are being reviewed by our medical team. You will be notified when they are ready."}
-                          </p>
-                        );
+                        if (!hasSentAny) {
+                          const status = consultation.status;
+                          if (status === 'ai_processing_complete') return (
+                            <div className="flex items-center gap-2 p-2 rounded bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                              <span className="text-blue-600 dark:text-blue-400 text-sm">
+                                {language === 'ar' ? '⚙️ اكتمل الذكاء الاصطناعي معالجة تقاريرك. يقوم طبيبك بمراجعتها قبل إرسالها إليك.' : '⚙️ AI has finished processing your reports. Your doctor is reviewing them before sending.'}
+                              </span>
+                            </div>
+                          );
+                          if (status === 'doctor_reviewed') return (
+                            <div className="flex items-center gap-2 p-2 rounded bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                              <span className="text-green-700 dark:text-green-300 text-sm">
+                                {language === 'ar' ? '✓ راجع طبيبك تقاريرك. ستظهر هنا عند إرسالها إليك.' : '✓ Your doctor has reviewed your reports. They will appear here once sent to you.'}
+                              </span>
+                            </div>
+                          );
+                          return (
+                            <p className="text-xs text-muted-foreground italic">
+                              {language === "ar" ? "جاري مراجعة تقاريرك من قبل الفريق الطبي. ستصلك إشعار عند جاهزيتها." : "Your reports are being reviewed by our medical team. You will be notified when they are ready."}
+                            </p>
+                          );
+                        }
                         return (
                           <div className="space-y-4">
                             {c.sentPdfToPatient && consultation.aiReportUrl && (
