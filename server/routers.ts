@@ -2373,18 +2373,20 @@ export const appRouter = router({
         turnCount: z.number().default(1),
       }))
       .mutation(async ({ input }) => {
-        const { invokeLLM } = await import("./_core/llm");
+        const { invokeMedGemmaLLM } = await import('./medgemmaLLM');
         const isArabic = input.language === "ar";
         const specialtySchema = '{"specialty":"general|cardiology|neurology|orthopedics|ophthalmology|pediatrics|internal|pharmacy|emergency","specialtyAr":"Arabic name","confidence":"high|medium|low","reason":"reason","icon":"heart|brain|eye|bone|baby|stethoscope|pill|activity|zap"}';
         const lang = isArabic ? 'Arabic' : 'English';
-        const systemPrompt = `You are an AI medical assistant. Ask 2-4 targeted questions about symptoms then recommend the appropriate specialty. When ready, append: [SPECIALTY_RESULT]` + specialtySchema + `[/SPECIALTY_RESULT] Do NOT diagnose, only guide to the right specialty. Respond in ` + lang + `.`;
+        const systemPrompt = `Ask 2-4 targeted questions about symptoms then recommend the appropriate specialty. When ready, append: [SPECIALTY_RESULT]` + specialtySchema + `[/SPECIALTY_RESULT] Do NOT diagnose, only guide to the right specialty. Respond in ` + lang + `.`;
         const messages: any[] = [
           { role: "system", content: systemPrompt },
           ...input.history.slice(-10),
         ];
-        const response = await invokeLLM({ messages });
-        const reply = (response.choices?.[0]?.message?.content as string) ?? "";
-        return { reply };
+        const medGemmaResponse = await invokeMedGemmaLLM(
+          messages,
+          { language: input.language }
+        );
+        return { reply: medGemmaResponse.content };
       }),
   }),
 
@@ -2453,7 +2455,7 @@ export const appRouter = router({
         language: z.enum(['en', 'ar']).default('en'),
       }))
       .mutation(async ({ ctx, input }) => {
-        const { invokeLLM } = await import('./_core/llm');
+        const { invokeMedGemmaLLM } = await import('./medgemmaLLM');
 
         const session = await db.getMedicalHistorySession(input.sessionId);
         if (!session) throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
@@ -2479,17 +2481,18 @@ export const appRouter = router({
           .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
         const systemPrompt = isArabic
-          ? `أنت مساعد طبي متخصص في جمع التاريخ الطبي. اطرح سؤالاً واحداً محدداً في كل مرة. المعلومات المطلوبة: الأعراض الرئيسية، المدة، التاريخ الطبي السابق، الأدوية الحالية، الحساسية، التاريخ العائلي، الحالة الاجتماعية. بعد ${Math.max(5, newTurnCount)} أسئلة أو عندما تكون المعلومات كافية، أضف في نهاية ردك: [HISTORY_COMPLETE] ثم ملخصاً للمعلومات المجمعة.`
-          : `You are a medical assistant collecting patient medical history. Ask one specific question at a time. Required information: main symptoms, duration, previous medical history, current medications, allergies, family history, social history. After ${Math.max(5, newTurnCount)} questions or when information is sufficient, add at the end of your response: [HISTORY_COMPLETE] followed by a summary of collected information.`;
+          ? `اطرح سؤالاً واحداً محدداً في كل مرة لجمع التاريخ الطبي. المعلومات المطلوبة: الأعراض الرئيسية، المدة، التاريخ الطبي السابق، الأدوية الحالية، الحساسية، التاريخ العائلي، الحالة الاجتماعية. بعد ${Math.max(5, newTurnCount)} أسئلة أو عندما تكون المعلومات كافية، أضف في نهاية ردك: [HISTORY_COMPLETE] ثم ملخصاً للمعلومات المجمعة.`
+          : `Ask one specific question at a time to collect patient medical history. Required information: main symptoms, duration, previous medical history, current medications, allergies, family history, social history. After ${Math.max(5, newTurnCount)} questions or when information is sufficient, add at the end of your response: [HISTORY_COMPLETE] followed by a summary of collected information.`;
 
-        const llmResponse = await invokeLLM({
-          messages: [
+        const medGemmaResponse = await invokeMedGemmaLLM(
+          [
             { role: 'system', content: systemPrompt },
             ...conversationHistory,
           ],
-        });
+          { language: detectedLang as 'en' | 'ar' }
+        );
 
-        const aiContent: string = (llmResponse.choices?.[0]?.message?.content as string) ?? '';
+        const aiContent: string = medGemmaResponse.content;
         const isComplete = aiContent.includes('[HISTORY_COMPLETE]') || newTurnCount >= 12;
 
         // Extract summary if complete

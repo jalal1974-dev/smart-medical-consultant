@@ -6,7 +6,7 @@
  *   3. Medical slide deck (5-7 slides stored as JSON content in S3)
  */
 
-import { invokeLLM } from "./_core/llm";
+import { invokeMedGemmaStructured, invokeMedGemmaLLM } from "./medgemmaLLM";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import * as db from "./db";
@@ -62,6 +62,10 @@ export interface AIProcessingResult {
   infographicUrl?: string;
   slideDeckUrl?: string;
   error?: string;
+  confidence?: number;
+  confidenceLabel?: string;
+  requiresHumanReview?: boolean;
+  disclaimer?: string;
 }
 
 // ─── SBAR Report Generator ────────────────────────────────────────────────────
@@ -74,7 +78,7 @@ async function generateSBARReport(
 ): Promise<SBARReport> {
   const isAr = language === "ar";
 
-  const systemPrompt = `You are a senior medical AI assistant. Your task is to generate a structured SBAR (Situation, Background, Assessment, Recommendation) medical report brief from patient-provided medical history.
+  const systemPrompt = `Generate a structured SBAR medical report brief from the patient-provided history.
 
 IMPORTANT:
 - Be concise, clinical, and evidence-based
@@ -102,38 +106,44 @@ ${medicalHistory}
 
 Generate the SBAR report brief now.`;
 
-  const response = await invokeLLM({
-    messages: [
+  const result = await invokeMedGemmaStructured<Omit<SBARReport, 'language' | 'patientName'>>(
+    [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "sbar_report",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            situation: { type: "string" },
-            background: { type: "string" },
-            assessment: { type: "string" },
-            recommendation: { type: "string" },
-            urgencyLevel: { type: "string", enum: ["low", "medium", "high", "critical"] },
-            keyFindings: { type: "array", items: { type: "string" } },
+    {
+      language,
+      clinicalContext: `Patient: ${patientName}. Chief symptoms: ${symptoms}`,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "sbar_report",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              situation: { type: "string" },
+              background: { type: "string" },
+              assessment: { type: "string" },
+              recommendation: { type: "string" },
+              urgencyLevel: { type: "string", enum: ["low", "medium", "high", "critical"] },
+              keyFindings: { type: "array", items: { type: "string" } },
+            },
+            required: ["situation", "background", "assessment", "recommendation", "urgencyLevel", "keyFindings"],
+            additionalProperties: false,
           },
-          required: ["situation", "background", "assessment", "recommendation", "urgencyLevel", "keyFindings"],
-          additionalProperties: false,
         },
       },
-    },
-  });
+    }
+  );
 
-  const content = response.choices?.[0]?.message?.content;
-  if (!content) throw new Error("No SBAR response from AI");
-
-  const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
-  return { ...parsed, language, patientName };
+  // Store confidence metadata on the SBAR object for use in the orchestrator
+  const sbar = { ...result.content, language, patientName } as SBARReport;
+  (sbar as any)._confidence = result.confidence;
+  (sbar as any)._confidenceLabel = result.confidenceLabel;
+  (sbar as any)._requiresHumanReview = result.requiresHumanReview;
+  (sbar as any)._disclaimer = result.disclaimer;
+  return sbar;
 }
 
 // ─── Infographic Content Generator ───────────────────────────────────────────
@@ -145,7 +155,7 @@ async function generateInfographicContent(
 ): Promise<InfographicContent> {
   const isAr = language === "ar";
 
-  const systemPrompt = `You are a medical infographic designer AI. Generate structured infographic content from an SBAR medical report.
+  const systemPrompt = `Generate structured medical infographic content from an SBAR medical report.
 The infographic should be visual, clear, and suitable for a medical professional.
 Respond ONLY in valid JSON.
 
@@ -178,48 +188,48 @@ Key Findings: ${sbar.keyFindings.join(", ")}
 
 Generate the infographic content now.`;
 
-  const response = await invokeLLM({
-    messages: [
+  const result = await invokeMedGemmaStructured<{ title: string; sections: InfographicSection[] }>(
+    [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "infographic_content",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            sections: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  heading: { type: "string" },
-                  items: { type: "array", items: { type: "string" } },
-                  color: { type: "string" },
-                  icon: { type: "string" },
+    {
+      language,
+      clinicalContext: `Patient: ${patientName}. Urgency: ${sbar.urgencyLevel}`,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "infographic_content",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              sections: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    heading: { type: "string" },
+                    items: { type: "array", items: { type: "string" } },
+                    color: { type: "string" },
+                    icon: { type: "string" },
+                  },
+                  required: ["heading", "items", "color", "icon"],
+                  additionalProperties: false,
                 },
-                required: ["heading", "items", "color", "icon"],
-                additionalProperties: false,
               },
             },
+            required: ["title", "sections"],
+            additionalProperties: false,
           },
-          required: ["title", "sections"],
-          additionalProperties: false,
         },
       },
-    },
-  });
+    }
+  );
 
-  const content = response.choices?.[0]?.message?.content;
-  if (!content) throw new Error("No infographic response from AI");
-
-  const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
   return {
-    ...parsed,
+    ...result.content,
     patientName,
     date: new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US"),
     language,
@@ -235,7 +245,7 @@ async function generateSlideDeckContent(
 ): Promise<SlideDeckContent> {
   const isAr = language === "ar";
 
-  const systemPrompt = `You are a medical presentation designer AI. Generate a 6-slide deck for a doctor review from an SBAR medical report.
+  const systemPrompt = `Generate a 6-slide medical presentation deck for doctor review from an SBAR medical report.
 Each slide should be concise and suitable for a 5-minute case presentation.
 Respond ONLY in valid JSON.
 
@@ -276,50 +286,54 @@ Key Findings: ${sbar.keyFindings.join(", ")}
 
 Generate the 6-slide deck now.`;
 
-  const response = await invokeLLM({
-    messages: [
+  const result = await invokeMedGemmaStructured<{ title: string; slides: SlideContent[] }>(
+    [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "slide_deck",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            slides: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  slideNumber: { type: "integer" },
-                  title: { type: "string" },
-                  subtitle: { type: ["string", "null"] },
-                  bulletPoints: { type: "array", items: { type: "string" } },
-                  notes: { type: ["string", "null"] },
-                  type: { type: "string", enum: ["title", "findings", "assessment", "recommendations", "summary"] },
+    {
+      language,
+      clinicalContext: `Patient: ${patientName}. Urgency: ${sbar.urgencyLevel}`,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "slide_deck",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              slides: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    slideNumber: { type: "integer" },
+                    title: { type: "string" },
+                    subtitle: { type: ["string", "null"] },
+                    bulletPoints: { type: "array", items: { type: "string" } },
+                    notes: { type: ["string", "null"] },
+                    type: { type: "string", enum: ["title", "findings", "assessment", "recommendations", "summary"] },
+                  },
+                  required: ["slideNumber", "title", "subtitle", "bulletPoints", "notes", "type"],
+                  additionalProperties: false,
                 },
-                required: ["slideNumber", "title", "subtitle", "bulletPoints", "notes", "type"],
-                additionalProperties: false,
               },
             },
+            required: ["title", "slides"],
+            additionalProperties: false,
           },
-          required: ["title", "slides"],
-          additionalProperties: false,
         },
       },
-    },
-  });
+    }
+  );
 
-  const content = response.choices?.[0]?.message?.content;
+  // Placeholder to satisfy original return shape
+  const content = JSON.stringify(result.content);
   if (!content) throw new Error("No slide deck response from AI");
 
-  const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
   return {
-    ...parsed,
+    ...result.content,
     patientName,
     date: new Date().toLocaleDateString(isAr ? "ar-SA" : "en-US"),
     language,
@@ -674,12 +688,21 @@ export async function processHistoryWithAI(
 
     console.log(`[HistoryAI] Processing complete for consultation #${consultationId}`);
 
+    const confidence = (sbar as any)._confidence ?? 0.7;
+    const confidenceLabel = (sbar as any)._confidenceLabel ?? "moderate";
+    const requiresHumanReview = (sbar as any)._requiresHumanReview ?? false;
+    const disclaimer = (sbar as any)._disclaimer ?? "AI-generated — requires specialist review";
+
     return {
       success: true,
       sbarReport: sbar,
       sbarReportUrl,
       infographicUrl,
       slideDeckUrl,
+      confidence,
+      confidenceLabel,
+      requiresHumanReview,
+      disclaimer,
     };
 
   } catch (error: any) {
