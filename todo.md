@@ -803,3 +803,19 @@
 - [x] Pre-fill medicalHistory field in consultation form from AI session
 - [x] Add "Collect with AI" button in consultation form Medical History field
 - [x] Wire route in App.tsx
+
+## Enhancement: Continue Previous Session
+- [ ] Add tRPC query to check for active incomplete session for current user
+- [ ] Show resume/start-new dialog on history collection page load
+- [ ] Resume session restores full conversation history
+
+## Enhancement: AI History in Admin Panel
+- [ ] Add tRPC query to fetch medical_history_sessions by consultation_id
+- [ ] Link session to consultation when patient confirms
+- [ ] Show AI-collected history card in Admin Panel consultation view
+
+## Enhancement: Symptom Checker
+- [ ] Create /symptom-checker page with AI chat (same pattern as history collection)
+- [ ] AI suggests consultation category based on symptoms
+- [ ] Add "Check Symptoms First" entry point on home page and consultations page
+- [ ] Wire route in App.tsx

@@ -19,7 +19,39 @@ import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
-import { Link2, Copy, Check, Send, SendHorizonal } from "lucide-react";
+import { Link2, Copy, Check, Send, SendHorizonal, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+
+// ─── AI-Collected History Card ────────────────────────────────────────────────
+function AIHistoryCard({ consultationId }: { consultationId: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: session, isLoading } = trpc.medicalHistory.getSessionByConsultation.useQuery(
+    { consultationId },
+    { retry: false }
+  );
+  if (isLoading) return null;
+  if (!session || !session.collectedHistory) return null;
+  return (
+    <div className="mt-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 p-3">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between text-sm font-medium text-emerald-800 dark:text-emerald-300"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="flex items-center gap-1.5">
+          <MessageSquare className="h-3.5 w-3.5" />
+          AI-Collected Medical History
+          <span className="text-xs font-normal text-muted-foreground ml-1">({session.messageCount} messages · {session.detectedLanguage?.toUpperCase()})</span>
+        </span>
+        {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+      </button>
+      {expanded && (
+        <p className="mt-2 text-sm text-foreground whitespace-pre-wrap border-t border-emerald-200 dark:border-emerald-800 pt-2">
+          {session.collectedHistory}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function AdminPanel() {
   const { t, language } = useLanguage();
@@ -504,6 +536,8 @@ export default function AdminPanel() {
                         <strong>Medical History:</strong> {consultation.medicalHistory}
                       </p>
                     )}
+                    {/* AI-Collected History from chat session */}
+                    <AIHistoryCard consultationId={consultation.id} />
                     <p className="text-sm text-muted-foreground">
                       Created: {format(new Date(consultation.createdAt), "PPP")}
                     </p>

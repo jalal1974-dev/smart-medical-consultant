@@ -21,7 +21,7 @@ interface ChatMessage {
   timestamp?: number;
 }
 
-type PageState = "chat" | "review" | "done";
+type PageState = "chat" | "review" | "done" | "resume-prompt";
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 function ProgressBar({ turnCount, maxTurns = 8 }: { turnCount: number; maxTurns?: number }) {
@@ -104,34 +104,60 @@ export default function MedicalHistoryCollection() {
 
   const isRtl = chatLanguage === "ar";
 
-  // tRPC mutations
+  // tRPC mutations & queries
   const startSessionMutation = trpc.medicalHistory.startSession.useMutation();
   const sendMessageMutation = trpc.medicalHistory.sendMessage.useMutation();
   const confirmCompleteMutation = trpc.medicalHistory.confirmComplete.useMutation();
   const transcribeMutation = trpc.voiceTranscription.transcribe.useMutation();
   const uploadMutation = trpc.upload.file.useMutation();
+  const { data: activeSession, isLoading: checkingSession } = trpc.medicalHistory.getActiveSession.useQuery(
+    undefined,
+    { enabled: isAuthenticated && !loading, retry: false }
+  );
 
   // ── Scroll to bottom on new messages ──────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Start session on mount ─────────────────────────────────────────────────
+  // ── Check for active session on mount; show resume prompt if found ──────────
   useEffect(() => {
-    if (!isAuthenticated || loading) return;
-    handleStartSession();
-  }, [isAuthenticated, loading]);
+    if (!isAuthenticated || loading || checkingSession) return;
+    if (activeSession && activeSession.turnCount > 0) {
+      setPageState("resume-prompt");
+    } else {
+      handleStartSession();
+    }
+  }, [isAuthenticated, loading, checkingSession, activeSession]);
 
-  const handleStartSession = async () => {
+  const handleStartSession = async (resumeSessionId?: number) => {
     try {
-      const result = await startSessionMutation.mutateAsync({ language: chatLanguage });
+      const result = await startSessionMutation.mutateAsync({
+        language: chatLanguage,
+        resumeSessionId,
+      });
       setSessionId(result.sessionId);
       setMessages(result.messages as ChatMessage[]);
       setTurnCount(result.turnCount);
       setIsComplete(result.isComplete);
+      setPageState("chat");
     } catch (err: any) {
       toast.error(err?.message || "Failed to start session");
     }
+  };
+
+  const handleResumeSession = () => {
+    if (!activeSession) return;
+    setSessionId(activeSession.sessionId);
+    setMessages(activeSession.messages as ChatMessage[]);
+    setTurnCount(activeSession.turnCount);
+    setChatLanguage((activeSession.detectedLanguage as "en" | "ar") || "en");
+    setIsComplete(false);
+    setPageState("chat");
+  };
+
+  const handleStartNew = () => {
+    handleStartSession();
   };
 
   // ── Send text message ──────────────────────────────────────────────────────
@@ -312,7 +338,50 @@ export default function MedicalHistoryCollection() {
     );
   }
 
-  // ── Done state ─────────────────────────────────────────────────────────────
+  //  // ── Resume prompt state ─────────────────────────────────────────
+  if (pageState === "resume-prompt" && activeSession) {
+    const sessionDate = activeSession.createdAt
+      ? new Date(activeSession.createdAt).toLocaleDateString(isRtl ? "ar-SA" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "";
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 px-4 max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+          <ClipboardList className="h-8 w-8 text-emerald-600" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold">
+            {isRtl ? "جلسة سابقة غير مكتملة" : "Unfinished Session Found"}
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            {isRtl
+              ? `لديك جلسة جمع تاريخ طبي بدأت بتاريخ ${sessionDate} وتحتوي على ${activeSession.turnCount} ردود. هل تريد الاستمرار من حيث توقفت؟`
+              : `You have an unfinished session from ${sessionDate} with ${activeSession.turnCount} exchanges. Would you like to continue where you left off?`
+            }
+          </p>
+        </div>
+        <div className="w-full space-y-3">
+          <Button
+            className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2"
+            onClick={handleResumeSession}
+          >
+            <ArrowRight className="h-4 w-4" />
+            {isRtl ? "استمرار الجلسة السابقة" : "Continue Previous Session"}
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={handleStartNew}
+            disabled={startSessionMutation.isPending}
+          >
+            {startSessionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            {isRtl ? "بدء جلسة جديدة" : "Start a New Session"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Done state ─────────────────────────────────────────────────
   if (pageState === "done") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">

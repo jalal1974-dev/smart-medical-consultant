@@ -2181,6 +2181,33 @@ export const appRouter = router({
   }),
 
   // ── Medical History Collection ──────────────────────────────────────────────
+  symptomChecker: router({
+    chat: publicProcedure
+      .input(z.object({
+        message: z.string().min(1).max(2000),
+        history: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })).max(20),
+        language: z.enum(["en", "ar"]).default("en"),
+        turnCount: z.number().default(1),
+      }))
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        const isArabic = input.language === "ar";
+        const specialtySchema = '{"specialty":"general|cardiology|neurology|orthopedics|ophthalmology|pediatrics|internal|pharmacy|emergency","specialtyAr":"Arabic name","confidence":"high|medium|low","reason":"reason","icon":"heart|brain|eye|bone|baby|stethoscope|pill|activity|zap"}';
+        const lang = isArabic ? 'Arabic' : 'English';
+        const systemPrompt = `You are an AI medical assistant. Ask 2-4 targeted questions about symptoms then recommend the appropriate specialty. When ready, append: [SPECIALTY_RESULT]` + specialtySchema + `[/SPECIALTY_RESULT] Do NOT diagnose, only guide to the right specialty. Respond in ` + lang + `.`;
+        const messages: any[] = [
+          { role: "system", content: systemPrompt },
+          ...input.history.slice(-10),
+        ];
+        const response = await invokeLLM({ messages });
+        const reply = (response.choices?.[0]?.message?.content as string) ?? "";
+        return { reply };
+      }),
+  }),
+
   medicalHistory: router({
     /**
      * Start or resume a medical history collection session.
@@ -2382,6 +2409,55 @@ export const appRouter = router({
           success: true,
           collectedHistory: finalHistory,
           sessionId: input.sessionId,
+        };
+      }),
+
+    /**
+     * Check if the current user has an active (incomplete) session to offer resume.
+     */
+    getActiveSession: protectedProcedure
+      .query(async ({ ctx }) => {
+        const session = await db.getActiveMedicalHistorySessionForUser(ctx.user.id);
+        if (!session) return null;
+        const patientMsgs: any[] = JSON.parse(session.patientMessages || '[]');
+        const aiMsgs: any[] = JSON.parse(session.aiQuestions || '[]');
+        const allMessages = [...aiMsgs, ...patientMsgs]
+          .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+        return {
+          sessionId: session.id,
+          turnCount: session.turnCount,
+          detectedLanguage: session.detectedLanguage,
+          messages: allMessages,
+          createdAt: session.createdAt,
+        };
+      }),
+
+    /**
+     * Get the AI-collected history session linked to a consultation (for admin view).
+     */
+    getSessionByConsultation: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') throw new TRPCError({ code: 'FORBIDDEN' });
+        const db2 = await (await import('./db')).getDb();
+        if (!db2) return null;
+        const { medicalHistorySessions } = await import('../drizzle/schema');
+        const { eq, desc } = await import('drizzle-orm');
+        const rows = await db2.select().from(medicalHistorySessions)
+          .where(eq(medicalHistorySessions.consultationId, input.consultationId))
+          .orderBy(desc(medicalHistorySessions.createdAt))
+          .limit(1);
+        if (!rows[0]) return null;
+        const session = rows[0];
+        const patientMsgs: any[] = JSON.parse(session.patientMessages || '[]');
+        const aiMsgs: any[] = JSON.parse(session.aiQuestions || '[]');
+        return {
+          sessionId: session.id,
+          turnCount: session.turnCount,
+          detectedLanguage: session.detectedLanguage,
+          collectedHistory: session.collectedHistory,
+          messageCount: patientMsgs.length + aiMsgs.length,
+          createdAt: session.createdAt,
         };
       }),
   }),
