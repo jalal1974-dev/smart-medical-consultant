@@ -2332,6 +2332,32 @@ export const appRouter = router({
         await db.updateConsultation(input.consultationId, updates);
         return { success: true, updatedFields: Object.keys(updates) };
       }),
+
+    // Bulk approve all consultations that are in ai_processing_complete or specialist_review
+    bulkApproveAll: adminProcedure
+      .mutation(async ({ ctx }) => {
+        // Get all consultations pending review
+        const all = await db.getAllConsultations();
+        const pending = all.filter((c: any) =>
+          c.status === 'ai_processing_complete' || c.status === 'specialist_review'
+        );
+        let approved = 0;
+        for (const c of pending) {
+          const updates: Record<string, unknown> = {
+            status: 'doctor_reviewed',
+            specialistApprovalStatus: 'approved',
+            sentPdfToPatient: true,
+            sentInfographicToPatient: true,
+            sentSlidesToPatient: true,
+            doctorReviewedAt: new Date(),
+            reviewedBy: ctx.user.id,
+            reviewedAt: new Date(),
+          };
+          await db.updateConsultation(c.id, updates);
+          approved++;
+        }
+        return { success: true, approvedCount: approved };
+      }),
   }),
 
   // ── Medical History Collection ──────────────────────────────────────────────

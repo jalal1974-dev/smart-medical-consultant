@@ -342,6 +342,53 @@ function DoctorReviewPanel({ consultation }: { consultation: any }) {
   );
 }
 
+// ─── Bulk Approve All Pending Button ────────────────────────────────────────
+function BulkApproveAllButton({ consultations }: { consultations: any[] }) {
+  const utils = trpc.useUtils();
+  const pendingCount = consultations.filter(
+    (c) => c.status === 'ai_processing_complete' || c.status === 'specialist_review'
+  ).length;
+
+  const bulkApproveMutation = trpc.doctorReview.bulkApproveAll.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Approved ${data.approvedCount} consultation${data.approvedCount !== 1 ? 's' : ''} and sent reports to patients`);
+      utils.admin.consultations.invalidate();
+    },
+    onError: (err) => toast.error(err.message || 'Bulk approve failed'),
+  });
+
+  if (pendingCount === 0) return null;
+
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-green-800 dark:text-green-300">
+          {pendingCount} consultation{pendingCount !== 1 ? 's' : ''} ready for approval
+        </span>
+        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+          {pendingCount} pending
+        </Badge>
+      </div>
+      <Button
+        size="sm"
+        className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+        disabled={bulkApproveMutation.isPending}
+        onClick={() => {
+          if (confirm(`Approve all ${pendingCount} pending consultations and send reports to patients?`)) {
+            bulkApproveMutation.mutate();
+          }
+        }}
+      >
+        {bulkApproveMutation.isPending ? (
+          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Approving...</>
+        ) : (
+          <><Check className="w-3.5 h-3.5" /> Approve All Pending</>
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
@@ -804,15 +851,45 @@ export default function AdminPanel() {
           </TabsList>
 
           <TabsContent value="consultations" className="space-y-4">
+            {/* Bulk Approve All Pending */}
+            <BulkApproveAllButton consultations={consultations ?? []} />
+
             {consultations?.map((consultation) => (
               <Card key={consultation.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{consultation.patientName}</CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
+                        {consultation.patientName}
+                        {/* SBAR Urgency Triage Badge */}
+                        {(() => {
+                          const c = consultation as any;
+                          const urgency = c.sbarUrgencyLevel || c.priority || 'routine';
+                          const map: Record<string, { label: string; cls: string; icon: string }> = {
+                            critical: { label: 'Critical', cls: 'bg-red-600 text-white', icon: '🔴' },
+                            urgent:   { label: 'Urgent',   cls: 'bg-orange-500 text-white', icon: '🟠' },
+                            moderate: { label: 'Moderate', cls: 'bg-yellow-500 text-white', icon: '🟡' },
+                            routine:  { label: 'Routine',  cls: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', icon: '🔵' },
+                          };
+                          const entry = map[urgency] || map.routine;
+                          return (
+                            <Badge className={`text-xs ${entry.cls}`}>
+                              {entry.icon} {entry.label}
+                            </Badge>
+                          );
+                        })()}
+                      </CardTitle>
                       <CardDescription>{consultation.patientEmail}</CardDescription>
                     </div>
-                    <Badge>{consultation.status}</Badge>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge variant="outline">{consultation.status}</Badge>
+                      {(consultation as any).specialistApprovalStatus && (consultation as any).specialistApprovalStatus !== 'pending_review' && (
+                        <Badge variant={(consultation as any).specialistApprovalStatus === 'approved' ? 'default' : 'secondary'}
+                          className={(consultation as any).specialistApprovalStatus === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}>
+                          {(consultation as any).specialistApprovalStatus === 'approved' ? '✓ Approved' : (consultation as any).specialistApprovalStatus}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

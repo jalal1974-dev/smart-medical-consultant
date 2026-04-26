@@ -493,6 +493,22 @@ export default function Dashboard() {
                       })()}
                     </div>
                   )}
+                  {/* Doctor Notes — shown when doctor has added notes via Edit & Approve */}
+                  {(consultation as any).doctorNotes && (
+                    <div className="mt-4 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                      <p className="text-sm font-semibold mb-1 text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                        🩺 {language === 'ar' ? 'ملاحظات الطبيب' : "Doctor's Notes"}
+                      </p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{(consultation as any).doctorNotes}</p>
+                      {(consultation as any).doctorReviewedAt && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {language === 'ar' ? 'تاريخ المراجعة:' : 'Reviewed on:'}{' '}
+                          {new Date((consultation as any).doctorReviewedAt).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {consultation.followUpNotes && (
                     <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                       <p className="text-sm font-medium mb-1">Treatment Follow-up</p>
