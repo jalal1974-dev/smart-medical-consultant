@@ -2460,6 +2460,79 @@ export const appRouter = router({
           createdAt: session.createdAt,
         };
       }),
+
+    // ── Trigger AI processing from collected medical history ──────────────────
+    processHistory: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Allow admin OR the consultation owner
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+
+        // Get the latest completed history session for this consultation
+        const db2 = await (await import('./db')).getDb();
+        if (!db2) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        const { medicalHistorySessions } = await import('../drizzle/schema');
+        const { eq, desc, and } = await import('drizzle-orm');
+        const rows = await db2.select().from(medicalHistorySessions)
+          .where(and(
+            eq(medicalHistorySessions.consultationId, input.consultationId),
+            eq(medicalHistorySessions.isComplete, true),
+          ))
+          .orderBy(desc(medicalHistorySessions.createdAt))
+          .limit(1);
+
+        const session = rows[0];
+        const medicalHistory = session?.collectedHistory || consultation.medicalHistory || consultation.symptoms;
+        if (!medicalHistory) throw new TRPCError({ code: 'BAD_REQUEST', message: 'No medical history available to process' });
+
+        const lang = (consultation.preferredLanguage as 'en' | 'ar') || 'en';
+
+        // Fire-and-forget: start processing asynchronously
+        const { processHistoryWithAI } = await import('./medicalHistoryAIProcessor');
+        processHistoryWithAI(
+          input.consultationId,
+          medicalHistory,
+          consultation.patientName,
+          consultation.symptoms,
+          lang,
+        ).catch(err => console.error('[processHistory] background error:', err));
+
+        // Immediately mark as processing
+        await db.updateConsultation(input.consultationId, {
+          status: 'ai_processing',
+        });
+
+        return { started: true, message: 'AI processing started' };
+      }),
+
+    // ── Get AI outputs for a consultation ─────────────────────────────────────
+    getAIOutputs: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        return {
+          consultationId: consultation.id,
+          status: consultation.status,
+          specialistApprovalStatus: consultation.specialistApprovalStatus,
+          aiAnalysis: consultation.aiAnalysis,
+          aiReportUrl: consultation.aiReportUrl,
+          aiInfographicUrl: consultation.aiInfographicUrl,
+          aiSlideDeckUrl: consultation.aiSlideDeckUrl,
+          aiMindMapUrl: consultation.aiMindMapUrl,
+          aiLastProcessedAt: consultation.aiLastProcessedAt,
+          aiProcessingAttempts: consultation.aiProcessingAttempts,
+        };
+      }),
   }),
 });
 export type AppRouter = typeof appRouter;;

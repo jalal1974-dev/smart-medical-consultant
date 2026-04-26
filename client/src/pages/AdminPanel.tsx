@@ -19,7 +19,111 @@ import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
-import { Link2, Copy, Check, Send, SendHorizonal, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { Link2, Copy, Check, Send, SendHorizonal, MessageSquare, ChevronDown, ChevronUp, RefreshCw, Cpu, FileBarChart2, ImageIcon, PresentationIcon } from "lucide-react";
+
+// ─── AI Processing Section ───────────────────────────────────────────────────
+function AIProcessingSection({ consultation }: { consultation: any }) {
+  const utils = trpc.useUtils();
+  const [isPolling, setIsPolling] = useState(false);
+
+  const processHistoryMutation = trpc.medicalHistory.processHistory.useMutation({
+    onSuccess: () => {
+      toast.success('AI processing started — this takes 30–60 seconds');
+      setIsPolling(true);
+      // Poll every 5 seconds for up to 2 minutes
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        await utils.admin.consultations.invalidate();
+        if (attempts >= 24) {
+          clearInterval(interval);
+          setIsPolling(false);
+        }
+      }, 5000);
+    },
+    onError: (err) => toast.error(err.message || 'Failed to start AI processing'),
+  });
+
+  const isProcessing = consultation.status === 'ai_processing' || isPolling;
+  const hasOutputs = consultation.aiReportUrl || consultation.aiInfographicUrl || consultation.aiSlideDeckUrl;
+
+  // Only show for consultations that have some data to process
+  const canProcess = ['submitted', 'specialist_review', 'needs_deep_analysis'].includes(consultation.status) ||
+    (consultation.status === 'ai_processing');
+
+  if (!canProcess && !hasOutputs) return null;
+
+  return (
+    <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/20 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-blue-800 dark:text-blue-300">
+          <Cpu className="h-3.5 w-3.5" />
+          AI Report Generation
+        </span>
+        {isProcessing ? (
+          <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Processing...
+          </span>
+        ) : hasOutputs ? (
+          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-300">
+            ✓ Generated
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-xs">
+            Not generated
+          </Badge>
+        )}
+      </div>
+
+      {/* Output previews */}
+      {hasOutputs && (
+        <div className="grid grid-cols-3 gap-2 mb-2">
+          {consultation.aiReportUrl && (
+            <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer"
+              className="flex flex-col items-center gap-1 p-2 rounded bg-white dark:bg-gray-900 border border-blue-100 dark:border-blue-900 hover:border-blue-400 transition-colors text-center">
+              <FileBarChart2 className="h-5 w-5 text-blue-600" />
+              <span className="text-xs text-muted-foreground">SBAR Report</span>
+            </a>
+          )}
+          {consultation.aiInfographicUrl && (
+            <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer"
+              className="flex flex-col items-center gap-1 p-2 rounded bg-white dark:bg-gray-900 border border-blue-100 dark:border-blue-900 hover:border-blue-400 transition-colors text-center">
+              <ImageIcon className="h-5 w-5 text-emerald-600" />
+              <span className="text-xs text-muted-foreground">Infographic</span>
+            </a>
+          )}
+          {consultation.aiSlideDeckUrl && (
+            <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer"
+              className="flex flex-col items-center gap-1 p-2 rounded bg-white dark:bg-gray-900 border border-blue-100 dark:border-blue-900 hover:border-blue-400 transition-colors text-center">
+              <FileText className="h-5 w-5 text-purple-600" />
+              <span className="text-xs text-muted-foreground">Slide Deck</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Generate / Regenerate button */}
+      {canProcess && !isProcessing && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900"
+          onClick={() => processHistoryMutation.mutate({ consultationId: consultation.id })}
+          disabled={processHistoryMutation.isPending}
+        >
+          {processHistoryMutation.isPending ? (
+            <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Starting...</>
+          ) : hasOutputs ? (
+            <><RefreshCw className="h-3 w-3 mr-1" /> Regenerate AI Reports</>
+          ) : (
+            <><Brain className="h-3 w-3 mr-1" /> Generate AI Reports (SBAR + Infographic + Slides)</>
+          )}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 // ─── AI-Collected History Card ────────────────────────────────────────────────
 function AIHistoryCard({ consultationId }: { consultationId: number }) {
@@ -555,6 +659,9 @@ export default function AdminPanel() {
                       </div>
                     )}
                     
+                    {/* AI Processing Section */}
+                    <AIProcessingSection consultation={consultation} />
+
                     {/* Mind Map for Research */}
                     {(consultation.status === "ai_processing" || consultation.status === "specialist_review") && (
                       <div className="mt-4">
