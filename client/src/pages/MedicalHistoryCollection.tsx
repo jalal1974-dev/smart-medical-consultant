@@ -7,12 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
-  Mic, Square, Send, Loader2, CheckCircle2, ChevronRight,
-  Globe, RotateCcw, ClipboardList, MessageSquare, Edit3, ArrowRight
+  Mic, MicOff, Send, Loader2, CheckCircle2, ChevronRight,
+  Globe, RotateCcw, ClipboardList, MessageSquare, ArrowRight,
+  Volume2, VolumeX, Square, Play, StopCircle
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ChatMessage {
@@ -42,25 +45,58 @@ function ProgressBar({ turnCount, maxTurns = 8 }: { turnCount: number; maxTurns?
   );
 }
 
-// ─── Chat Bubble ──────────────────────────────────────────────────────────────
-function ChatBubble({ message, isRtl }: { message: ChatMessage; isRtl: boolean }) {
+// ─── Chat Bubble with TTS speaker button ─────────────────────────────────────
+function ChatBubble({
+  message,
+  isRtl,
+  onSpeak,
+  onStopSpeak,
+  isSpeaking,
+  isTTSSupported,
+}: {
+  message: ChatMessage;
+  isRtl: boolean;
+  onSpeak: (text: string) => void;
+  onStopSpeak: () => void;
+  isSpeaking: boolean;
+  isTTSSupported: boolean;
+}) {
   const isUser = message.role === "user";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3 group`}>
       {!isUser && (
         <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-1 shrink-0">
           AI
         </div>
       )}
-      <div
-        className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-          isUser
-            ? "bg-emerald-600 text-white rounded-br-sm"
-            : "bg-card border border-border text-foreground rounded-bl-sm"
-        }`}
-        dir={isRtl ? "rtl" : "ltr"}
-      >
-        {message.content}
+      <div className="flex flex-col gap-1 max-w-[80%]">
+        <div
+          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+            isUser
+              ? "bg-emerald-600 text-white rounded-br-sm"
+              : "bg-card border border-border text-foreground rounded-bl-sm"
+          }`}
+          dir={isRtl ? "rtl" : "ltr"}
+        >
+          {message.content}
+        </div>
+        {/* TTS button for AI messages */}
+        {!isUser && isTTSSupported && (
+          <div className={`flex ${isRtl ? "justify-end" : "justify-start"}`}>
+            <button
+              type="button"
+              onClick={() => isSpeaking ? onStopSpeak() : onSpeak(message.content)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-emerald-600 transition-colors px-1 py-0.5 rounded"
+              title={isSpeaking ? (isRtl ? "إيقاف" : "Stop") : (isRtl ? "استمع" : "Listen")}
+            >
+              {isSpeaking ? (
+                <><StopCircle className="h-3 w-3" /><span>{isRtl ? "إيقاف" : "Stop"}</span></>
+              ) : (
+                <><Play className="h-3 w-3" /><span>{isRtl ? "استمع" : "Listen"}</span></>
+              )}
+            </button>
+          </div>
+        )}
       </div>
       {isUser && (
         <div className="w-8 h-8 rounded-full bg-slate-400 flex items-center justify-center text-white text-xs font-bold ml-2 mt-1 shrink-0">
@@ -71,10 +107,56 @@ function ChatBubble({ message, isRtl }: { message: ChatMessage; isRtl: boolean }
   );
 }
 
+// ─── Listening Indicator ──────────────────────────────────────────────────────
+function ListeningPulse({ isRtl }: { isRtl: boolean }) {
+  return (
+    <div className="flex items-center justify-center gap-2 py-2 px-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium">
+      <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+      {isRtl ? "جاري الاستماع..." : "Listening..."}
+    </div>
+  );
+}
+
+// ─── Volume Control ───────────────────────────────────────────────────────────
+function VolumeControl({
+  volume,
+  onVolumeChange,
+  isMuted,
+  onToggleMute,
+  isRtl,
+}: {
+  volume: number;
+  onVolumeChange: (v: number) => void;
+  isMuted: boolean;
+  onToggleMute: () => void;
+  isRtl: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-[120px]">
+      <button
+        type="button"
+        onClick={onToggleMute}
+        className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        title={isMuted ? (isRtl ? "تشغيل الصوت" : "Unmute") : (isRtl ? "كتم الصوت" : "Mute")}
+      >
+        {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+      </button>
+      <Slider
+        value={[isMuted ? 0 : volume * 100]}
+        min={0}
+        max={100}
+        step={5}
+        onValueChange={([v]) => onVolumeChange(v / 100)}
+        className="w-20"
+      />
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function MedicalHistoryCollection() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { isAuthenticated, loading } = useAuth();
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
 
@@ -92,24 +174,42 @@ export default function MedicalHistoryCollection() {
   const [turnCount, setTurnCount] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [chatLanguage, setChatLanguage] = useState<"en" | "ar">(language as "en" | "ar");
-
-  // Voice recording state
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true); // auto-read AI messages
+  const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
   const isRtl = chatLanguage === "ar";
 
-  // tRPC mutations & queries
+  // ── Voice hook ─────────────────────────────────────────────────────────────
+  const voice = useVoiceChat({
+    initialLanguage: chatLanguage,
+    onTranscript: (text) => {
+      setInputText(prev => prev ? `${prev} ${text}` : text);
+    },
+    onLanguageChange: (lang) => {
+      setChatLanguage(lang);
+    },
+  });
+
+  // Sync mute state to volume hook
+  const prevVolumeRef = useRef(voice.volume);
+  const handleToggleMute = useCallback(() => {
+    if (isMuted) {
+      voice.setVolume(prevVolumeRef.current || 0.8);
+      setIsMuted(false);
+    } else {
+      prevVolumeRef.current = voice.volume;
+      voice.setVolume(0);
+      setIsMuted(true);
+    }
+  }, [isMuted, voice]);
+
+  // ── tRPC mutations & queries ───────────────────────────────────────────────
   const startSessionMutation = trpc.medicalHistory.startSession.useMutation();
   const sendMessageMutation = trpc.medicalHistory.sendMessage.useMutation();
   const confirmCompleteMutation = trpc.medicalHistory.confirmComplete.useMutation();
-  const transcribeMutation = trpc.voiceTranscription.transcribe.useMutation();
-  const uploadMutation = trpc.upload.file.useMutation();
   const { data: activeSession, isLoading: checkingSession } = trpc.medicalHistory.getActiveSession.useQuery(
     undefined,
     { enabled: isAuthenticated && !loading, retry: false }
@@ -120,7 +220,26 @@ export default function MedicalHistoryCollection() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Check for active session on mount; show resume prompt if found ──────────
+  // ── Auto-speak latest AI message ───────────────────────────────────────────
+  useEffect(() => {
+    if (!autoSpeak || !voice.isTTSSupported || isMuted) return;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === "assistant") {
+      const idx = messages.length - 1;
+      setSpeakingMsgIndex(idx);
+      voice.speak(lastMsg.content, chatLanguage);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
+  // Clear speaking index when TTS ends
+  useEffect(() => {
+    if (!voice.isSpeaking) {
+      setSpeakingMsgIndex(null);
+    }
+  }, [voice.isSpeaking]);
+
+  // ── Check for active session on mount ─────────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated || loading || checkingSession) return;
     if (activeSession && activeSession.turnCount > 0) {
@@ -128,6 +247,7 @@ export default function MedicalHistoryCollection() {
     } else {
       handleStartSession();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, loading, checkingSession, activeSession]);
 
   const handleStartSession = async (resumeSessionId?: number) => {
@@ -151,23 +271,25 @@ export default function MedicalHistoryCollection() {
     setSessionId(activeSession.sessionId);
     setMessages(activeSession.messages as ChatMessage[]);
     setTurnCount(activeSession.turnCount);
-    setChatLanguage((activeSession.detectedLanguage as "en" | "ar") || "en");
+    const lang = (activeSession.detectedLanguage as "en" | "ar") || "en";
+    setChatLanguage(lang);
+    voice.setLanguage(lang);
     setIsComplete(false);
     setPageState("chat");
   };
 
-  const handleStartNew = () => {
-    handleStartSession();
-  };
+  const handleStartNew = () => handleStartSession();
 
   // ── Send text message ──────────────────────────────────────────────────────
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || !sessionId || sendMessageMutation.isPending) return;
 
-    setInputText("");
+    // Stop any ongoing speech before user sends
+    voice.stopSpeaking();
+    voice.detectLanguageFromText(text);
 
-    // Optimistically add user message
+    setInputText("");
     const userMsg: ChatMessage = { role: "user", content: text, timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
 
@@ -185,18 +307,15 @@ export default function MedicalHistoryCollection() {
         setIsComplete(true);
         setCollectedHistory(result.collectedHistory ?? "");
         setEditedHistory(result.collectedHistory ?? "");
-        // Small delay then show review
         setTimeout(() => setPageState("review"), 800);
       }
     } catch (err: any) {
       toast.error(err?.message || "Failed to send message");
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m !== userMsg));
       setInputText(text);
     }
   };
 
-  // ── Handle Enter key ───────────────────────────────────────────────────────
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -204,100 +323,32 @@ export default function MedicalHistoryCollection() {
     }
   };
 
-  // ── Voice recording ────────────────────────────────────────────────────────
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = [
-        "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg", "audio/mp4",
-      ].find(t => MediaRecorder.isTypeSupported(t)) || "";
-
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
-
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        const actualMime = recorder.mimeType || "audio/webm";
-        const cleanMime = actualMime.split(";")[0] || "audio/webm";
-        const ext = cleanMime.includes("ogg") ? "ogg" : cleanMime.includes("mp4") ? "mp4" : "webm";
-        const blob = new Blob(chunksRef.current, { type: cleanMime });
-
-        if (blob.size / 1024 / 1024 > 16) {
-          toast.error(isRtl ? "حجم التسجيل كبير جداً" : "Recording too large (max 16MB)");
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-
-        setIsTranscribing(true);
-        try {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            try {
-              const base64 = (reader.result as string).split(",")[1];
-              const uploaded = await uploadMutation.mutateAsync({
-                fileName: `voice-history-${Date.now()}.${ext}`,
-                fileData: base64,
-                fileType: cleanMime,
-                category: "audio",
-              });
-              const result = await transcribeMutation.mutateAsync({
-                audioUrl: uploaded.url,
-                language: chatLanguage,
-              });
-              setInputText(prev => prev ? `${prev} ${result.text}` : result.text);
-              toast.success(isRtl ? "تم تحويل الصوت إلى نص" : "Voice transcribed");
-            } catch (e: any) {
-              toast.error(e?.message || (isRtl ? "فشل التحويل" : "Transcription failed"));
-            } finally {
-              setIsTranscribing(false);
-            }
-          };
-          reader.readAsDataURL(blob);
-        } catch {
-          setIsTranscribing(false);
-        }
-        stream.getTracks().forEach(t => t.stop());
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      toast.success(isRtl ? "بدأ التسجيل..." : "Recording started...");
-    } catch {
-      toast.error(isRtl ? "فشل الوصول إلى الميكروفون" : "Microphone access denied");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  // ── Switch language ────────────────────────────────────────────────────────
+  // ── Language toggle ────────────────────────────────────────────────────────
   const toggleLanguage = () => {
     const newLang = chatLanguage === "en" ? "ar" : "en";
     setChatLanguage(newLang);
+    voice.setLanguage(newLang);
+  };
+
+  // ── Speak a specific message ───────────────────────────────────────────────
+  const handleSpeakMessage = (text: string, idx: number) => {
+    voice.stopSpeaking();
+    setSpeakingMsgIndex(idx);
+    voice.speak(text, chatLanguage);
   };
 
   // ── Confirm and proceed ────────────────────────────────────────────────────
   const handleConfirm = async () => {
     if (!sessionId) return;
+    voice.stopSpeaking();
     try {
       await confirmCompleteMutation.mutateAsync({
         sessionId,
         editedHistory: editedHistory.trim() || collectedHistory,
       });
       setPageState("done");
-      // Redirect to consultation form with history pre-filled
       const encoded = encodeURIComponent(editedHistory.trim() || collectedHistory);
-      setTimeout(() => {
-        setLocation(`${returnTo}?medicalHistory=${encoded}`);
-      }, 1500);
+      setTimeout(() => setLocation(`${returnTo}?medicalHistory=${encoded}`), 1500);
     } catch (err: any) {
       toast.error(err?.message || "Failed to confirm");
     }
@@ -305,6 +356,7 @@ export default function MedicalHistoryCollection() {
 
   // ── Restart ────────────────────────────────────────────────────────────────
   const handleRestart = async () => {
+    voice.stopSpeaking();
     setMessages([]);
     setSessionId(null);
     setTurnCount(0);
@@ -338,7 +390,7 @@ export default function MedicalHistoryCollection() {
     );
   }
 
-  //  // ── Resume prompt state ─────────────────────────────────────────
+  // ── Resume prompt state ────────────────────────────────────────────────────
   if (pageState === "resume-prompt" && activeSession) {
     const sessionDate = activeSession.createdAt
       ? new Date(activeSession.createdAt).toLocaleDateString(isRtl ? "ar-SA" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -354,25 +406,17 @@ export default function MedicalHistoryCollection() {
           </h2>
           <p className="text-muted-foreground text-sm">
             {isRtl
-              ? `لديك جلسة جمع تاريخ طبي بدأت بتاريخ ${sessionDate} وتحتوي على ${activeSession.turnCount} ردود. هل تريد الاستمرار من حيث توقفت؟`
-              : `You have an unfinished session from ${sessionDate} with ${activeSession.turnCount} exchanges. Would you like to continue where you left off?`
+              ? `لديك جلسة بدأت بتاريخ ${sessionDate} وتحتوي على ${activeSession.turnCount} ردود. هل تريد الاستمرار؟`
+              : `You have an unfinished session from ${sessionDate} with ${activeSession.turnCount} exchanges. Continue where you left off?`
             }
           </p>
         </div>
         <div className="w-full space-y-3">
-          <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2"
-            onClick={handleResumeSession}
-          >
+          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 gap-2" onClick={handleResumeSession}>
             <ArrowRight className="h-4 w-4" />
             {isRtl ? "استمرار الجلسة السابقة" : "Continue Previous Session"}
           </Button>
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={handleStartNew}
-            disabled={startSessionMutation.isPending}
-          >
+          <Button variant="outline" className="w-full gap-2" onClick={handleStartNew} disabled={startSessionMutation.isPending}>
             {startSessionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
             {isRtl ? "بدء جلسة جديدة" : "Start a New Session"}
           </Button>
@@ -381,7 +425,7 @@ export default function MedicalHistoryCollection() {
     );
   }
 
-  // ── Done state ─────────────────────────────────────────────────
+  // ── Done state ─────────────────────────────────────────────────────────────
   if (pageState === "done") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4">
@@ -389,11 +433,6 @@ export default function MedicalHistoryCollection() {
         <h2 className="text-2xl font-bold text-center text-emerald-700">
           {isRtl ? "تم! جاري التوجيه..." : "Done! Redirecting..."}
         </h2>
-        <p className="text-muted-foreground text-center">
-          {isRtl
-            ? "سيتم نقل تاريخك الطبي إلى نموذج الاستشارة"
-            : "Your medical history will be transferred to the consultation form"}
-        </p>
         <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
       </div>
     );
@@ -402,29 +441,20 @@ export default function MedicalHistoryCollection() {
   // ── Review state ───────────────────────────────────────────────────────────
   if (pageState === "review") {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-            <ClipboardList className="h-5 w-5 text-emerald-700" />
-          </div>
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="flex items-center gap-3 mb-2">
+          <CheckCircle2 className="h-8 w-8 text-emerald-600 shrink-0" />
           <div>
-            <h1 className="text-xl font-bold">
-              {isRtl ? "مراجعة التاريخ الطبي المجمع" : "Review Your Collected Medical History"}
-            </h1>
+            <h1 className="text-xl font-bold">{isRtl ? "مراجعة التاريخ الطبي" : "Review Medical History"}</h1>
             <p className="text-sm text-muted-foreground">
-              {isRtl
-                ? "يمكنك تعديل المعلومات قبل المتابعة"
-                : "You can edit the information before proceeding"}
+              {isRtl ? "راجع وعدّل قبل الإرسال" : "Review and edit before submitting"}
             </p>
           </div>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Edit3 className="h-4 w-4" />
-              {isRtl ? "التاريخ الطبي" : "Medical History"}
-            </CardTitle>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{isRtl ? "التاريخ الطبي المجمع" : "Collected Medical History"}</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -436,19 +466,13 @@ export default function MedicalHistoryCollection() {
               placeholder={isRtl ? "التاريخ الطبي المجمع..." : "Collected medical history..."}
             />
             <p className="text-xs text-muted-foreground mt-2">
-              {isRtl
-                ? "يمكنك تعديل أو إضافة أي معلومات إضافية"
-                : "You can edit or add any additional information"}
+              {isRtl ? "يمكنك تعديل أو إضافة أي معلومات إضافية" : "You can edit or add any additional information"}
             </p>
           </CardContent>
         </Card>
 
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleRestart}
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={handleRestart} className="gap-2">
             <RotateCcw className="h-4 w-4" />
             {isRtl ? "إعادة البدء" : "Start Over"}
           </Button>
@@ -457,11 +481,7 @@ export default function MedicalHistoryCollection() {
             disabled={confirmCompleteMutation.isPending}
             className="flex-1 bg-emerald-600 hover:bg-emerald-700 gap-2"
           >
-            {confirmCompleteMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowRight className="h-4 w-4" />
-            )}
+            {confirmCompleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
             {isRtl ? "تأكيد والمتابعة للاستشارة" : "Confirm & Continue to Consultation"}
           </Button>
         </div>
@@ -483,20 +503,30 @@ export default function MedicalHistoryCollection() {
             <h1 className="text-lg font-bold leading-tight">
               {isRtl ? "جمع التاريخ الطبي" : "Medical History Collection"}
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
               {isRtl ? "مساعد طبي ذكي" : "AI Medical Assistant"}
+              {voice.isSTTSupported && (
+                <span className="text-emerald-600">• {isRtl ? "الإدخال الصوتي متاح" : "Voice input available"}</span>
+              )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Auto-speak toggle */}
+          {voice.isTTSSupported && (
+            <button
+              type="button"
+              onClick={() => setAutoSpeak(v => !v)}
+              className={`text-xs px-2 py-1 rounded border transition-colors ${autoSpeak ? "bg-emerald-50 border-emerald-300 text-emerald-700" : "border-border text-muted-foreground"}`}
+              title={isRtl ? "تشغيل تلقائي للأسئلة" : "Auto-play AI questions"}
+            >
+              {autoSpeak ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            </button>
+          )}
+
           {/* Language toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleLanguage}
-            className="gap-1.5 text-xs h-8"
-          >
+          <Button variant="outline" size="sm" onClick={toggleLanguage} className="gap-1.5 text-xs h-8">
             <Globe className="h-3.5 w-3.5" />
             {chatLanguage === "en" ? "العربية" : "English"}
           </Button>
@@ -520,8 +550,28 @@ export default function MedicalHistoryCollection() {
         <ProgressBar turnCount={turnCount} maxTurns={8} />
       </div>
 
+      {/* Volume control bar */}
+      {voice.isTTSSupported && (
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <span className="text-xs text-muted-foreground shrink-0">{isRtl ? "صوت الذكاء الاصطناعي:" : "AI Voice:"}</span>
+          <VolumeControl
+            volume={voice.volume}
+            onVolumeChange={voice.setVolume}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
+            isRtl={isRtl}
+          />
+          {voice.isSpeaking && (
+            <div className="flex items-center gap-1 text-xs text-emerald-600 animate-pulse">
+              <Volume2 className="h-3 w-3" />
+              <span>{isRtl ? "يتحدث..." : "Speaking..."}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-1 pr-1" style={{ minHeight: 0, maxHeight: "calc(100vh - 380px)" }}>
+      <div className="flex-1 overflow-y-auto mb-4 space-y-1 pr-1" style={{ minHeight: 0, maxHeight: "calc(100vh - 420px)" }}>
         {startSessionMutation.isPending && messages.length === 0 && (
           <div className="flex justify-center py-8">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -532,14 +582,20 @@ export default function MedicalHistoryCollection() {
         )}
 
         {messages.map((msg, i) => (
-          <ChatBubble key={i} message={msg} isRtl={isRtl} />
+          <ChatBubble
+            key={i}
+            message={msg}
+            isRtl={isRtl}
+            onSpeak={(text) => handleSpeakMessage(text, i)}
+            onStopSpeak={voice.stopSpeaking}
+            isSpeaking={voice.isSpeaking && speakingMsgIndex === i}
+            isTTSSupported={voice.isTTSSupported}
+          />
         ))}
 
         {sendMessageMutation.isPending && (
           <div className="flex justify-start mb-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-1 shrink-0">
-              AI
-            </div>
+            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs font-bold mr-2 mt-1 shrink-0">AI</div>
             <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -553,6 +609,16 @@ export default function MedicalHistoryCollection() {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Listening indicator */}
+      {voice.isListening && (
+        <div className="mb-2">
+          <ListeningPulse isRtl={isRtl} />
+          {voice.interimTranscript && (
+            <p className="text-xs text-muted-foreground italic mt-1 px-1">{voice.interimTranscript}</p>
+          )}
+        </div>
+      )}
+
       {/* Complete CTA */}
       {isComplete && pageState === "chat" && (
         <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
@@ -562,11 +628,7 @@ export default function MedicalHistoryCollection() {
               {isRtl ? "تم جمع معلومات كافية! راجع وأكد." : "Sufficient information collected! Review and confirm."}
             </p>
           </div>
-          <Button
-            size="sm"
-            onClick={() => setPageState("review")}
-            className="bg-emerald-600 hover:bg-emerald-700 gap-1 shrink-0"
-          >
+          <Button size="sm" onClick={() => setPageState("review")} className="bg-emerald-600 hover:bg-emerald-700 gap-1 shrink-0">
             {isRtl ? "مراجعة" : "Review"}
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
@@ -582,58 +644,53 @@ export default function MedicalHistoryCollection() {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isRtl ? "اكتب ردك هنا... (Enter للإرسال)" : "Type your response here... (Enter to send)"}
+              placeholder={
+                voice.isListening
+                  ? (isRtl ? "جاري الاستماع..." : "Listening...")
+                  : (isRtl ? "اكتب ردك هنا... (Enter للإرسال)" : "Type your response here... (Enter to send)")
+              }
               rows={2}
-              className="resize-none pr-2 text-sm"
+              className={`resize-none pr-2 text-sm transition-all ${voice.isListening ? "border-red-400 ring-1 ring-red-300" : ""}`}
               dir={isRtl ? "rtl" : "ltr"}
-              disabled={sendMessageMutation.isPending || isTranscribing}
+              disabled={sendMessageMutation.isPending}
             />
           </div>
 
-          {/* Voice button */}
-          {!isRecording && !isTranscribing && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={startRecording}
-              className="h-[60px] w-10 shrink-0"
-              title={isRtl ? "تسجيل صوتي" : "Voice input"}
-            >
-              <Mic className="h-4 w-4" />
-            </Button>
-          )}
-
-          {isRecording && (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              onClick={stopRecording}
-              className="h-[60px] w-10 shrink-0 animate-pulse"
-              title={isRtl ? "إيقاف التسجيل" : "Stop recording"}
-            >
-              <Square className="h-4 w-4" />
-            </Button>
-          )}
-
-          {isTranscribing && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled
-              className="h-[60px] w-10 shrink-0"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </Button>
+          {/* STT mic button */}
+          {voice.isSTTSupported && (
+            <>
+              {!voice.isListening ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={voice.startListening}
+                  className="h-[60px] w-10 shrink-0 hover:border-emerald-500 hover:text-emerald-600"
+                  title={isRtl ? "تسجيل صوتي" : "Voice input"}
+                  disabled={sendMessageMutation.isPending}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={voice.stopListening}
+                  className="h-[60px] w-10 shrink-0 animate-pulse"
+                  title={isRtl ? "إيقاف الاستماع" : "Stop listening"}
+                >
+                  <MicOff className="h-4 w-4" />
+                </Button>
+              )}
+            </>
           )}
 
           {/* Send button */}
           <Button
             type="button"
             onClick={handleSend}
-            disabled={!inputText.trim() || sendMessageMutation.isPending || isTranscribing}
+            disabled={!inputText.trim() || sendMessageMutation.isPending || voice.isListening}
             className="h-[60px] w-10 shrink-0 bg-emerald-600 hover:bg-emerald-700"
             size="icon"
           >
@@ -646,13 +703,20 @@ export default function MedicalHistoryCollection() {
         </div>
       )}
 
-      {/* Hint */}
+      {/* Hint bar */}
       {!isComplete && (
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          {isRtl
-            ? "اضغط Enter للإرسال • Shift+Enter لسطر جديد • زر الميكروفون للإدخال الصوتي"
-            : "Press Enter to send • Shift+Enter for new line • Mic button for voice input"}
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-muted-foreground">
+            {isRtl
+              ? "Enter للإرسال • Shift+Enter لسطر جديد"
+              : "Enter to send • Shift+Enter for new line"}
+          </p>
+          {voice.isSTTSupported && (
+            <p className="text-xs text-muted-foreground">
+              {isRtl ? "🎤 انقر على الميكروفون للإدخال الصوتي" : "🎤 Click mic for voice input"}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
