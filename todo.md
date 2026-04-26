@@ -790,3 +790,16 @@
 - [x] Add Send to Patient buttons per report row in Admin Panel
 - [x] Update patient Dashboard to only show reports where sentToPatient = true
 - [x] Wire sendReportReadyNotification when report is sent to patient
+
+## Medical History Collection Feature (AI Chat)
+- [x] Add medical_history_sessions DB table and migration
+- [x] Add DB helper functions (create, get, update, getActive)
+- [x] Add tRPC medicalHistory router (startSession, sendMessage, getSession, confirmComplete)
+- [x] Build /consultation/history-collection interactive chat page
+- [x] Voice input support in history collection chat
+- [x] Language toggle (Arabic/English) in chat
+- [x] Progress indicator showing completion status
+- [x] Review and edit collected history before submitting
+- [x] Pre-fill medicalHistory field in consultation form from AI session
+- [x] Add "Collect with AI" button in consultation form Medical History field
+- [x] Wire route in App.tsx

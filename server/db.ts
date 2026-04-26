@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken, medicalHistorySessions, MedicalHistorySession } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1566,4 +1566,55 @@ export async function markTokenUsed(token: string, uploadedFileUrl: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(uploadTokens).set({ usedAt: Date.now(), uploadedFileUrl }).where(eq(uploadTokens.token, token));
+}
+
+// ── Medical History Sessions ──────────────────────────────────────────────────
+
+export async function createMedicalHistorySession(userId: number, detectedLanguage: string = 'en'): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(medicalHistorySessions).values({
+    userId,
+    patientMessages: '[]',
+    aiQuestions: '[]',
+    detectedLanguage,
+    isComplete: false,
+    turnCount: 0,
+  });
+  return (result as any)[0]?.insertId ?? 0;
+}
+
+export async function getMedicalHistorySession(sessionId: number): Promise<MedicalHistorySession | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(medicalHistorySessions).where(eq(medicalHistorySessions.id, sessionId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateMedicalHistorySession(
+  sessionId: number,
+  updates: Partial<{
+    patientMessages: string;
+    aiQuestions: string;
+    detectedLanguage: string;
+    isComplete: boolean;
+    completionReason: string;
+    collectedHistory: string;
+    turnCount: number;
+    consultationId: number;
+  }>
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(medicalHistorySessions).set(updates as any).where(eq(medicalHistorySessions.id, sessionId));
+}
+
+export async function getActiveMedicalHistorySessionForUser(userId: number): Promise<MedicalHistorySession | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(medicalHistorySessions)
+    .where(and(eq(medicalHistorySessions.userId, userId), eq(medicalHistorySessions.isComplete, false)))
+    .orderBy(desc(medicalHistorySessions.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
 }

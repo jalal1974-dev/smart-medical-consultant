@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { Header } from "@/components/Header";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { RecordPicker } from "@/components/RecordPicker";
@@ -43,6 +43,16 @@ export default function Consultations() {
     preferredLanguage: language as "en" | "ar",
     priority: "routine" as "routine" | "urgent" | "critical",
   });
+
+  // Pre-fill medicalHistory from AI collection query param
+  const searchString = useSearch();
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const prefilledHistory = params.get('medicalHistory');
+    if (prefilledHistory) {
+      setFormData(prev => ({ ...prev, medicalHistory: decodeURIComponent(prefilledHistory) }));
+    }
+  }, [searchString]);
 
   // File upload states (URLs will be stored after upload to S3)
   const [medicalReports, setMedicalReports] = useState<string[]>([]);
@@ -493,9 +503,21 @@ export default function Consultations() {
                   </div>
 
                   <div>
-                    <Label htmlFor="medicalHistory">
-                      {language === "ar" ? "التاريخ الطبي" : "Medical History"}
-                    </Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label htmlFor="medicalHistory">
+                        {language === "ar" ? "التاريخ الطبي" : "Medical History"}
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => setLocation(`/consultation/history-collection?returnTo=/consultations`)}
+                      >
+                        <span>🤖</span>
+                        {language === "ar" ? "جمع بالذكاء الاصطناعي" : "Collect with AI"}
+                      </Button>
+                    </div>
                     <Textarea
                       id="medicalHistory"
                       value={formData.medicalHistory}
@@ -505,6 +527,12 @@ export default function Consultations() {
                         : "Previous illnesses, surgeries, current medications..."}
                       rows={4}
                     />
+                    {formData.medicalHistory && (
+                      <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                        <span>✓</span>
+                        {language === "ar" ? "تم تعبئة التاريخ الطبي من المساعد الذكي" : "Medical history pre-filled from AI assistant"}
+                      </p>
+                    )}
                   </div>
                 </div>
 

@@ -460,3 +460,35 @@ export const consultationAttachedRecords = mysqlTable("consultation_attached_rec
 
 export type ConsultationAttachedRecord = typeof consultationAttachedRecords.$inferSelect;
 export type InsertConsultationAttachedRecord = typeof consultationAttachedRecords.$inferInsert;
+
+/**
+ * Medical history sessions table - stores AI-driven interactive history collection conversations
+ */
+export const medicalHistorySessions = mysqlTable("medical_history_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  consultationId: int("consultation_id"), // nullable until consultation is created
+
+  // Conversation data stored as JSON arrays
+  patientMessages: text("patient_messages").notNull(), // JSON: [{role:"user", content:"...", timestamp:ms}]
+  aiQuestions: text("ai_questions").notNull(),         // JSON: [{role:"assistant", content:"...", timestamp:ms}]
+
+  // Detected language from patient input
+  detectedLanguage: varchar("detected_language", { length: 10 }).default("en").notNull(),
+
+  // Completion tracking
+  isComplete: boolean("is_complete").default(false).notNull(),
+  completionReason: varchar("completion_reason", { length: 255 }), // "sufficient_info" | "user_confirmed" | "max_turns"
+
+  // Extracted summary for use in consultation
+  collectedHistory: text("collected_history"), // AI-synthesized medical history summary
+
+  // Turn tracking
+  turnCount: int("turn_count").default(0).notNull(),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MedicalHistorySession = typeof medicalHistorySessions.$inferSelect;
+export type InsertMedicalHistorySession = typeof medicalHistorySessions.$inferInsert;

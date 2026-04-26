@@ -2179,7 +2179,212 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
-});
 
-export type AppRouter = typeof appRouter;
+  // ── Medical History Collection ──────────────────────────────────────────────
+  medicalHistory: router({
+    /**
+     * Start or resume a medical history collection session.
+     * Returns the session ID and the first AI question.
+     */
+    startSession: protectedProcedure
+      .input(z.object({
+        language: z.enum(['en', 'ar']).default('en'),
+        resumeSessionId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { invokeLLM } = await import('./_core/llm');
+
+        // Resume existing session if requested
+        if (input.resumeSessionId) {
+          const existing = await db.getMedicalHistorySession(input.resumeSessionId);
+          if (existing && existing.userId === ctx.user.id && !existing.isComplete) {
+            const messages = JSON.parse(existing.patientMessages || '[]') as any[];
+            const aiMsgs = JSON.parse(existing.aiQuestions || '[]') as any[];
+            return {
+              sessionId: existing.id,
+              messages: [...aiMsgs, ...messages].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0)),
+              isComplete: false,
+              turnCount: existing.turnCount,
+            };
+          }
+        }
+
+        // Create new session
+        const sessionId = await db.createMedicalHistorySession(ctx.user.id, input.language);
+
+        const isArabic = input.language === 'ar';
+        const systemPrompt = isArabic
+          ? `أنت مساعد طبي متخصص في جمع التاريخ الطبي للمرضى. مهمتك هي طرح أسئلة واضحة ومحددة لجمع معلومات طبية شاملة. اسأل سؤالاً واحداً في كل مرة. ابدأ بالأعراض الرئيسية، ثم انتقل إلى التاريخ الطبي، الأدوية، الحساسية، والتاريخ العائلي. كن متعاطفاً ومهنياً. عندما تجمع معلومات كافية (عادةً بعد 5-8 أسئلة)، أخبر المريض أن المعلومات كافية وأنه يمكنه المراجعة والتأكيد.`
+          : `You are a medical assistant specialized in collecting patient medical history. Your task is to ask clear, specific questions to gather comprehensive medical information. Ask one question at a time. Start with the main symptoms, then move to medical history, medications, allergies, and family history. Be empathetic and professional. When you have gathered sufficient information (usually after 5-8 questions), let the patient know the information is sufficient and they can review and confirm.`;
+
+        const openingMessage = isArabic
+          ? 'مرحباً! أنا هنا لمساعدتك في جمع تاريخك الطبي بشكل شامل. سأطرح عليك بعض الأسئلة لفهم حالتك الصحية بشكل أفضل.\n\nما هي الأعراض الرئيسية التي تعاني منها حالياً؟'
+          : 'Hello! I\'m here to help you collect your medical history comprehensively. I\'ll ask you a few questions to better understand your health situation.\n\nWhat are the main symptoms you are currently experiencing?';
+
+        // Store the opening AI message
+        const aiMsgs = [{ role: 'assistant', content: openingMessage, timestamp: Date.now() }];
+        await db.updateMedicalHistorySession(sessionId, {
+          aiQuestions: JSON.stringify(aiMsgs),
+          detectedLanguage: input.language,
+        });
+
+        return {
+          sessionId,
+          messages: aiMsgs,
+          isComplete: false,
+          turnCount: 0,
+        };
+      }),
+
+    /**
+     * Send a patient message and receive the next AI follow-up question.
+     */
+    sendMessage: protectedProcedure
+      .input(z.object({
+        sessionId: z.number(),
+        message: z.string().min(1).max(2000),
+        language: z.enum(['en', 'ar']).default('en'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { invokeLLM } = await import('./_core/llm');
+
+        const session = await db.getMedicalHistorySession(input.sessionId);
+        if (!session) throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
+        if (session.userId !== ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN' });
+        if (session.isComplete) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Session is already complete' });
+
+        const patientMsgs: any[] = JSON.parse(session.patientMessages || '[]');
+        const aiMsgs: any[] = JSON.parse(session.aiQuestions || '[]');
+        const newTurnCount = session.turnCount + 1;
+
+        // Add patient message
+        const patientMsg = { role: 'user', content: input.message, timestamp: Date.now() };
+        patientMsgs.push(patientMsg);
+
+        // Detect language from content
+        const detectedLang = /[\u0600-\u06FF]/.test(input.message) ? 'ar' : (input.language || 'en');
+
+        const isArabic = detectedLang === 'ar';
+
+        // Build conversation history for LLM
+        const conversationHistory = [...aiMsgs, ...patientMsgs]
+          .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+          .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+        const systemPrompt = isArabic
+          ? `أنت مساعد طبي متخصص في جمع التاريخ الطبي. اطرح سؤالاً واحداً محدداً في كل مرة. المعلومات المطلوبة: الأعراض الرئيسية، المدة، التاريخ الطبي السابق، الأدوية الحالية، الحساسية، التاريخ العائلي، الحالة الاجتماعية. بعد ${Math.max(5, newTurnCount)} أسئلة أو عندما تكون المعلومات كافية، أضف في نهاية ردك: [HISTORY_COMPLETE] ثم ملخصاً للمعلومات المجمعة.`
+          : `You are a medical assistant collecting patient medical history. Ask one specific question at a time. Required information: main symptoms, duration, previous medical history, current medications, allergies, family history, social history. After ${Math.max(5, newTurnCount)} questions or when information is sufficient, add at the end of your response: [HISTORY_COMPLETE] followed by a summary of collected information.`;
+
+        const llmResponse = await invokeLLM({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...conversationHistory,
+          ],
+        });
+
+        const aiContent: string = (llmResponse.choices?.[0]?.message?.content as string) ?? '';
+        const isComplete = aiContent.includes('[HISTORY_COMPLETE]') || newTurnCount >= 12;
+
+        // Extract summary if complete
+        let collectedHistory = session.collectedHistory;
+        let displayContent = aiContent;
+
+        if (isComplete) {
+          const summaryMatch = aiContent.split('[HISTORY_COMPLETE]');
+          displayContent = summaryMatch[0]?.trim() || aiContent;
+          if (summaryMatch[1]) {
+            collectedHistory = summaryMatch[1].trim();
+          } else {
+            // Generate a summary
+            const allPatientText = patientMsgs.map(m => m.content).join(' | ');
+            collectedHistory = allPatientText;
+          }
+          if (!displayContent) {
+            displayContent = isArabic
+              ? 'شكراً لك! لقد جمعنا معلومات كافية عن تاريخك الطبي. يمكنك الآن مراجعة المعلومات والتأكيد للمتابعة.'
+              : 'Thank you! We have gathered sufficient information about your medical history. You can now review the information and confirm to proceed.';
+          }
+        }
+
+        const aiMsg = { role: 'assistant', content: displayContent, timestamp: Date.now() + 1 };
+        aiMsgs.push(aiMsg);
+
+        await db.updateMedicalHistorySession(input.sessionId, {
+          patientMessages: JSON.stringify(patientMsgs),
+          aiQuestions: JSON.stringify(aiMsgs),
+          detectedLanguage: detectedLang,
+          turnCount: newTurnCount,
+          isComplete,
+          completionReason: isComplete ? (newTurnCount >= 12 ? 'max_turns' : 'sufficient_info') : undefined,
+          collectedHistory: collectedHistory ?? undefined,
+        });
+
+        // Build full sorted message list for client
+        const allMessages = [...aiMsgs, ...patientMsgs]
+          .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+
+        return {
+          sessionId: input.sessionId,
+          aiMessage: displayContent,
+          messages: allMessages,
+          isComplete,
+          turnCount: newTurnCount,
+          collectedHistory: isComplete ? collectedHistory : undefined,
+        };
+      }),
+
+    /**
+     * Get the current state of a session (for page refresh recovery).
+     */
+    getSession: protectedProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const session = await db.getMedicalHistorySession(input.sessionId);
+        if (!session) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (session.userId !== ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN' });
+
+        const patientMsgs: any[] = JSON.parse(session.patientMessages || '[]');
+        const aiMsgs: any[] = JSON.parse(session.aiQuestions || '[]');
+        const allMessages = [...aiMsgs, ...patientMsgs]
+          .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+
+        return {
+          sessionId: session.id,
+          messages: allMessages,
+          isComplete: session.isComplete,
+          turnCount: session.turnCount,
+          collectedHistory: session.collectedHistory,
+          detectedLanguage: session.detectedLanguage,
+        };
+      }),
+
+    /**
+     * Confirm completion and get the collected history summary for use in consultation.
+     */
+    confirmComplete: protectedProcedure
+      .input(z.object({
+        sessionId: z.number(),
+        editedHistory: z.string().optional(), // patient may edit the summary
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await db.getMedicalHistorySession(input.sessionId);
+        if (!session) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (session.userId !== ctx.user.id) throw new TRPCError({ code: 'FORBIDDEN' });
+
+        const finalHistory = input.editedHistory ?? session.collectedHistory ?? '';
+        await db.updateMedicalHistorySession(input.sessionId, {
+          isComplete: true,
+          completionReason: 'user_confirmed',
+          collectedHistory: finalHistory,
+        });
+
+        return {
+          success: true,
+          collectedHistory: finalHistory,
+          sessionId: input.sessionId,
+        };
+      }),
+  }),
+});
+export type AppRouter = typeof appRouter;;
 
