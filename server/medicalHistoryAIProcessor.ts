@@ -665,7 +665,13 @@ export async function processHistoryWithAI(
       "text/html"
     );
 
-    // 7. Update consultation record
+    // 7. Extract confidence from SBAR result
+    const confidence = (sbar as any)._confidence ?? 0.7;
+    const confidenceLabel = (sbar as any)._confidenceLabel ?? "moderate";
+    const requiresHumanReview = (sbar as any)._requiresHumanReview ?? false;
+    const disclaimer = (sbar as any)._disclaimer ?? "AI-generated — requires specialist review";
+
+    // 8. Update consultation record (including confidence metadata)
     await db.updateConsultation(consultationId, {
       aiInfographicUrl: infographicUrl,
       aiInfographicContent: JSON.stringify(infographicContent),
@@ -684,14 +690,13 @@ export async function processHistoryWithAI(
       aiLastProcessedAt: new Date(),
       status: "specialist_review",
       specialistApprovalStatus: "pending_review",
+      aiConfidence: String(confidence),
+      aiConfidenceLabel: confidenceLabel,
+      aiRequiresHumanReview: requiresHumanReview,
+      aiDisclaimer: disclaimer,
     });
 
     console.log(`[HistoryAI] Processing complete for consultation #${consultationId}`);
-
-    const confidence = (sbar as any)._confidence ?? 0.7;
-    const confidenceLabel = (sbar as any)._confidenceLabel ?? "moderate";
-    const requiresHumanReview = (sbar as any)._requiresHumanReview ?? false;
-    const disclaimer = (sbar as any)._disclaimer ?? "AI-generated — requires specialist review";
 
     return {
       success: true,

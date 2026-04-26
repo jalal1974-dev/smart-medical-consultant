@@ -97,6 +97,10 @@ export const consultations = mysqlTable("consultations", {
   specialistNotes: text("specialistNotes"), // Specialist feedback
   specialistRejectionReason: text("specialistRejectionReason"), // Why content was rejected
   doctorNotes: text("doctorNotes"), // Doctor's notes added during Edit & Approve flow
+  aiConfidence: varchar("aiConfidence", { length: 10 }), // e.g. "0.82"
+  aiConfidenceLabel: varchar("aiConfidenceLabel", { length: 20 }), // high | moderate | low | uncertain
+  aiRequiresHumanReview: boolean("aiRequiresHumanReview").default(false),
+  aiDisclaimer: text("aiDisclaimer"), // Safety disclaimer from MedGemma wrapper
   doctorReviewedAt: timestamp("doctorReviewedAt"), // When doctor approved/rejected AI materials
   reviewedBy: int("reviewedBy"), // Admin user ID who reviewed
   reviewedAt: timestamp("reviewedAt"),

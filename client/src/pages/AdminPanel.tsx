@@ -79,6 +79,38 @@ function AIProcessingSection({ consultation }: { consultation: any }) {
         )}
       </div>
 
+      {/* Confidence badge — shown when AI has processed the consultation */}
+      {hasOutputs && consultation.aiConfidenceLabel && (() => {
+        const label = consultation.aiConfidenceLabel as string;
+        const score = consultation.aiConfidence ? Math.round(parseFloat(consultation.aiConfidence) * 100) : null;
+        const requiresReview = consultation.aiRequiresHumanReview;
+        const colorMap: Record<string, string> = {
+          high: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950 dark:text-green-300 dark:border-green-700',
+          moderate: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-700',
+          low: 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-700',
+          uncertain: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700',
+        };
+        const iconMap: Record<string, string> = { high: '✓', moderate: '~', low: '!', uncertain: '⚠' };
+        return (
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium">AI Confidence:</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${colorMap[label] ?? colorMap.moderate}`}>
+              {iconMap[label] ?? '~'} {label.charAt(0).toUpperCase() + label.slice(1)}{score !== null ? ` (${score}%)` : ''}
+            </span>
+            {requiresReview && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-700">
+                ⚠ Human Review Required
+              </span>
+            )}
+            {consultation.aiDisclaimer && (
+              <span className="text-xs text-muted-foreground italic truncate max-w-xs" title={consultation.aiDisclaimer}>
+                {consultation.aiDisclaimer.length > 60 ? consultation.aiDisclaimer.slice(0, 60) + '…' : consultation.aiDisclaimer}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Output previews */}
       {hasOutputs && (
         <div className="grid grid-cols-3 gap-2 mb-2">
