@@ -20,6 +20,9 @@ import { MindMapVisualization } from "@/components/MindMapVisualization";
 import { RegenerateInfographicButton } from "@/components/RegenerateInfographicButton";
 import { RegenerateSlidesButton } from "@/components/RegenerateSlidesButton";
 import { Link2, Copy, Check, Send, SendHorizonal, MessageSquare, ChevronDown, ChevronUp, RefreshCw, Cpu, FileBarChart2, ImageIcon, PresentationIcon } from "lucide-react";
+import { MedicalInfographicViewer } from "@/components/MedicalInfographicViewer";
+import { MedicalSlideDeckViewer } from "@/components/MedicalSlideDeckViewer";
+import { MedicalReportBriefViewer } from "@/components/MedicalReportBriefViewer";
 
 // ─── AI Processing Section ───────────────────────────────────────────────────
 function AIProcessingSection({ consultation }: { consultation: any }) {
@@ -910,6 +913,34 @@ export default function AdminPanel() {
                           <Badge variant={consultation.specialistApprovalStatus === "approved" ? "default" : "secondary"}>
                             {consultation.specialistApprovalStatus}
                           </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── AI Material Viewers (Admin Preview) ── */}
+                    {(consultation.aiReportUrl || consultation.aiInfographicUrl || consultation.aiSlideDeckUrl) && (
+                      <div className="mt-4 space-y-4">
+                        <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">AI Report Previews</h4>
+                        {consultation.aiReportUrl && (
+                          <MedicalReportBriefViewer
+                            url={consultation.aiReportUrl}
+                            generatedAt={consultation.updatedAt}
+                            compact={false}
+                          />
+                        )}
+                        {consultation.aiInfographicUrl && (
+                          <MedicalInfographicViewer
+                            url={consultation.aiInfographicUrl}
+                            generatedAt={consultation.updatedAt}
+                            compact={false}
+                          />
+                        )}
+                        {consultation.aiSlideDeckUrl && (
+                          <MedicalSlideDeckViewer
+                            url={consultation.aiSlideDeckUrl}
+                            generatedAt={consultation.updatedAt}
+                            compact={false}
+                          />
                         )}
                       </div>
                     )}

@@ -11,6 +11,9 @@ import { format } from "date-fns";
 import { Link } from "wouter";
 import { SatisfactionSurvey } from "@/components/SatisfactionSurvey";
 import { ConsultationTimeline } from "@/components/ConsultationTimeline";
+import { MedicalInfographicViewer } from "@/components/MedicalInfographicViewer";
+import { MedicalSlideDeckViewer } from "@/components/MedicalSlideDeckViewer";
+import { MedicalReportBriefViewer } from "@/components/MedicalReportBriefViewer";
 import { useState } from "react";
 
 function CompletedConsultationSurvey({ consultationId, language }: { consultationId: number; language: "en" | "ar" }) {
@@ -406,30 +409,30 @@ export default function Dashboard() {
                           </p>
                         );
                         return (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          <div className="space-y-4">
                             {c.sentPdfToPatient && consultation.aiReportUrl && (
-                              <Button size="sm" variant="outline" asChild className="justify-start">
-                                <a href={consultation.aiReportUrl} target="_blank" rel="noopener noreferrer">
-                                  <Download className="w-4 h-4 mr-2" />
-                                  {language === "ar" ? "التقرير الطبي" : "Medical Report"}
-                                </a>
-                              </Button>
+                              <MedicalReportBriefViewer
+                                url={consultation.aiReportUrl}
+                                language={language as "en" | "ar"}
+                                generatedAt={(consultation as any).updatedAt}
+                                compact={false}
+                              />
                             )}
                             {c.sentInfographicToPatient && consultation.aiInfographicUrl && (
-                              <Button size="sm" variant="outline" asChild className="justify-start">
-                                <a href={consultation.aiInfographicUrl} target="_blank" rel="noopener noreferrer">
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  {language === "ar" ? "الإنفوجرافيك" : "Infographic"}
-                                </a>
-                              </Button>
+                              <MedicalInfographicViewer
+                                url={consultation.aiInfographicUrl}
+                                language={language as "en" | "ar"}
+                                generatedAt={(consultation as any).updatedAt}
+                                compact={false}
+                              />
                             )}
                             {c.sentSlidesToPatient && consultation.aiSlideDeckUrl && (
-                              <Button size="sm" variant="outline" asChild className="justify-start">
-                                <a href={consultation.aiSlideDeckUrl} target="_blank" rel="noopener noreferrer">
-                                  <Presentation className="w-4 h-4 mr-2" />
-                                  {language === "ar" ? "العرض التقديمي" : "Slide Deck"}
-                                </a>
-                              </Button>
+                              <MedicalSlideDeckViewer
+                                url={consultation.aiSlideDeckUrl}
+                                language={language as "en" | "ar"}
+                                generatedAt={(consultation as any).updatedAt}
+                                compact={false}
+                              />
                             )}
                             {c.sentMindMapToPatient && consultation.aiMindMapUrl && (
                               <Button size="sm" variant="outline" asChild className="justify-start">
