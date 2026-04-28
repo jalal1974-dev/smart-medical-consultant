@@ -10,6 +10,7 @@ import { sendConsultationWhatsAppNotification } from "./whatsappNotification";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { processConsultationWithAI, reprocessConsultationAfterRejection } from "./aiProcessingOrchestrator";
+import { generateConsultationPDF } from "./consultationPDFGenerator";
 import { transcribeAudio } from "./voiceTranscription";
 import bcrypt from "bcryptjs";
 import { sdk } from "./_core/sdk";
@@ -2334,6 +2335,33 @@ export const appRouter = router({
       }),
 
     // Bulk approve all consultations that are in ai_processing_complete or specialist_review
+    generatePDF: adminProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .mutation(async ({ input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const pdfUrl = await generateConsultationPDF({
+          id: consultation.id,
+          patientName: consultation.patientName,
+          patientEmail: consultation.patientEmail,
+          symptoms: consultation.symptoms,
+          medicalHistory: consultation.medicalHistory,
+          priority: consultation.priority,
+          status: consultation.status,
+          createdAt: consultation.createdAt,
+          updatedAt: consultation.updatedAt,
+          aiReportUrl: consultation.aiReportUrl,
+          aiInfographicUrl: consultation.aiInfographicUrl,
+          aiSlideDeckUrl: consultation.aiSlideDeckUrl,
+          aiConfidence: consultation.aiConfidence,
+          aiConfidenceLabel: consultation.aiConfidenceLabel,
+          aiRequiresHumanReview: consultation.aiRequiresHumanReview,
+          aiDisclaimer: consultation.aiDisclaimer,
+          doctorNotes: consultation.doctorNotes,
+        });
+        return { success: true, pdfUrl };
+      }),
+
     bulkApproveAll: adminProcedure
       .mutation(async ({ ctx }) => {
         // Get all consultations pending review

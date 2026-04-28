@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map } from "lucide-react";
+import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2 } from "lucide-react";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -158,6 +158,15 @@ export default function Dashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
+
+  const exportPDF = trpc.doctorReview.generatePDF.useMutation({
+    onSuccess: (data) => {
+      if (data.pdfUrl) {
+        window.open(data.pdfUrl, '_blank');
+      }
+    },
+    onError: () => {},
+  });
 
   if (loading || consultationsLoading) {
     return (
@@ -488,6 +497,21 @@ export default function Dashboard() {
                                 </a>
                               </Button>
                             )}
+                            {/* Export Full PDF — always shown when any material has been sent */}
+                            <div className="pt-2 border-t border-blue-200 dark:border-blue-800">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full gap-2 border-slate-400"
+                                disabled={exportPDF.isPending && exportPDF.variables?.consultationId === consultation.id}
+                                onClick={() => exportPDF.mutate({ consultationId: consultation.id })}
+                              >
+                                {exportPDF.isPending && exportPDF.variables?.consultationId === consultation.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <FileDown className="w-4 h-4" />}
+                                {language === 'ar' ? 'تصدير تقرير PDF كامل' : 'Export Full PDF Report'}
+                              </Button>
+                            </div>
                           </div>
                         );
                       })()}

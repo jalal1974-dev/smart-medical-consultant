@@ -13,7 +13,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
@@ -220,6 +220,16 @@ function DoctorReviewPanel({ consultation }: { consultation: any }) {
   const hasAnyMaterial = consultation.aiReportUrl || consultation.aiInfographicUrl || consultation.aiSlideDeckUrl;
   const isReviewed = consultation.specialistApprovalStatus === 'approved' || consultation.status === 'doctor_reviewed';
 
+  const exportPDF = trpc.doctorReview.generatePDF.useMutation({
+    onSuccess: (data) => {
+      if (data.pdfUrl) {
+        window.open(data.pdfUrl, '_blank');
+        toast.success('PDF generated — opening in new tab');
+      }
+    },
+    onError: (e) => toast.error('PDF generation failed: ' + e.message),
+  });
+
   if (!['specialist_review', 'ai_processing_complete', 'doctor_reviewed'].includes(consultation.status)) return null;
 
   return (
@@ -228,9 +238,25 @@ function DoctorReviewPanel({ consultation }: { consultation: any }) {
         <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
           <Brain className="h-4 w-4" /> AI Materials Review
         </h4>
-        {isReviewed && (
-          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">✓ Approved by Doctor</Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {isReviewed && (
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">✓ Approved by Doctor</Badge>
+          )}
+          {hasAnyMaterial && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-slate-400 text-slate-700 dark:text-slate-300 h-7 px-2 text-xs"
+              disabled={exportPDF.isPending}
+              onClick={() => exportPDF.mutate({ consultationId: consultation.id })}
+            >
+              {exportPDF.isPending
+                ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                : <FileDown className="h-3 w-3 mr-1" />}
+              Export PDF
+            </Button>
+          )}
+        </div>
       </div>
 
       {consultation.doctorNotes && (

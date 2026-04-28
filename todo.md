@@ -819,3 +819,10 @@
 - [ ] AI suggests consultation category based on symptoms
 - [ ] Add "Check Symptoms First" entry point on home page and consultations page
 - [ ] Wire route in App.tsx
+
+## Consultation PDF Export
+- [x] Install html-pdf-node for server-side PDF generation
+- [x] Create consultationPDFGenerator.ts service
+- [x] Add generateConsultationPDF tRPC procedure
+- [x] Add "Export PDF" button in Admin Panel consultation card (DoctorReviewPanel header)
+- [x] Add "Download Full Report" button in patient Dashboard (Export Full PDF Report)
