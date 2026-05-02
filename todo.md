@@ -835,3 +835,11 @@
 - [x] Build DisclaimerGate component with bilingual checkbox and disclaimer text
 - [x] Wire DisclaimerGate into patient Dashboard before AI reports section
 - [x] Persist acknowledgment to DB so it only shows once per user
+
+## Admin Panel: Consultation Search & Filter Bar
+- [x] Add search input (patient name / email) above consultations list
+- [x] Add status filter dropdown (All / Submitted / AI Processing / AI Complete / Specialist Review / Doctor Reviewed)
+- [x] Add priority filter dropdown (All / Routine / Urgent / Critical)
+- [x] Implement client-side filtering logic combining all three filters
+- [x] Show result count (e.g. "Showing 3 of 12 consultations")
+- [x] Add clear/reset filters button

@@ -453,6 +453,9 @@ export default function AdminPanel() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const [userSearch, setUserSearch] = useState("");
+  const [consultationSearch, setConsultationSearch] = useState("");
+  const [consultationStatusFilter, setConsultationStatusFilter] = useState("all");
+  const [consultationPriorityFilter, setConsultationPriorityFilter] = useState("all");
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: consultations } = trpc.admin.consultations.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
@@ -909,10 +912,99 @@ export default function AdminPanel() {
           </TabsList>
 
           <TabsContent value="consultations" className="space-y-4">
+            {/* ── Search & Filter Bar ── */}
+            <div className="flex flex-col sm:flex-row gap-3 p-4 bg-muted/40 rounded-xl border border-border">
+              {/* Search input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search by patient name or email…"
+                  value={consultationSearch}
+                  onChange={(e) => setConsultationSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              {/* Status filter */}
+              <Select value={consultationStatusFilter} onValueChange={setConsultationStatusFilter}>
+                <SelectTrigger className="w-full sm:w-52">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="ai_processing">AI Processing</SelectItem>
+                  <SelectItem value="ai_processing_complete">AI Complete</SelectItem>
+                  <SelectItem value="specialist_review">Specialist Review</SelectItem>
+                  <SelectItem value="doctor_reviewed">Doctor Reviewed</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Priority filter */}
+              <Select value={consultationPriorityFilter} onValueChange={setConsultationPriorityFilter}>
+                <SelectTrigger className="w-full sm:w-44">
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="critical">🔴 Critical</SelectItem>
+                  <SelectItem value="urgent">🟠 Urgent</SelectItem>
+                  <SelectItem value="moderate">🟡 Moderate</SelectItem>
+                  <SelectItem value="routine">🔵 Routine</SelectItem>
+                </SelectContent>
+              </Select>
+              {/* Clear button — only shown when any filter is active */}
+              {(consultationSearch || consultationStatusFilter !== "all" || consultationPriorityFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setConsultationSearch("");
+                    setConsultationStatusFilter("all");
+                    setConsultationPriorityFilter("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+
+            {/* Result count */}
+            {(() => {
+              const total = consultations?.length ?? 0;
+              const q = consultationSearch.toLowerCase().trim();
+              const filtered = (consultations ?? []).filter((c: any) => {
+                const matchesSearch = !q ||
+                  c.patientName?.toLowerCase().includes(q) ||
+                  c.patientEmail?.toLowerCase().includes(q);
+                const matchesStatus = consultationStatusFilter === "all" || c.status === consultationStatusFilter;
+                const priority = c.sbarUrgencyLevel || c.priority || "routine";
+                const matchesPriority = consultationPriorityFilter === "all" || priority === consultationPriorityFilter;
+                return matchesSearch && matchesStatus && matchesPriority;
+              });
+              if (total === 0) return null;
+              return (
+                <p className="text-sm text-muted-foreground px-1">
+                  Showing <span className="font-semibold text-foreground">{filtered.length}</span> of{" "}
+                  <span className="font-semibold text-foreground">{total}</span> consultation{total !== 1 ? "s" : ""}
+                </p>
+              );
+            })()}
+
             {/* Bulk Approve All Pending */}
             <BulkApproveAllButton consultations={consultations ?? []} />
 
-            {consultations?.map((consultation) => (
+            {(consultations ?? []).filter((c: any) => {
+              const q = consultationSearch.toLowerCase().trim();
+              const matchesSearch = !q ||
+                c.patientName?.toLowerCase().includes(q) ||
+                c.patientEmail?.toLowerCase().includes(q);
+              const matchesStatus = consultationStatusFilter === "all" || c.status === consultationStatusFilter;
+              const priority = c.sbarUrgencyLevel || c.priority || "routine";
+              const matchesPriority = consultationPriorityFilter === "all" || priority === consultationPriorityFilter;
+              return matchesSearch && matchesStatus && matchesPriority;
+            }).map((consultation) => (
               <Card key={consultation.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
