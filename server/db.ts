@@ -1618,3 +1618,12 @@ export async function getActiveMedicalHistorySessionForUser(userId: number): Pro
     .limit(1);
   return rows[0] ?? null;
 }
+
+export async function acknowledgeDisclaimer(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await (db as any).execute(
+    `UPDATE users SET disclaimerAcknowledgedAt = NOW() WHERE id = ?`,
+    [userId]
+  );
+}

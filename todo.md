@@ -826,3 +826,12 @@
 - [x] Add generateConsultationPDF tRPC procedure
 - [x] Add "Export PDF" button in Admin Panel consultation card (DoctorReviewPanel header)
 - [x] Add "Download Full Report" button in patient Dashboard (Export Full PDF Report)
+
+## Disclaimer Acknowledged Gate (Patient Dashboard)
+- [x] Add disclaimerAcknowledgedAt column to users table in drizzle/schema.ts
+- [x] Run DB migration (pnpm db:push)
+- [x] Add auth.acknowledgeDisclaimer tRPC mutation
+- [x] Add auth.me query to return disclaimerAcknowledgedAt
+- [x] Build DisclaimerGate component with bilingual checkbox and disclaimer text
+- [x] Wire DisclaimerGate into patient Dashboard before AI reports section
+- [x] Persist acknowledgment to DB so it only shows once per user

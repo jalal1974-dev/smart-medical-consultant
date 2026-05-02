@@ -161,6 +161,13 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // One-time AI disclaimer acknowledgment
+    acknowledgeDisclaimer: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await db.acknowledgeDisclaimer(ctx.user.id);
+        return { success: true };
+      }),
+
     // Reset password using token
     resetPassword: publicProcedure
       .input(z.object({

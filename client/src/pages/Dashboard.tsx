@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2 } from "lucide-react";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
+import { DisclaimerGate } from "@/components/DisclaimerGate";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { SatisfactionSurvey } from "@/components/SatisfactionSurvey";
@@ -158,6 +159,12 @@ export default function Dashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
+
+  // Track disclaimer acknowledgment — uses DB value as source of truth,
+  // with a local override so the gate disappears immediately after clicking Confirm
+  const { data: meData } = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
+  const [localAcknowledged, setLocalAcknowledged] = useState(false);
+  const disclaimerAcknowledged = localAcknowledged || !!(meData as any)?.disclaimerAcknowledgedAt;
 
   const exportPDF = trpc.doctorReview.generatePDF.useMutation({
     onSuccess: (data) => {
@@ -424,13 +431,17 @@ export default function Dashboard() {
                       language={language}
                     />
                   </div>
-                  {consultation.aiAnalysis && (
+                    {consultation.aiAnalysis && (
                     <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                       <p className="text-sm font-medium mb-2">{language === "ar" ? "التحليل الطبي" : "Medical Analysis"}</p>
                       <p className="text-sm text-muted-foreground mb-3">{consultation.aiAnalysis}</p>
-                      {/* Only show reports that admin has explicitly sent to patient */}
-                      {(() => {
-                        const c = consultation as any;
+                      {/* Disclaimer gate — shown once before AI reports are revealed */}
+                      {!disclaimerAcknowledged ? (
+                        <DisclaimerGate onAcknowledged={() => setLocalAcknowledged(true)} />
+                      ) : (
+                        /* Only show reports that admin has explicitly sent to patient */
+                        <>{(() => {
+                          const c = consultation as any;
                         const hasSentAny = c.sentPdfToPatient || c.sentInfographicToPatient || c.sentSlidesToPatient || c.sentMindMapToPatient || c.sentPptxToPatient;
                         if (!hasSentAny) {
                           const status = consultation.status;
@@ -514,7 +525,9 @@ export default function Dashboard() {
                             </div>
                           </div>
                         );
-                      })()}
+                        })()
+                        }</>
+                      )}
                     </div>
                   )}
                   {/* Doctor Notes — shown when doctor has added notes via Edit & Approve */}
