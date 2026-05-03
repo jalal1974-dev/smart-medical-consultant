@@ -843,3 +843,8 @@
 - [x] Implement client-side filtering logic combining all three filters
 - [x] Show result count (e.g. "Showing 3 of 12 consultations")
 - [x] Add clear/reset filters button
+
+## Admin Panel: Sort Order Control
+- [x] Add consultationSort state (newest/oldest/priority-high/priority-low)
+- [x] Implement sort logic on the filtered consultation list
+- [x] Add sort dropdown to the filter bar next to priority filter

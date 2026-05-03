@@ -456,6 +456,7 @@ export default function AdminPanel() {
   const [consultationSearch, setConsultationSearch] = useState("");
   const [consultationStatusFilter, setConsultationStatusFilter] = useState("all");
   const [consultationPriorityFilter, setConsultationPriorityFilter] = useState("all");
+  const [consultationSort, setConsultationSort] = useState("priority_high");
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: consultations } = trpc.admin.consultations.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
@@ -953,8 +954,20 @@ export default function AdminPanel() {
                   <SelectItem value="routine">🔵 Routine</SelectItem>
                 </SelectContent>
               </Select>
+              {/* Sort dropdown */}
+              <Select value={consultationSort} onValueChange={setConsultationSort}>
+                <SelectTrigger className="w-full sm:w-52">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="priority_high">🔴 Priority: High → Low</SelectItem>
+                  <SelectItem value="priority_low">🔵 Priority: Low → High</SelectItem>
+                  <SelectItem value="newest">🕐 Newest first</SelectItem>
+                  <SelectItem value="oldest">🕐 Oldest first</SelectItem>
+                </SelectContent>
+              </Select>
               {/* Clear button — only shown when any filter is active */}
-              {(consultationSearch || consultationStatusFilter !== "all" || consultationPriorityFilter !== "all") && (
+              {(consultationSearch || consultationStatusFilter !== "all" || consultationPriorityFilter !== "all" || consultationSort !== "priority_high") && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -963,6 +976,7 @@ export default function AdminPanel() {
                     setConsultationSearch("");
                     setConsultationStatusFilter("all");
                     setConsultationPriorityFilter("all");
+                    setConsultationSort("priority_high");
                   }}
                 >
                   Clear filters
@@ -992,6 +1006,8 @@ export default function AdminPanel() {
               );
             })()}
 
+            {/* Helper: priority rank for sorting */}
+
             {/* Bulk Approve All Pending */}
             <BulkApproveAllButton consultations={consultations ?? []} />
 
@@ -1004,6 +1020,17 @@ export default function AdminPanel() {
               const priority = c.sbarUrgencyLevel || c.priority || "routine";
               const matchesPriority = consultationPriorityFilter === "all" || priority === consultationPriorityFilter;
               return matchesSearch && matchesStatus && matchesPriority;
+            }).sort((a: any, b: any) => {
+              const priorityRank: Record<string, number> = { critical: 0, urgent: 1, moderate: 2, routine: 3 };
+              const pa = priorityRank[a.sbarUrgencyLevel || a.priority || "routine"] ?? 3;
+              const pb = priorityRank[b.sbarUrgencyLevel || b.priority || "routine"] ?? 3;
+              if (consultationSort === "priority_high") return pa - pb;
+              if (consultationSort === "priority_low") return pb - pa;
+              const da = new Date(a.createdAt).getTime();
+              const db = new Date(b.createdAt).getTime();
+              if (consultationSort === "newest") return db - da;
+              if (consultationSort === "oldest") return da - db;
+              return 0;
             }).map((consultation) => (
               <Card key={consultation.id}>
                 <CardHeader>
