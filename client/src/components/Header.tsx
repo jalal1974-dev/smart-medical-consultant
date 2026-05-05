@@ -24,6 +24,13 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logoutMutation = trpc.auth.logout.useMutation();
 
+  // Unread consultation badge — only fetched for admins
+  const { data: unreadData } = trpc.admin.unreadConsultationCount.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+    refetchInterval: 30_000, // poll every 30 s
+  });
+  const unreadCount = unreadData?.count ?? 0;
+
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     window.location.href = "/";
@@ -69,13 +76,18 @@ export function Header() {
             <Link
               key={item.path}
               href={item.path}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`relative text-sm font-medium transition-colors hover:text-primary ${
                 location === item.path
                   ? "text-primary"
                   : "text-muted-foreground"
               }`}
             >
               {item.label}
+              {item.path === "/admin" && unreadCount > 0 && (
+                <span className="absolute -top-2 -right-3 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -154,7 +166,7 @@ export function Header() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
+                className={`relative inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${
                   location === item.path
                     ? "text-primary"
                     : "text-muted-foreground"
@@ -162,6 +174,11 @@ export function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
+                {item.path === "/admin" && unreadCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </Link>
             ))}
             <div className="flex items-center gap-3 pt-2 border-t">

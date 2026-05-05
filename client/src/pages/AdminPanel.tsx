@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown } from "lucide-react";
 import { format } from "date-fns";
@@ -457,6 +457,16 @@ export default function AdminPanel() {
   const [consultationStatusFilter, setConsultationStatusFilter] = useState("all");
   const [consultationPriorityFilter, setConsultationPriorityFilter] = useState("all");
   const [consultationSort, setConsultationSort] = useState("priority_high");
+
+  const markSeenMutation = trpc.admin.markConsultationsSeen.useMutation();
+
+  // Mark consultations as seen when the admin opens this panel
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "admin") {
+      markSeenMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.role]);
 
   const { data: stats } = trpc.admin.stats.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const { data: consultations } = trpc.admin.consultations.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });

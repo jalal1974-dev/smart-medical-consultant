@@ -1290,6 +1290,30 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Count consultations submitted after the admin last visited the panel
+    unreadConsultationCount: adminProcedure.query(async ({ ctx }) => {
+      const lastVisit = ctx.user.lastAdminPanelVisitAt;
+      if (!lastVisit) {
+        const all = await db.getAllConsultations();
+        return { count: all.length };
+      }
+      const all = await db.getAllConsultations();
+      const unread = all.filter((c: any) => new Date(c.createdAt) > new Date(lastVisit));
+      return { count: unread.length };
+    }),
+
+    // Update the admin's lastAdminPanelVisitAt timestamp to now
+    markConsultationsSeen: adminProcedure.mutation(async ({ ctx }) => {
+      const drizzleDb = await (await import('./db')).getDb();
+      if (!drizzleDb) return { success: false };
+      const { users } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      await drizzleDb.update(users)
+        .set({ lastAdminPanelVisitAt: new Date() })
+        .where(eq(users.id, ctx.user.id));
+      return { success: true };
+    }),
+
     // Video management
     videos: router({
       list: adminProcedure.query(async () => {
@@ -2393,6 +2417,7 @@ export const appRouter = router({
         }
         return { success: true, approvedCount: approved };
       }),
+
   }),
 
   // ── Medical History Collection ──────────────────────────────────────────────

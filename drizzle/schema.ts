@@ -22,6 +22,7 @@ export const users = mysqlTable("users", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   disclaimerAcknowledgedAt: timestamp("disclaimerAcknowledgedAt"),  // null = not yet acknowledged; set once when patient checks the AI disclaimer
+  lastAdminPanelVisitAt: timestamp("lastAdminPanelVisitAt"),  // null = never visited; updated each time admin opens Admin Panel
 });
 
 export type User = typeof users.$inferSelect;

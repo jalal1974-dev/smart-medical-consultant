@@ -848,3 +848,11 @@
 - [x] Add consultationSort state (newest/oldest/priority-high/priority-low)
 - [x] Implement sort logic on the filtered consultation list
 - [x] Add sort dropdown to the filter bar next to priority filter
+
+## Admin Panel: Unread Consultation Badge
+- [x] Add lastAdminPanelVisitAt column to users table
+- [x] Run DB migration
+- [x] Add admin.unreadConsultationCount tRPC query
+- [x] Add admin.markConsultationsSeen tRPC mutation
+- [x] Show red badge with count on Admin Panel nav link in Header
+- [x] Call markConsultationsSeen when admin opens Admin Panel page
