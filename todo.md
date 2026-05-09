@@ -856,3 +856,14 @@
 - [x] Add admin.markConsultationsSeen tRPC mutation
 - [x] Show red badge with count on Admin Panel nav link in Header
 - [x] Call markConsultationsSeen when admin opens Admin Panel page
+
+## Patient Notification on New Report
+- [x] Audit approveAIMaterials / sendToPatient procedures for notification hook points
+- [x] Add patient_notifications table to drizzle/schema.ts
+- [x] Run DB migration (direct SQL ALTER)
+- [x] Add db helpers: createPatientNotification, getPatientNotifications, markNotificationsRead
+- [x] Wire notification dispatch into approveAIMaterials and any sendToPatient mutations
+- [x] Add notifications tRPC router (getAll, getUnreadCount, markAllRead)
+- [x] Add notification bell icon to Header for logged-in patients (desktop + mobile)
+- [x] Add notification dropdown showing unread/read notifications with timestamps
+- [x] Auto-mark notifications as read when patient opens the bell dropdown

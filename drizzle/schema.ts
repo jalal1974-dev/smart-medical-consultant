@@ -502,3 +502,20 @@ export const medicalHistorySessions = mysqlTable("medical_history_sessions", {
 
 export type MedicalHistorySession = typeof medicalHistorySessions.$inferSelect;
 export type InsertMedicalHistorySession = typeof medicalHistorySessions.$inferInsert;
+
+/**
+ * Patient notifications — in-app alerts sent when the doctor releases a report
+ */
+export const patientNotifications = mysqlTable("patient_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),           // recipient patient
+  consultationId: int("consultationId"),     // linked consultation (nullable for system messages)
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  type: mysqlEnum("type", ["report_ready", "system"]).default("report_ready").notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PatientNotification = typeof patientNotifications.$inferSelect;
+export type InsertPatientNotification = typeof patientNotifications.$inferInsert;

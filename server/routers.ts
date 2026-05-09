@@ -1208,6 +1208,20 @@ export const appRouter = router({
           ).catch(err => console.error('[Email] sendReportToPatient notification failed:', err));
         }
 
+        // In-app notification for the patient
+        if (sentCount > 0 && consultation.userId) {
+          const isAr = (consultation.preferredLanguage ?? 'ar') === 'ar';
+          db.createPatientNotification({
+            userId: consultation.userId,
+            consultationId: consultation.id,
+            title: isAr ? '\u062a\u0642\u0631\u064a\u0631\u0643 \u062c\u0627\u0647\u0632' : 'Your Report is Ready',
+            body: isAr
+              ? `\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u062a\u0642\u0627\u0631\u064a\u0631 \u062c\u062f\u064a\u062f\u0629 \u0644\u0627\u0633\u062a\u0634\u0627\u0631\u062a\u0643 #${consultation.id}. \u064a\u0645\u0643\u0646\u0643 \u0645\u0631\u0627\u062c\u0639\u062a\u0647\u0627 \u0641\u064a \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645.`
+              : `New reports are available for consultation #${consultation.id}. Visit your dashboard to view them.`,
+            type: 'report_ready',
+          }).catch(err => console.error('[Notification] in-app notification failed:', err));
+        }
+
         return { success: true, updatedFields: Object.keys(updates) };
       }),
 
@@ -2080,6 +2094,26 @@ export const appRouter = router({
     }),
   }),
 
+  // ── Patient Notifications ──────────────────────────────────────────────────
+  notifications: router({
+    // Get all notifications for the logged-in patient
+    getAll: protectedProcedure.query(async ({ ctx }) => {
+      return db.getPatientNotifications(ctx.user.id);
+    }),
+
+    // Count unread notifications for the logged-in patient
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const count = await db.getUnreadPatientNotificationCount(ctx.user.id);
+      return { count };
+    }),
+
+    // Mark all notifications as read for the logged-in patient
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.markPatientNotificationsRead(ctx.user.id);
+      return { success: true };
+    }),
+  }),
+
   // ── External Upload Tokens ──
   uploadToken: router({
     // Admin: generate a single-use upload link for a specific consultation report
@@ -2254,6 +2288,20 @@ export const appRouter = router({
             consultation.aiReportUrl ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
             (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
           ).catch((err: unknown) => console.error('[Email] approveAIMaterials notification failed:', err));
+        }
+
+        // In-app notification for the patient
+        if (consultation.userId) {
+          const isAr = (consultation.preferredLanguage ?? 'ar') === 'ar';
+          db.createPatientNotification({
+            userId: consultation.userId,
+            consultationId: consultation.id,
+            title: isAr ? '\u062a\u0642\u0631\u064a\u0631\u0643 \u062c\u0627\u0647\u0632' : 'Your Report is Ready',
+            body: isAr
+              ? `\u0648\u0627\u0641\u0642 \u0637\u0628\u064a\u0628\u0643 \u0639\u0644\u0649 \u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0633\u062a\u0634\u0627\u0631\u062a\u0643 #${consultation.id} \u0648\u0623\u0631\u0633\u0644\u0647\u0627 \u0625\u0644\u064a\u0643. \u064a\u0645\u0643\u0646\u0643 \u0645\u0631\u0627\u062c\u0639\u062a\u0647\u0627 \u0641\u064a \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645.`
+              : `Your doctor has approved and released the reports for consultation #${consultation.id}. Visit your dashboard to view them.`,
+            type: 'report_ready',
+          }).catch((err: unknown) => console.error('[Notification] in-app approveAIMaterials notification failed:', err));
         }
 
         return { success: true };

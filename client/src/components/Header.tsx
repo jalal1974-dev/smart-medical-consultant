@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "./LanguageToggle";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Menu, X, User, LogOut, LayoutDashboard, FolderHeart } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, FolderHeart, Bell } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,24 +16,51 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState } from "react";
+import { useLocation as useWouterLocation } from "wouter";
 
 export function Header() {
   const { user, isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
   const [location] = useLocation();
+  const [, navigate] = useWouterLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logoutMutation = trpc.auth.logout.useMutation();
+  const utils = trpc.useUtils();
 
   // Unread consultation badge — only fetched for admins
   const { data: unreadData } = trpc.admin.unreadConsultationCount.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
-    refetchInterval: 30_000, // poll every 30 s
+    refetchInterval: 30_000,
   });
   const unreadCount = unreadData?.count ?? 0;
+
+  // Patient notification bell — only for non-admin authenticated users
+  const isPatient = isAuthenticated && user?.role !== "admin";
+  const { data: notifData } = trpc.notifications.getUnreadCount.useQuery(undefined, {
+    enabled: isPatient,
+    refetchInterval: 30_000,
+  });
+  const { data: notifList } = trpc.notifications.getAll.useQuery(undefined, {
+    enabled: isPatient,
+  });
+  const markAllReadMutation = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.getUnreadCount.invalidate();
+      utils.notifications.getAll.invalidate();
+    },
+  });
+  const unreadNotifCount = notifData?.count ?? 0;
+  const notifications = notifList ?? [];
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     window.location.href = "/";
+  };
+
+  const handleBellOpen = () => {
+    if (unreadNotifCount > 0) {
+      markAllReadMutation.mutate();
+    }
   };
 
   const navItems = [
@@ -95,6 +122,73 @@ export function Header() {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
           <LanguageToggle />
+
+          {/* Patient notification bell */}
+          {isPatient && (
+            <DropdownMenu onOpenChange={(open) => open && handleBellOpen()}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-5 w-5" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                      {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  <span>{language === "ar" ? "الإشعارات" : "Notifications"}</span>
+                  {notifications.length > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {notifications.length} {language === "ar" ? "إشعار" : "total"}
+                    </span>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    {language === "ar" ? "لا توجد إشعارات" : "No notifications yet"}
+                  </div>
+                ) : (
+                  notifications.map((notif) => (
+                    <DropdownMenuItem
+                      key={notif.id}
+                      className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                      onClick={() => navigate("/dashboard")}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        {!notif.isRead && (
+                          <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        )}
+                        <span className={`text-sm font-medium ${!notif.isRead ? "text-foreground" : "text-muted-foreground"}`}>
+                          {notif.title}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 pl-4">
+                        {notif.body}
+                      </p>
+                      <span className="text-[10px] text-muted-foreground pl-4">
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+                {notifications.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-center text-xs text-primary cursor-pointer justify-center"
+                      onClick={() => navigate("/dashboard")}
+                    >
+                      {language === "ar" ? "عرض لوحة التحكم" : "Go to Dashboard"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -150,12 +244,52 @@ export function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button
-          className="md:hidden p-2"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X /> : <Menu />}
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          {/* Mobile notification bell */}
+          {isPatient && (
+            <DropdownMenu onOpenChange={(open) => open && handleBellOpen()}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                  <Bell className="h-5 w-5" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+                      {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                <DropdownMenuLabel>{language === "ar" ? "الإشعارات" : "Notifications"}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    {language === "ar" ? "لا توجد إشعارات" : "No notifications yet"}
+                  </div>
+                ) : (
+                  notifications.map((notif) => (
+                    <DropdownMenuItem
+                      key={notif.id}
+                      className="flex flex-col items-start gap-1 py-2 cursor-pointer"
+                      onClick={() => { navigate("/dashboard"); setMobileMenuOpen(false); }}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        {!notif.isRead && <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />}
+                        <span className="text-sm font-medium">{notif.title}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 pl-4">{notif.body}</p>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <button
+            className="p-2"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}

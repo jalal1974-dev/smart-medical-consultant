@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken, medicalHistorySessions, MedicalHistorySession } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken, medicalHistorySessions, MedicalHistorySession, patientNotifications, PatientNotification } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1626,4 +1626,50 @@ export async function acknowledgeDisclaimer(userId: number): Promise<void> {
     `UPDATE users SET disclaimerAcknowledgedAt = NOW() WHERE id = ?`,
     [userId]
   );
+}
+
+// ==================== Patient Notification Functions ====================
+
+export async function createPatientNotification(data: {
+  userId: number;
+  consultationId?: number;
+  title: string;
+  body: string;
+  type?: 'report_ready' | 'system';
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(patientNotifications).values({
+    userId: data.userId,
+    consultationId: data.consultationId ?? null,
+    title: data.title,
+    body: data.body,
+    type: data.type ?? 'report_ready',
+    isRead: false,
+  });
+}
+
+export async function getPatientNotifications(userId: number): Promise<PatientNotification[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(patientNotifications)
+    .where(eq(patientNotifications.userId, userId))
+    .orderBy(desc(patientNotifications.createdAt))
+    .limit(50);
+}
+
+export async function getUnreadPatientNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select().from(patientNotifications)
+    .where(and(eq(patientNotifications.userId, userId), eq(patientNotifications.isRead, false)));
+  return rows.length;
+}
+
+export async function markPatientNotificationsRead(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(patientNotifications)
+    .set({ isRead: true })
+    .where(and(eq(patientNotifications.userId, userId), eq(patientNotifications.isRead, false)));
 }
