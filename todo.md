@@ -874,3 +874,10 @@
 - [x] Build MonitoringDashboard page with summary cards, chart, and table
 - [x] Wire /admin/monitoring route in App.tsx
 - [x] Add "Monitoring" nav link in Admin Panel header nav
+
+## Admin Panel: Recall / Unsend Report Button
+- [x] Identify all sentXxxToPatient flags in the consultations schema
+- [x] Add admin.recallReport tRPC mutation (flips flag back to false)
+- [x] Add Recall button with confirmation AlertDialog to DoctorReviewPanel
+- [x] Invalidate consultation list after successful recall
+- [x] Show toast on success / error

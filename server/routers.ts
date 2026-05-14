@@ -1399,6 +1399,34 @@ export const appRouter = router({
         }));
       }),
 
+    // Recall / unsend a report that was sent to the patient
+    recallReport: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        recallPdf: z.boolean().optional(),
+        recallInfographic: z.boolean().optional(),
+        recallSlides: z.boolean().optional(),
+        recallMindMap: z.boolean().optional(),
+        recallPptx: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const drizzleDb = await (await import('./db')).getDb();
+        if (!drizzleDb) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+        const { consultations } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const updates: Record<string, boolean> = {};
+        if (input.recallPdf)         updates.sentPdfToPatient         = false;
+        if (input.recallInfographic) updates.sentInfographicToPatient = false;
+        if (input.recallSlides)      updates.sentSlidesToPatient      = false;
+        if (input.recallMindMap)     updates.sentMindMapToPatient     = false;
+        if (input.recallPptx)        updates.sentPptxToPatient        = false;
+        if (Object.keys(updates).length === 0) return { success: true, recalled: 0 };
+        await drizzleDb.update(consultations)
+          .set(updates as any)
+          .where(eq(consultations.id, input.consultationId));
+        return { success: true, recalled: Object.keys(updates).length };
+      }),
+
     // Video management
     videos: router({
       list: adminProcedure.query(async () => {

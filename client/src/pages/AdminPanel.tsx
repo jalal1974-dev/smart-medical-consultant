@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +14,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
@@ -217,8 +218,21 @@ function DoctorReviewPanel({ consultation }: { consultation: any }) {
     onError: (e) => toast.error(e.message),
   });
 
+  const [recallOpen, setRecallOpen] = useState(false);
+
+  const recallReport = trpc.admin.recallReport.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Recalled ${data.recalled} report${data.recalled !== 1 ? 's' : ''} — patient can no longer see them`);
+      utils.admin.consultations.invalidate();
+      setRecallOpen(false);
+    },
+    onError: (e) => toast.error('Recall failed: ' + e.message),
+  });
+
   const hasAnyMaterial = consultation.aiReportUrl || consultation.aiInfographicUrl || consultation.aiSlideDeckUrl;
   const isReviewed = consultation.specialistApprovalStatus === 'approved' || consultation.status === 'doctor_reviewed';
+  const hasSentAny = consultation.sentPdfToPatient || consultation.sentInfographicToPatient ||
+    consultation.sentSlidesToPatient || consultation.sentMindMapToPatient || consultation.sentPptxToPatient;
 
   const exportPDF = trpc.doctorReview.generatePDF.useMutation({
     onSuccess: (data) => {
@@ -255,6 +269,81 @@ function DoctorReviewPanel({ consultation }: { consultation: any }) {
                 : <FileDown className="h-3 w-3 mr-1" />}
               Export PDF
             </Button>
+          )}
+          {hasSentAny && (
+            <AlertDialog open={recallOpen} onOpenChange={setRecallOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-orange-400 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950 h-7 px-2 text-xs"
+                >
+                  <Undo2 className="h-3 w-3 mr-1" />
+                  Recall
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Recall Sent Reports</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will retract the selected reports from the patient’s Dashboard immediately.
+                    The patient will no longer be able to view them until you re-send.
+                    Select which reports to recall:
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-2 space-y-2">
+                  {consultation.sentPdfToPatient && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" defaultChecked id={`recall-pdf-${consultation.id}`} className="rounded" />
+                      📄 Medical Report (PDF)
+                    </label>
+                  )}
+                  {consultation.sentInfographicToPatient && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" defaultChecked id={`recall-inf-${consultation.id}`} className="rounded" />
+                      📈 Infographic
+                    </label>
+                  )}
+                  {consultation.sentSlidesToPatient && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" defaultChecked id={`recall-slides-${consultation.id}`} className="rounded" />
+                      📊 Slide Deck
+                    </label>
+                  )}
+                  {consultation.sentMindMapToPatient && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" defaultChecked id={`recall-mindmap-${consultation.id}`} className="rounded" />
+                      📍 Mind Map
+                    </label>
+                  )}
+                  {consultation.sentPptxToPatient && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" defaultChecked id={`recall-pptx-${consultation.id}`} className="rounded" />
+                      📎 PPTX Report
+                    </label>
+                  )}
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                    onClick={() => {
+                      recallReport.mutate({
+                        consultationId: consultation.id,
+                        recallPdf: !!(document.getElementById(`recall-pdf-${consultation.id}`) as HTMLInputElement)?.checked,
+                        recallInfographic: !!(document.getElementById(`recall-inf-${consultation.id}`) as HTMLInputElement)?.checked,
+                        recallSlides: !!(document.getElementById(`recall-slides-${consultation.id}`) as HTMLInputElement)?.checked,
+                        recallMindMap: !!(document.getElementById(`recall-mindmap-${consultation.id}`) as HTMLInputElement)?.checked,
+                        recallPptx: !!(document.getElementById(`recall-pptx-${consultation.id}`) as HTMLInputElement)?.checked,
+                      });
+                    }}
+                    disabled={recallReport.isPending}
+                  >
+                    {recallReport.isPending ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Recalling...</> : 'Recall Selected'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </div>
