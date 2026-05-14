@@ -867,3 +867,10 @@
 - [x] Add notification bell icon to Header for logged-in patients (desktop + mobile)
 - [x] Add notification dropdown showing unread/read notifications with timestamps
 - [x] Auto-mark notifications as read when patient opens the bell dropdown
+
+## Monitoring Dashboard (Admin)
+- [x] Add admin.getMonitoringStats tRPC query (counts + breakdown)
+- [x] Add admin.getMissingDataConsultations tRPC query (drilldown table)
+- [x] Build MonitoringDashboard page with summary cards, chart, and table
+- [x] Wire /admin/monitoring route in App.tsx
+- [x] Add "Monitoring" nav link in Admin Panel header nav

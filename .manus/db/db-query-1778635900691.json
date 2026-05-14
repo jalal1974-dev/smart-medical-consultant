@@ -1,0 +1,74 @@
+{
+  "query": "SELECT id, patientName, status, (aiAnalysis IS NOT NULL) AS has_analysis, preferredLanguage, createdAt FROM consultations WHERE status = 'completed' AND aiReportUrl IS NULL ORDER BY id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute SELECT id, patientName, status, (aiAnalysis IS NOT NULL) AS has_analysis, preferredLanguage, createdAt FROM consultations WHERE status = 'completed' AND aiReportUrl IS NULL ORDER BY id LIMIT 20;",
+  "rows": [
+    {
+      "id": "390003",
+      "patientName": "Test Patient",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-22 00:43:27"
+    },
+    {
+      "id": "390006",
+      "patientName": "Test Patient 3",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-22 00:43:27"
+    },
+    {
+      "id": "390016",
+      "patientName": "Test Patient",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-22 00:44:52"
+    },
+    {
+      "id": "390020",
+      "patientName": "Test Patient 3",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-22 00:44:53"
+    },
+    {
+      "id": "420003",
+      "patientName": "Test Patient",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-26 01:36:10"
+    },
+    {
+      "id": "420006",
+      "patientName": "Test Patient 3",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-26 01:36:10"
+    },
+    {
+      "id": "420016",
+      "patientName": "Test Patient",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-26 01:37:49"
+    },
+    {
+      "id": "420020",
+      "patientName": "Test Patient 3",
+      "status": "completed",
+      "has_analysis": "0",
+      "preferredLanguage": "en",
+      "createdAt": "2026-03-26 01:37:49"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpatientName\tstatus\thas_analysis\tpreferredLanguage\tcreatedAt\n390003\tTest Patient\tcompleted\t0\ten\t2026-03-22 00:43:27\n390006\tTest Patient 3\tcompleted\t0\ten\t2026-03-22 00:43:27\n390016\tTest Patient\tcompleted\t0\ten\t2026-03-22 00:44:52\n390020\tTest Patient 3\tcompleted\t0\ten\t2026-03-22 00:44:53\n420003\tTest Patient\tcompleted\t0\ten\t2026-03-26 01:36:10\n420006\tTest Patient 3\tcompleted\t0\ten\t2026-03-26 01:36:10\n420016\tTest Patient\tcompleted\t0\ten\t2026-03-26 01:37:49\n420020\tTest Patient 3\tcompleted\t0\ten\t2026-03-26 01:37:49\n",
+  "stderr": "",
+  "execution_time_ms": 1977
+}

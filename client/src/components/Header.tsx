@@ -80,6 +80,7 @@ export function Header() {
     navItems.push({ path: "/admin", label: t("admin") });
     navItems.push({ path: "/admin/blog", label: language === "ar" ? "إدارة المدونة" : "Blog Mgmt" });
     navItems.push({ path: "/admin/report-log", label: language === "ar" ? "سجل التقارير" : "Report Log" });
+    navItems.push({ path: "/admin/monitoring", label: language === "ar" ? "المراقبة" : "Monitoring" });
   }
 
   return (

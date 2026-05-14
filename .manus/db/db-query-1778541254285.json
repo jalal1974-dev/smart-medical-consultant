@@ -1,0 +1,16 @@
+{
+  "query": "\nSELECT\n  COUNT(*)                                                AS total_completed,\n  SUM(archivedPdfUrl IS NOT NULL)                         AS archived,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NOT NULL) AS still_missing_with_pdf,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NULL)     AS missing_no_pdf\nFROM consultations\nWHERE status = 'completed';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nSELECT\n  COUNT(*)                                                AS total_completed,\n  SUM(archivedPdfUrl IS NOT NULL)                         AS archived,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NOT NULL) AS still_missing_with_pdf,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NULL)     AS missing_no_pdf\nFROM consultations\nWHERE status = 'completed';\n",
+  "rows": [
+    {
+      "total_completed": "8",
+      "archived": "0",
+      "still_missing_with_pdf": "0",
+      "missing_no_pdf": "8"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_completed\tarchived\tstill_missing_with_pdf\tmissing_no_pdf\n8\t0\t0\t8\n",
+  "stderr": "",
+  "execution_time_ms": 1908
+}

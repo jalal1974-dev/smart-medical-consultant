@@ -13,6 +13,7 @@ import Podcasts from "./pages/Podcasts";
 import Consultations from "./pages/Consultations";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
+import MonitoringDashboard from "./pages/MonitoringDashboard";
 import AIConsultationReview from "./pages/AIConsultationReview";
 import AdminReportLog from "./pages/AdminReportLog";
 import PaymentConfirmation from "./pages/PaymentConfirmation";
@@ -76,6 +77,7 @@ function Router() {
         <Route path={"/admin"} component={AdminPanel} />
         <Route path={"/admin/ai-review"} component={AIConsultationReview} />
         <Route path={"/admin/report-log"} component={AdminReportLog} />
+        <Route path="/admin/monitoring" component={MonitoringDashboard} />
         <Route path="/payment-confirmation/:consultationId" component={PaymentConfirmation} />
         <Route path="/blog" component={Blog} />
         <Route path="/blog/:slug" component={BlogArticle} />

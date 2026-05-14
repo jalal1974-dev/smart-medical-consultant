@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT\n  COUNT(*)                                                    AS total_completed,\n  SUM(archivedPdfUrl IS NOT NULL)                             AS archived,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NOT NULL)     AS still_missing_with_pdf,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NULL)         AS missing_no_pdf\nFROM consultations\nWHERE status = 'completed';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2whiezmce38peQU.0cd041f72ab1 --database jSnYmp6WUaKPak95AQvbBu --execute \nSELECT\n  COUNT(*)                                                    AS total_completed,\n  SUM(archivedPdfUrl IS NOT NULL)                             AS archived,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NOT NULL)     AS still_missing_with_pdf,\n  SUM(archivedPdfUrl IS NULL AND aiReportUrl IS NULL)         AS missing_no_pdf\nFROM consultations\nWHERE status = 'completed';\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'archivedpdfurl' in 'where clause'"
+  ]
+}

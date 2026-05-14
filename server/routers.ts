@@ -1328,6 +1328,77 @@ export const appRouter = router({
       return { success: true };
     }),
 
+    // Monitoring dashboard queries
+    getMonitoringStats: adminProcedure.query(async () => {
+      const all = await db.getAllConsultations();
+      const total = all.length;
+      const completed = all.filter((c: any) => c.status === 'completed').length;
+      const missingAnalysis = all.filter((c: any) => !c.aiAnalysis).length;
+      const missingReport = all.filter((c: any) => !c.aiReportUrl).length;
+      const missingBoth = all.filter((c: any) => !c.aiAnalysis && !c.aiReportUrl).length;
+      const completedMissingReport = all.filter((c: any) => c.status === 'completed' && !c.aiReportUrl).length;
+      const completedMissingAnalysis = all.filter((c: any) => c.status === 'completed' && !c.aiAnalysis).length;
+      const byStatus = [
+        'submitted', 'ai_processing', 'ai_complete', 'specialist_review',
+        'doctor_reviewed', 'completed', 'cancelled'
+      ].map(s => ({
+        status: s,
+        count: all.filter((c: any) => c.status === s).length,
+      }));
+      const byPriority = ['critical', 'urgent', 'moderate', 'routine'].map(p => ({
+        priority: p,
+        count: all.filter((c: any) => c.priority === p).length,
+      }));
+      return {
+        total,
+        completed,
+        missingAnalysis,
+        missingReport,
+        missingBoth,
+        completedMissingReport,
+        completedMissingAnalysis,
+        byStatus,
+        byPriority,
+      };
+    }),
+
+    getMissingDataConsultations: adminProcedure
+      .input(z.object({
+        filter: z.enum(['missing_analysis', 'missing_report', 'missing_both', 'all_incomplete']).default('missing_both'),
+      }))
+      .query(async ({ input }) => {
+        const all = await db.getAllConsultations();
+        let filtered: any[];
+        switch (input.filter) {
+          case 'missing_analysis':
+            filtered = all.filter((c: any) => !c.aiAnalysis);
+            break;
+          case 'missing_report':
+            filtered = all.filter((c: any) => !c.aiReportUrl);
+            break;
+          case 'missing_both':
+            filtered = all.filter((c: any) => !c.aiAnalysis && !c.aiReportUrl);
+            break;
+          case 'all_incomplete':
+            filtered = all.filter((c: any) => c.status !== 'completed' && c.status !== 'cancelled');
+            break;
+          default:
+            filtered = all;
+        }
+        return filtered.map((c: any) => ({
+          id: c.id,
+          patientName: c.patientName,
+          status: c.status,
+          priority: c.priority,
+          preferredLanguage: c.preferredLanguage,
+          hasAnalysis: !!c.aiAnalysis,
+          hasReport: !!c.aiReportUrl,
+          hasArchivedPdf: !!c.archivedPdfUrl,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        }));
+      }),
+
     // Video management
     videos: router({
       list: adminProcedure.query(async () => {
