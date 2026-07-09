@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, inArray, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken, medicalHistorySessions, MedicalHistorySession, patientNotifications, PatientNotification } from "../drizzle/schema";
+import { InsertUser, users, consultations, InsertConsultation, videos, podcasts, InsertVideo, InsertPodcast, consultationQuestions, InsertConsultationQuestion, watchHistory, InsertWatchHistory, satisfactionSurveys, researchTopics, blogCategories, blogPosts, InsertBlogCategory, InsertBlogPost, userMedicalRecords, UserMedicalRecord, consultationAttachedRecords, ConsultationAttachedRecord, reportGenerationLogs, InsertReportGenerationLog, uploadTokens, InsertUploadToken, medicalHistorySessions, MedicalHistorySession, patientNotifications, PatientNotification, avatarSessions, AvatarSession } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -1672,4 +1672,43 @@ export async function markPatientNotificationsRead(userId: number): Promise<void
   await db.update(patientNotifications)
     .set({ isRead: true })
     .where(and(eq(patientNotifications.userId, userId), eq(patientNotifications.isRead, false)));
+}
+
+// ==================== Avatar Session Functions ====================
+
+export async function getOrCreateAvatarSession(consultationId: number, userId: number): Promise<AvatarSession> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Return existing session if one exists for this consultation
+  const existing = await db.select().from(avatarSessions)
+    .where(and(eq(avatarSessions.consultationId, consultationId), eq(avatarSessions.userId, userId)))
+    .limit(1);
+  if (existing.length > 0) return existing[0];
+  // Create new session
+  await db.insert(avatarSessions).values({ consultationId, userId, transcript: "[]" });
+  const created = await db.select().from(avatarSessions)
+    .where(and(eq(avatarSessions.consultationId, consultationId), eq(avatarSessions.userId, userId)))
+    .limit(1);
+  return created[0];
+}
+
+export async function getAvatarSession(consultationId: number, userId: number): Promise<AvatarSession | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(avatarSessions)
+    .where(and(eq(avatarSessions.consultationId, consultationId), eq(avatarSessions.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateAvatarSessionTranscript(
+  consultationId: number,
+  userId: number,
+  transcript: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(avatarSessions)
+    .set({ transcript, updatedAt: new Date() })
+    .where(and(eq(avatarSessions.consultationId, consultationId), eq(avatarSessions.userId, userId)));
 }

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2 } from "lucide-react";
+import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2, Bot } from "lucide-react";
+import { useLocation } from "wouter";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { DisclaimerGate } from "@/components/DisclaimerGate";
 import { format } from "date-fns";
@@ -509,7 +510,7 @@ export default function Dashboard() {
                               </Button>
                             )}
                             {/* Export Full PDF — always shown when any material has been sent */}
-                            <div className="pt-2 border-t border-blue-200 dark:border-blue-800">
+                            <div className="pt-2 border-t border-blue-200 dark:border-blue-800 flex flex-col gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -521,6 +522,16 @@ export default function Dashboard() {
                                   ? <Loader2 className="w-4 h-4 animate-spin" />
                                   : <FileDown className="w-4 h-4" />}
                                 {language === 'ar' ? 'تصدير تقرير PDF كامل' : 'Export Full PDF Report'}
+                              </Button>
+                              {/* Avatar Session button */}
+                              <Button
+                                size="sm"
+                                className="w-full gap-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30"
+                                variant="ghost"
+                                onClick={() => window.location.href = `/consultation/${consultation.id}/avatar`}
+                              >
+                                <Bot className="w-4 h-4" />
+                                {language === 'ar' ? '💬 تحدث مع المساعد الطبي' : '💬 Chat with Medical AI'}
                               </Button>
                             </div>
                           </div>

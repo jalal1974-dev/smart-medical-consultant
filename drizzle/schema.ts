@@ -519,3 +519,21 @@ export const patientNotifications = mysqlTable("patient_notifications", {
 
 export type PatientNotification = typeof patientNotifications.$inferSelect;
 export type InsertPatientNotification = typeof patientNotifications.$inferInsert;
+
+/**
+ * Avatar sessions — stores the conversation transcript between patient and medical AI avatar
+ */
+export const avatarSessions = mysqlTable("avatar_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  consultationId: int("consultationId").notNull(),
+  userId: int("userId").notNull(),
+  // JSON array of { role: "user"|"assistant", content: string, timestamp: number }
+  transcript: text("transcript").notNull().default("[]"),
+  // HeyGen session token (nullable — only set when video avatar is active)
+  heygenSessionId: varchar("heygenSessionId", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type AvatarSession = typeof avatarSessions.$inferSelect;
+export type InsertAvatarSession = typeof avatarSessions.$inferInsert;

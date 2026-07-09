@@ -881,3 +881,27 @@
 - [x] Add Recall button with confirmation AlertDialog to DoctorReviewPanel
 - [x] Invalidate consultation list after successful recall
 - [x] Show toast on success / error
+
+## Medical AI Avatar Session Feature
+- [ ] Add avatar_sessions table to drizzle/schema.ts (consultationId, transcript JSON, createdAt)
+- [ ] Run DB migration for avatar_sessions table
+- [ ] Add avatarSession tRPC router (createSession, saveMessage, getSession, chat with LLM)
+- [ ] Add HEYGEN_API_KEY secret to env (optional — text-chat fallback works without it)
+- [ ] Build MedicalAvatarSession page (/consultation/:id/avatar)
+  - [ ] HeyGen Streaming SDK video avatar panel (activates when API key present)
+  - [ ] Text-chat fallback using AIChatBox component (always available)
+  - [ ] Document download panel (PDF, slides, mind map, infographic, PPTX)
+  - [ ] Brainstorm / Mind Map tab using existing MindMapVisualization component
+  - [ ] Voice input via existing VoiceRecorder component
+- [ ] Wire /consultation/:id/avatar route in App.tsx
+- [ ] Add "Talk to Medical Avatar" button on patient Dashboard consultation cards
+
+## Medical AI Avatar Session
+- [x] Add avatar_sessions table to drizzle/schema.ts and DB
+- [x] Add avatarSession.getOrCreate and avatarSession.chat tRPC procedures
+- [x] Build MedicalAvatarSession page (avatar panel, chat, document download, mind map tab)
+- [x] Wire /consultation/:id/avatar route in App.tsx
+- [x] Add 'Chat with Medical AI' button to patient Dashboard consultation cards
+- [x] Bilingual EN/AR support with RTL layout
+- [x] Browser Web Speech API TTS for spoken responses
+- [x] HeyGen video integration placeholder (activates when API key configured)

@@ -2924,6 +2924,109 @@ export const appRouter = router({
         };
       }),
   }),
+
+  // ── Avatar Session Router ─────────────────────────────────────────────────
+  avatarSession: router({
+    // Get or create a session for a consultation
+    getOrCreate: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Verify the patient owns this consultation (or is admin)
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        const session = await db.getOrCreateAvatarSession(input.consultationId, ctx.user.id);
+        return session;
+      }),
+
+    // Get existing session (read-only)
+    get: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        return db.getAvatarSession(input.consultationId, ctx.user.id);
+      }),
+
+    // Save an updated transcript
+    saveTranscript: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        transcript: z.string(), // JSON string
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        await db.updateAvatarSessionTranscript(input.consultationId, ctx.user.id, input.transcript);
+        return { success: true };
+      }),
+
+    // Chat with the medical AI avatar (LLM-backed)
+    chat: protectedProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        message: z.string().min(1).max(2000),
+        language: z.enum(['en', 'ar']).default('en'),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { invokeLLM } = await import('./_core/llm');
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND' });
+        if (ctx.user.role !== 'admin' && consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+
+        // Build system prompt from consultation data
+        const lang = input.language;
+        const systemPrompt = lang === 'ar'
+          ? `أنت طبيب ذكاء اصطناعي طبي متخصص. لديك التحليل الطبي التالي للمريض:
+
+الأعراض: ${consultation.symptoms}
+التاريخ الطبي: ${consultation.medicalHistory || 'غير متوفر'}
+تحليل الذكاء الاصطناعي: ${consultation.aiAnalysis || 'لم يكتمل بعد'}
+
+أجب على أسئلة المريض بلغة عربية واضحة ومبسطة. لا تقدم تشخيصاً نهائياً — هذا التحليل للأغراض التعليمية فقط. اقترح دائماً استشارة طبيب متخصص.`
+          : `You are a medical AI assistant. You have the following medical analysis for this patient:
+
+Symptoms: ${consultation.symptoms}
+Medical History: ${consultation.medicalHistory || 'Not provided'}
+AI Analysis: ${consultation.aiAnalysis || 'Not yet completed'}
+
+Answer the patient's questions in clear, simple language. Do not provide a final diagnosis — this analysis is for educational purposes only. Always recommend consulting a specialist.`;
+
+        // Load conversation history
+        const session = await db.getOrCreateAvatarSession(input.consultationId, ctx.user.id);
+        const history: Array<{ role: 'user' | 'assistant'; content: string }> = JSON.parse(session.transcript || '[]');
+
+        // Build messages array
+        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+          { role: 'system', content: systemPrompt },
+          ...history.slice(-10), // Keep last 10 messages for context
+          { role: 'user', content: input.message },
+        ];
+
+        const response = await invokeLLM({ messages });
+        const assistantMessage = response.choices[0]?.message?.content ?? (lang === 'ar' ? 'عذراً، حدث خطأ.' : 'Sorry, an error occurred.');
+
+        // Update transcript
+        const updatedHistory = [
+          ...history,
+          { role: 'user' as const, content: input.message, timestamp: Date.now() },
+          { role: 'assistant' as const, content: assistantMessage, timestamp: Date.now() },
+        ];
+        await db.updateAvatarSessionTranscript(input.consultationId, ctx.user.id, JSON.stringify(updatedHistory));
+
+        return { reply: assistantMessage };
+      }),
+  }),
 });
-export type AppRouter = typeof appRouter;;
+export type AppRouter = typeof appRouter;
 
