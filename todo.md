@@ -905,3 +905,11 @@
 - [x] Bilingual EN/AR support with RTL layout
 - [x] Browser Web Speech API TTS for spoken responses
 - [x] HeyGen video integration placeholder (activates when API key configured)
+
+## Medical AI Avatar Session Redesign (Clinical Intake Doctor)
+- [x] Redesign avatarSession.chat system prompt: clinical intake doctor role, differential diagnosis, structured questioning
+- [x] Load patient uploaded materials (symptoms, medical history, uploaded file URLs) as context for the avatar
+- [x] Remove mind map tab from patient-facing avatar session page (doctor-only)
+- [x] Add clinical intake UI: avatar asks questions, patient answers, avatar narrows diagnosis
+- [ ] Show session progress indicator (history taking → differential → focused questions → summary) — future enhancement
+- [x] Persist full conversation transcript in avatar_sessions table
