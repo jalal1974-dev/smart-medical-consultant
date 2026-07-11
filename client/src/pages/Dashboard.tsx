@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2, Bot } from "lucide-react";
+import { Calendar, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2, Bot, ExternalLink } from "lucide-react";
 import { useLocation } from "wouter";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { DisclaimerGate } from "@/components/DisclaimerGate";
@@ -497,6 +497,16 @@ export default function Dashboard() {
                                   ? <Loader2 className="w-4 h-4 animate-spin" />
                                   : <FileDown className="w-4 h-4" />}
                                 {language === 'ar' ? 'تصدير تقرير PDF كامل' : 'Export Full PDF Report'}
+                              </Button>
+                              {/* View Full Report Page button */}
+                              <Button
+                                size="sm"
+                                className="w-full gap-2"
+                                variant="outline"
+                                onClick={() => window.location.href = `/consultation/${consultation.id}`}
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                {language === 'ar' ? '📄 عرض صفحة التقرير' : '📄 View Report Page'}
                               </Button>
                               {/* Avatar Session button */}
                               <Button

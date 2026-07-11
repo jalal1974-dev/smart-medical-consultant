@@ -33,6 +33,7 @@ import ExternalUpload from "./pages/ExternalUpload";
 import MedicalHistoryCollection from "./pages/MedicalHistoryCollection";
 import MedicalAvatarSession from "./pages/MedicalAvatarSession";
 import SymptomChecker from "./pages/SymptomChecker";
+import ConsultationDetail from "./pages/ConsultationDetail";
 import { useEffect } from "react";
 import { updatePageSEO, updateCanonicalURL } from "./lib/seo";
 
@@ -94,6 +95,7 @@ function Router() {
         <Route path="/consultation/history-collection" component={MedicalHistoryCollection} />
         <Route path="/symptom-checker" component={SymptomChecker} />
         <Route path="/consultation/:id/avatar" component={MedicalAvatarSession} />
+        <Route path="/consultation/:id" component={ConsultationDetail} />
         <Route path={"/404"} component={NotFound} />
         <Route component={NotFound} />
           </Switch>

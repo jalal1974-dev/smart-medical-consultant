@@ -653,6 +653,9 @@ export default function AdminPanel() {
         vars.sendSlides && 'Slide Deck',
         vars.sendMindMap && 'Mind Map',
         vars.sendPptx && 'PPTX',
+        vars.sendVideo && 'Video',
+        vars.sendAudio && 'Audio',
+        vars.sendOther && 'Document',
       ].filter(Boolean).join(', ');
       toast.success(`Sent to patient: ${types}`);
       utils.admin.consultations.invalidate();
@@ -663,6 +666,42 @@ export default function AdminPanel() {
       setSendingKey(null);
     },
   });
+
+  // Doctor manual material upload mutations
+  const uploadDoctorVideo = trpc.admin.uploadDoctorVideo.useMutation({
+    onSuccess: () => { toast.success('Video uploaded successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Video upload failed: ${e.message}`),
+  });
+  const uploadDoctorAudio = trpc.admin.uploadDoctorAudio.useMutation({
+    onSuccess: () => { toast.success('Audio uploaded successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Audio upload failed: ${e.message}`),
+  });
+  const uploadDoctorOther = trpc.admin.uploadDoctorOther.useMutation({
+    onSuccess: () => { toast.success('Document uploaded successfully'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Document upload failed: ${e.message}`),
+  });
+
+  const handleDoctorMaterialUpload = (consultationId: number, type: 'video' | 'audio' | 'other') => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    if (type === 'video') inp.accept = 'video/*';
+    else if (type === 'audio') inp.accept = 'audio/*';
+    inp.onchange = async () => {
+      const file = inp.files?.[0];
+      if (!file) return;
+      if (file.size > 500 * 1024 * 1024) { toast.error('File exceeds 500 MB limit'); return; }
+      const titleInput = window.prompt(`${type.charAt(0).toUpperCase() + type.slice(1)} title (optional)`, file.name.replace(/\.[^.]+$/, ''));
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        if (type === 'video') uploadDoctorVideo.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name, title: titleInput || undefined });
+        else if (type === 'audio') uploadDoctorAudio.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name, title: titleInput || undefined });
+        else uploadDoctorOther.mutate({ consultationId, fileBase64: base64, mimeType: file.type, fileName: file.name, title: titleInput || undefined });
+      };
+      reader.readAsDataURL(file);
+    };
+    inp.click();
+  };
 
   const handleReplaceFile = async (
     file: File,
@@ -1415,6 +1454,74 @@ export default function AdminPanel() {
                           );
                         })()}
                         
+                        {/* ── Doctor Manual Materials (NotebookLM output) ── */}
+                        <div className="mt-4 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-3">
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                            <Upload className="w-3.5 h-3.5" />
+                            Manual Materials (NotebookLM)
+                          </p>
+                          {/* Video */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium">🎬 Video</p>
+                              {(consultation as any).doctorUploadedVideoUrl
+                                ? <a href={(consultation as any).doctorUploadedVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedVideoTitle || 'Video'} ↗</a>
+                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorVideo.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'video')}>
+                                {uploadDoctorVideo.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              </Button>
+                              {(consultation as any).doctorUploadedVideoUrl && !((consultation as any).sentVideoToPatient) && (
+                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendVideo: true })}>
+                                  <Send className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {(consultation as any).sentVideoToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
+                            </div>
+                          </div>
+                          {/* Audio */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium">🎧 Audio / Podcast</p>
+                              {(consultation as any).doctorUploadedAudioUrl
+                                ? <a href={(consultation as any).doctorUploadedAudioUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedAudioTitle || 'Audio'} ↗</a>
+                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorAudio.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'audio')}>
+                                {uploadDoctorAudio.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              </Button>
+                              {(consultation as any).doctorUploadedAudioUrl && !((consultation as any).sentAudioToPatient) && (
+                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendAudio: true })}>
+                                  <Send className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {(consultation as any).sentAudioToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
+                            </div>
+                          </div>
+                          {/* Other Document */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium">📎 Other Document</p>
+                              {(consultation as any).doctorUploadedOtherUrl
+                                ? <a href={(consultation as any).doctorUploadedOtherUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedOtherTitle || 'Document'} ↗</a>
+                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorOther.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'other')}>
+                                {uploadDoctorOther.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              </Button>
+                              {(consultation as any).doctorUploadedOtherUrl && !((consultation as any).sentOtherToPatient) && (
+                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendOther: true })}>
+                                  <Send className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {(consultation as any).sentOtherToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
+                            </div>
+                          </div>
+                        </div>
+
                         {consultation.specialistApprovalStatus === "pending_review" && (
                           <div className="flex gap-2 mt-3">
                             <Button

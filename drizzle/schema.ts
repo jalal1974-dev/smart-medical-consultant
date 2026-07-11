@@ -76,12 +76,24 @@ export const consultations = mysqlTable("consultations", {
   aiMindMapUrl: varchar("aiMindMapUrl", { length: 500 }), // Mind map URL
   pptxReportUrl: varchar("pptxReportUrl", { length: 500 }), // Dedicated PPTX report URL (separate from AI slide deck)
 
+  // Doctor-uploaded manual materials (NotebookLM output, custom videos, podcasts, etc.)
+  doctorUploadedVideoUrl: varchar("doctorUploadedVideoUrl", { length: 500 }), // MP4/video uploaded by doctor
+  doctorUploadedVideoTitle: varchar("doctorUploadedVideoTitle", { length: 255 }), // Display title for the video
+  doctorUploadedAudioUrl: varchar("doctorUploadedAudioUrl", { length: 500 }), // MP3/audio/podcast uploaded by doctor
+  doctorUploadedAudioTitle: varchar("doctorUploadedAudioTitle", { length: 255 }), // Display title for the audio
+  doctorUploadedOtherUrl: varchar("doctorUploadedOtherUrl", { length: 500 }), // Any other file (Word, Excel, extra PDF)
+  doctorUploadedOtherTitle: varchar("doctorUploadedOtherTitle", { length: 255 }), // Display title for the other file
+  doctorUploadedOtherMimeType: varchar("doctorUploadedOtherMimeType", { length: 100 }), // MIME type of other file
+
   // Admin "Send to Patient" approval flags — each report is hidden from patient until explicitly sent
   sentPdfToPatient: boolean("sentPdfToPatient").default(false).notNull(),
   sentInfographicToPatient: boolean("sentInfographicToPatient").default(false).notNull(),
   sentSlidesToPatient: boolean("sentSlidesToPatient").default(false).notNull(),
   sentMindMapToPatient: boolean("sentMindMapToPatient").default(false).notNull(),
   sentPptxToPatient: boolean("sentPptxToPatient").default(false).notNull(),
+  sentVideoToPatient: boolean("sentVideoToPatient").default(false).notNull(),
+  sentAudioToPatient: boolean("sentAudioToPatient").default(false).notNull(),
+  sentOtherToPatient: boolean("sentOtherToPatient").default(false).notNull(),
   sentToPatientAt: timestamp("sentToPatientAt"), // timestamp of most recent send action
   sentToPatientBy: int("sentToPatientBy"), // admin user ID who last sent
   aiProcessingAttempts: int("aiProcessingAttempts").default(0).notNull(), // Number of AI analysis attempts

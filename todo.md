@@ -939,3 +939,17 @@
 - [x] PaymentConfirmation.tsx: kept as-is (already handles isFree=true gracefully — shows "Free")
 - [x] All payment backend code preserved in comments for future re-enablement
 - [ ] TODO (future): re-enable payment — uncomment createDraftMutation, confirmPaymentMutation, restore PayPal screen, ConsultationCounter, Payment History tab
+
+## Doctor Manual Materials Workflow (NotebookLM Upload)
+- [x] Add doctorUploadedVideoUrl/Title, doctorUploadedAudioUrl/Title, doctorUploadedOtherUrl/Title columns to consultations table
+- [x] Add sentVideoToPatient, sentAudioToPatient, sentOtherToPatient boolean columns to consultations table
+- [x] Run SQL migration to apply new columns (scripts/apply-migration-0004.mjs)
+- [x] Add uploadDoctorVideo, uploadDoctorAudio, uploadDoctorOther tRPC procedures (admin-protected, S3 upload)
+- [x] Extend sendReportToPatient to accept sendVideo, sendAudio, sendOther flags
+- [x] Extend recallReport to accept recallVideo, recallAudio, recallOther flags
+- [x] Add Manual Materials (NotebookLM) panel to AdminPanel.tsx with upload + send + sent badge per type
+- [x] Create ConsultationDetail.tsx — branded patient-facing page with SMC logo, phone, WhatsApp
+- [x] Register /consultation/:id route in App.tsx
+- [x] Add "View Report Page" button to Dashboard consultation cards
+- [ ] Add branding watermark overlay to uploaded PDFs (future enhancement — requires server-side PDF processing)
+- [ ] Notification to patient when new material is sent (future enhancement)

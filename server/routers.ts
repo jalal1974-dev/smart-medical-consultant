@@ -1161,6 +1161,70 @@ export const appRouter = router({
         return { success: true, mindMapUrl: url };
       }),
 
+    // ── Doctor-uploaded manual materials (NotebookLM output, custom videos, podcasts, etc.) ──
+    uploadDoctorVideo: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        mimeType: z.string().default('video/mp4'),
+        fileName: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const ext = input.mimeType.split('/')[1]?.split(';')[0] || 'mp4';
+        const key = `doctor-materials/video-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        const title = input.title || input.fileName || 'Video Explanation';
+        await db.updateConsultation(input.consultationId, { doctorUploadedVideoUrl: url, doctorUploadedVideoTitle: title } as any);
+        await db.insertReportLog({ consultationId: consultation.id, patientName: consultation.patientName, adminId: ctx.user.id, adminName: ctx.user.name ?? 'Admin', reportType: 'upload_pdf', action: 'upload', status: 'success', outputUrl: url });
+        return { success: true, videoUrl: url, title };
+      }),
+
+    uploadDoctorAudio: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        mimeType: z.string().default('audio/mpeg'),
+        fileName: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const ext = input.mimeType.split('/')[1]?.split(';')[0] || 'mp3';
+        const key = `doctor-materials/audio-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        const title = input.title || input.fileName || 'Audio Summary';
+        await db.updateConsultation(input.consultationId, { doctorUploadedAudioUrl: url, doctorUploadedAudioTitle: title } as any);
+        await db.insertReportLog({ consultationId: consultation.id, patientName: consultation.patientName, adminId: ctx.user.id, adminName: ctx.user.name ?? 'Admin', reportType: 'upload_pdf', action: 'upload', status: 'success', outputUrl: url });
+        return { success: true, audioUrl: url, title };
+      }),
+
+    uploadDoctorOther: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        fileBase64: z.string(),
+        mimeType: z.string().default('application/octet-stream'),
+        fileName: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const buffer = Buffer.from(input.fileBase64, 'base64');
+        const ext = (input.fileName?.split('.').pop()) || input.mimeType.split('/')[1]?.split(';')[0] || 'bin';
+        const key = `doctor-materials/other-${input.consultationId}-${nanoid()}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        const title = input.title || input.fileName || 'Additional Document';
+        await db.updateConsultation(input.consultationId, { doctorUploadedOtherUrl: url, doctorUploadedOtherTitle: title, doctorUploadedOtherMimeType: input.mimeType } as any);
+        await db.insertReportLog({ consultationId: consultation.id, patientName: consultation.patientName, adminId: ctx.user.id, adminName: ctx.user.name ?? 'Admin', reportType: 'upload_pdf', action: 'upload', status: 'success', outputUrl: url });
+        return { success: true, otherUrl: url, title };
+      }),
+
     // Send one or more reports to the patient — sets the sentXxxToPatient flags
     sendReportToPatient: adminProcedure
       .input(z.object({
@@ -1171,6 +1235,9 @@ export const appRouter = router({
         sendSlides: z.boolean().default(false),
         sendMindMap: z.boolean().default(false),
         sendPptx: z.boolean().default(false),
+        sendVideo: z.boolean().default(false),
+        sendAudio: z.boolean().default(false),
+        sendOther: z.boolean().default(false),
       }))
       .mutation(async ({ ctx, input }) => {
         const consultation = await db.getConsultationById(input.consultationId);
@@ -1185,11 +1252,14 @@ export const appRouter = router({
         if (input.sendSlides) updates.sentSlidesToPatient = true;
         if (input.sendMindMap) updates.sentMindMapToPatient = true;
         if (input.sendPptx) updates.sentPptxToPatient = true;
+        if (input.sendVideo) updates.sentVideoToPatient = true;
+        if (input.sendAudio) updates.sentAudioToPatient = true;
+        if (input.sendOther) updates.sentOtherToPatient = true;
 
         await db.updateConsultation(input.consultationId, updates);
 
         // Fire-and-forget email notification
-        const sentCount = [input.sendPdf, input.sendInfographic, input.sendSlides, input.sendMindMap, input.sendPptx].filter(Boolean).length;
+        const sentCount = [input.sendPdf, input.sendInfographic, input.sendSlides, input.sendMindMap, input.sendPptx, input.sendVideo, input.sendAudio, input.sendOther].filter(Boolean).length;
         if (sentCount > 0 && consultation.patientEmail) {
           // Pick the most prominent URL to link in the email
           const reportUrl =
@@ -1408,6 +1478,9 @@ export const appRouter = router({
         recallSlides: z.boolean().optional(),
         recallMindMap: z.boolean().optional(),
         recallPptx: z.boolean().optional(),
+        recallVideo: z.boolean().optional(),
+        recallAudio: z.boolean().optional(),
+        recallOther: z.boolean().optional(),
       }))
       .mutation(async ({ input }) => {
         const drizzleDb = await (await import('./db')).getDb();
@@ -1420,6 +1493,9 @@ export const appRouter = router({
         if (input.recallSlides)      updates.sentSlidesToPatient      = false;
         if (input.recallMindMap)     updates.sentMindMapToPatient     = false;
         if (input.recallPptx)        updates.sentPptxToPatient        = false;
+        if (input.recallVideo)       updates.sentVideoToPatient       = false;
+        if (input.recallAudio)       updates.sentAudioToPatient       = false;
+        if (input.recallOther)       updates.sentOtherToPatient       = false;
         if (Object.keys(updates).length === 0) return { success: true, recalled: 0 };
         await drizzleDb.update(consultations)
           .set(updates as any)
