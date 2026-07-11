@@ -15,24 +15,17 @@ import { useLocation, useSearch } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { RecordPicker } from "@/components/RecordPicker";
-import { CreditCard, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Consultations() {
   const { user, isAuthenticated, loading } = useAuth();
   const { t, language } = useLanguage();
   const [, setLocation] = useLocation();
   const createMutation = trpc.consultation.create.useMutation();
-  const createDraftMutation = trpc.consultation.createDraft.useMutation();
-  const confirmPaymentMutation = trpc.consultation.confirmConsultationPayment.useMutation();
-  const utils = trpc.useUtils();
-
-  // PayPal state for paid consultations
-  const [paypalStep, setPaypalStep] = useState<'form' | 'paypal'>('form');
-  const [draftConsultationId, setDraftConsultationId] = useState<number | null>(null);
-  const [paypalLoaded, setPaypalLoaded] = useState(false);
-  const [paypalRendered, setPaypalRendered] = useState(false);
-  const paypalContainerRef = useRef<HTMLDivElement>(null);
-  const paypalButtonsRef = useRef<any>(null);
+  // PAYMENT FROZEN FOR LAUNCH — draft/payment mutations kept for future re-enablement
+  // const createDraftMutation = trpc.consultation.createDraft.useMutation();
+  // const confirmPaymentMutation = trpc.consultation.confirmConsultationPayment.useMutation();
+  // const utils = trpc.useUtils(); // re-enable when payment is restored
 
   const [formData, setFormData] = useState({
     patientName: "",
@@ -62,107 +55,14 @@ export default function Consultations() {
   // Existing records from user's medical vault
   const [attachedRecordIds, setAttachedRecordIds] = useState<number[]>([]);
 
-  // Derive quota from user object (populated by auth.me)
-  const freeUsed = (user as any)?.freeConsultationsUsed ?? (user?.hasUsedFreeConsultation ? 1 : 0);
-  const freeTotal = (user as any)?.freeConsultationsTotal ?? 1;
-  const freeRemaining = Math.max(0, freeTotal - freeUsed);
-  const hasFreeLeft = freeRemaining > 0;
-
-  // Load PayPal SDK when needed
-  useEffect(() => {
-    if (paypalStep !== 'paypal') return;
-    const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-    if (!clientId) {
-      toast.error('PayPal is not configured. Please contact support.');
-      return;
-    }
-    if ((window as any).paypal) {
-      setPaypalLoaded(true);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
-    script.async = true;
-    script.onload = () => setPaypalLoaded(true);
-    script.onerror = () => toast.error('Failed to load PayPal. Please refresh and try again.');
-    document.body.appendChild(script);
-  }, [paypalStep]);
-
-  // Render PayPal buttons once SDK is loaded and container is ready
-  useEffect(() => {
-    if (!paypalLoaded || paypalRendered || !paypalContainerRef.current || !draftConsultationId) return;
-    const wp = (window as any).paypal;
-    if (!wp) return;
-    setPaypalRendered(true);
-
-    paypalButtonsRef.current = wp.Buttons({
-      style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 50 },
-      createOrder: (_data: any, actions: any) => {
-        return actions.order.create({
-          purchase_units: [{
-            amount: { value: '5.00', currency_code: 'USD' },
-            description: 'Smart Medical Consultant – Medical Consultation',
-            custom_id: String(draftConsultationId),
-          }],
-          application_context: { brand_name: 'Smart Medical Consultant', user_action: 'PAY_NOW' },
-        });
-      },
-      onApprove: async (data: any, actions: any) => {
-        try {
-          const order = await actions.order.capture();
-          await confirmPaymentMutation.mutateAsync({
-            consultationId: draftConsultationId!,
-            paypalOrderId: order.id,
-            paypalPayerId: order.payer?.payer_id,
-          });
-          await utils.auth.me.invalidate();
-          toast.success(language === 'ar' ? 'تم الدفع بنجاح! جاري معالجة استشارتك...' : 'Payment successful! Processing your consultation...');
-          setLocation(`/payment-confirmation/${draftConsultationId}`);
-        } catch (err: any) {
-          toast.error(err.message || 'Payment confirmation failed. Please contact support.');
-        }
-      },
-      onError: (err: any) => {
-        console.error('PayPal error:', err);
-        toast.error('Payment failed. Please try again.');
-      },
-      onCancel: () => {
-        toast.info(language === 'ar' ? 'تم إلغاء الدفع.' : 'Payment cancelled.');
-      },
-    });
-    paypalButtonsRef.current.render(paypalContainerRef.current);
-  }, [paypalLoaded, paypalRendered, draftConsultationId]);
-
-  const handleSubmit = async (e: React.FormEvent, isFree: boolean) => {
+  // PAYMENT FROZEN FOR LAUNCH — all consultations are free at this stage
+  // Every submission goes through the free path; payment code is preserved in comments above
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!isAuthenticated) {
       toast.error(t('loginRequired'));
       return;
     }
-
-    if (!isFree) {
-      // ── Paid path: save draft first, then show PayPal ──
-      try {
-        const result = await createDraftMutation.mutateAsync({
-          ...formData,
-          medicalReports,
-          labResults,
-          xrayImages,
-          otherDocuments,
-          attachedRecordIds: attachedRecordIds.length > 0 ? attachedRecordIds : undefined,
-        });
-        setDraftConsultationId(result.consultationId);
-        setPaypalStep('paypal');
-        // Scroll to top so PayPal buttons are visible
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (error: any) {
-        toast.error(error.message || t('consultationError'));
-      }
-      return;
-    }
-
-    // ── Free path: submit directly ──
     try {
       const result = await createMutation.mutateAsync({
         ...formData,
@@ -173,21 +73,10 @@ export default function Consultations() {
         isFree: true,
         attachedRecordIds: attachedRecordIds.length > 0 ? attachedRecordIds : undefined,
       });
-
       toast.success(t('consultationBooked'));
       setLocation(`/payment-confirmation/${result.consultationId}`);
     } catch (error: any) {
-      const msg: string = error?.message ?? '';
-      if (msg.includes('FREE_QUOTA_EXHAUSTED')) {
-        toast.error(
-          language === 'ar'
-            ? 'لقد استنفدت استشاراتك المجانية. ستُحتسب هذه الاستشارة بـ 5$.'
-            : 'Your free consultations are used up. This consultation will cost $5.',
-          { duration: 5000 }
-        );
-      } else {
-        toast.error(error.message || t('consultationError'));
-      }
+      toast.error(error.message || t('consultationError'));
     }
   };
 
@@ -274,77 +163,7 @@ export default function Consultations() {
     );
   }
 
-  // ── PayPal checkout screen (shown after draft is saved) ──
-  if (paypalStep === 'paypal' && draftConsultationId) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 container py-8">
-          <div className="max-w-lg mx-auto">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle>
-                      {language === 'ar' ? 'إتمام الدفع' : 'Complete Payment'}
-                    </CardTitle>
-                    <CardDescription>
-                      {language === 'ar'
-                        ? `استشارة #${draftConsultationId} — 5$ فقط`
-                        : `Consultation #${draftConsultationId} — $5 only`}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Summary */}
-                <div className="bg-muted/40 rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{language === 'ar' ? 'اسم المريض' : 'Patient'}</span>
-                    <span className="font-medium">{formData.patientName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{language === 'ar' ? 'الخدمة' : 'Service'}</span>
-                    <span className="font-medium">{language === 'ar' ? 'استشارة طبية ذكية' : 'AI Medical Consultation'}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2 mt-2">
-                    <span className="font-semibold">{language === 'ar' ? 'المجموع' : 'Total'}</span>
-                    <span className="font-bold text-lg">$5.00</span>
-                  </div>
-                </div>
-
-                {/* PayPal button container */}
-                {!paypalLoaded ? (
-                  <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>{language === 'ar' ? 'جاري تحميل PayPal...' : 'Loading PayPal...'}</span>
-                  </div>
-                ) : (
-                  <div ref={paypalContainerRef} className="min-h-[60px]" />
-                )}
-
-                <Button
-                  variant="ghost"
-                  className="w-full text-muted-foreground"
-                  onClick={() => {
-                    setPaypalStep('form');
-                    setDraftConsultationId(null);
-                    setPaypalLoaded(false);
-                    setPaypalRendered(false);
-                  }}
-                >
-                  ← {language === 'ar' ? 'العودة لتعديل الاستشارة' : 'Back to edit consultation'}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  // PAYMENT FROZEN — PayPal checkout screen removed for launch stage
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -359,29 +178,19 @@ export default function Consultations() {
                   ? "قدم معلوماتك الطبية وسنقوم بتحليلها باستخدام الذكاء الاصطناعي تحت إشراف أطبائنا المتخصصين"
                   : "Submit your medical information and we'll analyze it using AI under the supervision of our medical specialists"}
               </CardDescription>
-              {/* ── Free Consultation Balance Banner ── */}
+              {/* FREE LAUNCH BANNER */}
               {isAuthenticated && (
-                hasFreeLeft ? (
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                      {language === 'ar'
-                        ? `لديك ${freeRemaining} من أصل ${freeTotal} استشارة مجانية متبقية — هذه الاستشارة مجانية!`
-                        : `You have ${freeRemaining} of ${freeTotal} free consultation${freeTotal > 1 ? 's' : ''} remaining — this one is free!`}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      {language === 'ar'
-                        ? `لقد استنفدت جميع استشاراتك المجانية الـ${freeTotal}. ستُحتسب كل استشارة إضافية بـ 5$.`
-                        : `You have used all ${freeTotal} free consultation${freeTotal > 1 ? 's' : ''}. Each additional consultation costs $5.`}
-                    </p>
-                  </div>
-                )
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    {language === 'ar'
+                      ? '🎉 جميع الاستشارات مجانية خلال مرحلة الإطلاق — لا حاجة لأي دفع!'
+                      : '🎉 All consultations are free during our launch stage — no payment required!'}
+                  </p>
+                </div>
               )}
             </CardHeader>
             <CardContent>
-              <form onSubmit={(e) => handleSubmit(e, hasFreeLeft)} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-lg">
@@ -601,32 +410,18 @@ export default function Consultations() {
                 {/* Submit Buttons */}
                 <div className="space-y-4">
                   <div className="flex gap-4">
-                    {hasFreeLeft ? (
-                      <Button
-                        type="submit"
-                        size="lg"
-                        disabled={createMutation.isPending}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {createMutation.isPending
-                          ? t("loading")
-                          : language === 'ar'
-                            ? `إرسال مجاناً (${freeRemaining} متبقية)`
-                            : `Submit Free (${freeRemaining} left)`}
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="lg"
-                        disabled={createMutation.isPending}
-                        onClick={(e) => handleSubmit(e as any, false)}
-                        className="flex-1"
-                      >
-                        {createMutation.isPending
-                          ? t("loading")
-                          : language === 'ar' ? 'إرسال بـ 5$' : 'Submit — $5'}
-                      </Button>
-                    )}
+                    <Button
+                      type="submit"
+                      size="lg"
+                      disabled={createMutation.isPending}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {createMutation.isPending
+                        ? t("loading")
+                        : language === 'ar'
+                          ? 'إرسال مجاناً'
+                          : 'Submit — Free'}
+                    </Button>
                   </div>
                   
                   {/* WhatsApp Submission Option */}

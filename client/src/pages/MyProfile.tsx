@@ -394,7 +394,7 @@ export default function MyProfile() {
               )}
             </div>
           </div>
-          <ConsultationCounter language={language} />
+          {/* PAYMENT FROZEN — ConsultationCounter hidden for launch stage */}
         </div>
 
         {/* ── Edit Profile Dialog ─────────────────────────────────────────────────── */}
@@ -505,13 +505,7 @@ export default function MyProfile() {
                 <Badge variant="secondary" className="text-xs ml-1">{consultations.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              {t("paymentHistory", language)}
-              {paymentHistory.length > 0 && (
-                <Badge variant="secondary" className="text-xs ml-1">{paymentHistory.length}</Badge>
-              )}
-            </TabsTrigger>
+            {/* PAYMENT FROZEN — Payment History tab hidden for launch stage */}
           </TabsList>
 
           {/* ── Medical Records Tab ─────────────────────────────── */}
@@ -690,7 +684,8 @@ export default function MyProfile() {
           </TabsContent>
 
           {/* ── Payment History Tab ─────────────────────────────────────────── */}
-          <TabsContent value="payments">
+          {/* PAYMENT FROZEN — hidden for launch stage */}
+          {false && <TabsContent value="payments">
             {paymentHistory.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
                 <CreditCard className="w-14 h-14 text-muted-foreground/40" />
@@ -787,7 +782,7 @@ export default function MyProfile() {
                 </div>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
         </Tabs>
       </div>
 

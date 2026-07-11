@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { Calendar, DollarSign, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2, Bot } from "lucide-react";
+import { Calendar, FileText, Play, Headphones, Clock, Download, Presentation, Map, FileDown, Loader2, Bot } from "lucide-react";
 import { useLocation } from "wouter";
 import { ConsultationCounter } from "@/components/ConsultationCounter";
 import { DisclaimerGate } from "@/components/DisclaimerGate";
@@ -243,25 +243,7 @@ export default function Dashboard() {
     );
   };
 
-  const getPaymentBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "secondary",
-      completed: "default",
-      failed: "destructive",
-      refunded: "outline",
-    };
-    const labels: Record<string, string> = {
-      pending: t("paymentRequired"),
-      completed: t("paymentCompleted"),
-      failed: t("paymentFailed"),
-      refunded: "Refunded",
-    };
-    return (
-      <Badge variant={variants[status] || "default"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
+  // PAYMENT FROZEN — getPaymentBadge removed for launch stage
 
   return (
     <div className="min-h-screen py-12">
@@ -271,10 +253,12 @@ export default function Dashboard() {
             <div>
               <h1 className="text-4xl font-bold mb-2">{t("dashboard")}</h1>
               <p className="text-xl text-muted-foreground">
-                {user?.hasUsedFreeConsultation ? t("freeConsultationUsed") : t("freeConsultation")}
+                {language === "ar"
+                  ? "🎉 جميع الاستشارات مجانية خلال مرحلة الإطلاق"
+                  : "🎉 All consultations are free during our launch stage"}
               </p>
             </div>
-            <ConsultationCounter language={language} />
+            {/* PAYMENT FROZEN — ConsultationCounter (PayPal top-up) hidden for launch stage */}
           </div>
         </div>
 
@@ -323,7 +307,6 @@ export default function Dashboard() {
                         }
                       })()}
                       {getStatusBadge(consultation.status)}
-                      {getPaymentBadge(consultation.paymentStatus)}
                     </div>
                   </div>
                 </CardHeader>
@@ -359,15 +342,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     <div className="space-y-3">
-                      <div className="flex items-start gap-2">
-                        <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium">{t("amount")}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {consultation.isFree ? t("free") : `$${consultation.amount}`}
-                          </p>
-                        </div>
-                      </div>
+                      {/* PAYMENT FROZEN — amount row hidden for launch stage */}
                       <div className="flex items-start gap-2">
                         <div>
                           <p className="text-sm font-medium">{t("preferredLanguage")}</p>

@@ -926,3 +926,16 @@
 - [x] Bilingual labels and button text (EN/AR)
 - [x] Disabled state while AI is responding
 - [x] TypeScript: 0 errors
+
+## Payment Freeze — Launch Stage (Free for All Users)
+- [x] Consultations.tsx: remove PayPal screen, remove free/paid split, always submit as isFree:true
+- [x] Consultations.tsx: replace quota banner with "All consultations are free during launch" banner
+- [x] Consultations.tsx: single green "Submit — Free" button (no $5 paid path)
+- [x] Dashboard.tsx: remove payment badge from consultation cards, hide DollarSign amount row
+- [x] Dashboard.tsx: replace hasUsedFreeConsultation subtitle with launch-free message
+- [x] Dashboard.tsx: hide ConsultationCounter (PayPal top-up widget)
+- [x] MyProfile.tsx: hide ConsultationCounter
+- [x] MyProfile.tsx: hide Payment History tab trigger and TabsContent
+- [x] PaymentConfirmation.tsx: kept as-is (already handles isFree=true gracefully — shows "Free")
+- [x] All payment backend code preserved in comments for future re-enablement
+- [ ] TODO (future): re-enable payment — uncomment createDraftMutation, confirmPaymentMutation, restore PayPal screen, ConsultationCounter, Payment History tab
