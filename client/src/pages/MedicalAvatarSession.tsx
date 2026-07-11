@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Bot,
   User,
   Send,
   Download,
@@ -25,6 +24,7 @@ import {
   AlertCircle,
   Stethoscope,
   ClipboardList,
+  ChevronRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,6 +32,251 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+}
+
+interface QuickReplyGroup {
+  label: string;          // group heading shown above buttons
+  labelAr: string;
+  replies: { en: string; ar: string }[];
+}
+
+// ─── Quick-reply catalogue ────────────────────────────────────────────────────
+// Each group is shown when the last assistant message contains any of the
+// trigger keywords (case-insensitive).
+const QUICK_REPLY_GROUPS: Array<{
+  triggers: string[];
+  triggersAr: string[];
+  group: QuickReplyGroup;
+}> = [
+  {
+    triggers: ["scale", "rate", "severity", "1 to 10", "1-10", "out of 10", "how bad", "how severe", "how much pain", "pain level"],
+    triggersAr: ["مقياس", "شدة", "من 1", "من عشرة", "كم", "ألم", "درجة"],
+    group: {
+      label: "Pain / Severity Scale",
+      labelAr: "مقياس الشدة / الألم",
+      replies: [
+        { en: "1 – Barely noticeable", ar: "١ – بالكاد أشعر به" },
+        { en: "2 – Very mild", ar: "٢ – خفيف جداً" },
+        { en: "3 – Mild", ar: "٣ – خفيف" },
+        { en: "4 – Moderate", ar: "٤ – متوسط" },
+        { en: "5 – Uncomfortable", ar: "٥ – مزعج" },
+        { en: "6 – Distressing", ar: "٦ – مؤلم نسبياً" },
+        { en: "7 – Severe", ar: "٧ – شديد" },
+        { en: "8 – Very severe", ar: "٨ – شديد جداً" },
+        { en: "9 – Excruciating", ar: "٩ – لا يُحتمل" },
+        { en: "10 – Worst possible", ar: "١٠ – أشد ما يمكن" },
+      ],
+    },
+  },
+  {
+    triggers: ["yes or no", "do you have", "have you", "are you", "did you", "does it", "is there", "any ", "ever had"],
+    triggersAr: ["هل لديك", "هل تعاني", "هل سبق", "هل يوجد", "هل"],
+    group: {
+      label: "Yes / No",
+      labelAr: "نعم / لا",
+      replies: [
+        { en: "Yes", ar: "نعم" },
+        { en: "No", ar: "لا" },
+        { en: "Sometimes", ar: "أحياناً" },
+        { en: "Not sure", ar: "غير متأكد" },
+      ],
+    },
+  },
+  {
+    triggers: ["when did", "how long", "started", "duration", "begin", "onset", "since when", "how many days", "how many weeks"],
+    triggersAr: ["متى بدأ", "منذ متى", "كم يوم", "كم أسبوع", "منذ"],
+    group: {
+      label: "Duration",
+      labelAr: "المدة الزمنية",
+      replies: [
+        { en: "Today (less than 24 h)", ar: "اليوم (أقل من ٢٤ ساعة)" },
+        { en: "2–3 days", ar: "٢–٣ أيام" },
+        { en: "About a week", ar: "حوالي أسبوع" },
+        { en: "2–4 weeks", ar: "٢–٤ أسابيع" },
+        { en: "1–3 months", ar: "١–٣ أشهر" },
+        { en: "More than 3 months", ar: "أكثر من ٣ أشهر" },
+      ],
+    },
+  },
+  {
+    triggers: ["describe", "character", "nature", "type of pain", "what does it feel", "what kind", "how would you describe"],
+    triggersAr: ["صف", "طبيعة", "نوع", "كيف تصف"],
+    group: {
+      label: "Pain Character",
+      labelAr: "طبيعة الألم",
+      replies: [
+        { en: "Sharp / stabbing", ar: "حاد / طعن" },
+        { en: "Dull / aching", ar: "خفيف / وجع" },
+        { en: "Burning", ar: "حرقة" },
+        { en: "Throbbing / pulsating", ar: "نابض" },
+        { en: "Cramping / squeezing", ar: "تقلص / ضغط" },
+        { en: "Pressure / tightness", ar: "ضغط / شد" },
+        { en: "Tingling / numbness", ar: "وخز / تنميل" },
+      ],
+    },
+  },
+  {
+    triggers: ["spread", "radiate", "radiation", "move", "travel", "go to", "extend", "does it go"],
+    triggersAr: ["ينتشر", "يمتد", "ينتقل", "يصل إلى"],
+    group: {
+      label: "Radiation",
+      labelAr: "انتشار الألم",
+      replies: [
+        { en: "Stays in one place", ar: "يبقى في مكانه" },
+        { en: "Spreads to the shoulder", ar: "يمتد للكتف" },
+        { en: "Spreads to the arm / jaw", ar: "يمتد للذراع / الفك" },
+        { en: "Spreads to the back", ar: "يمتد للظهر" },
+        { en: "Spreads down the leg", ar: "يمتد للساق" },
+        { en: "Spreads to the neck", ar: "يمتد للرقبة" },
+      ],
+    },
+  },
+  {
+    triggers: ["make it better", "relieve", "alleviating", "improve", "helps", "what helps", "reduce"],
+    triggersAr: ["يخفف", "يحسن", "يساعد", "يريح"],
+    group: {
+      label: "Relieving Factors",
+      labelAr: "العوامل المخففة",
+      replies: [
+        { en: "Rest", ar: "الراحة" },
+        { en: "Pain medication", ar: "مسكنات الألم" },
+        { en: "Heat / warm compress", ar: "الحرارة / كمادات دافئة" },
+        { en: "Cold / ice pack", ar: "البرودة / كمادات باردة" },
+        { en: "Eating / drinking", ar: "الأكل / الشرب" },
+        { en: "Lying down", ar: "الاستلقاء" },
+        { en: "Nothing helps", ar: "لا شيء يساعد" },
+      ],
+    },
+  },
+  {
+    triggers: ["make it worse", "aggravat", "trigger", "worsen", "increase", "exacerbat", "what causes"],
+    triggersAr: ["يزيد", "يسوء", "يؤدي إلى", "يسبب"],
+    group: {
+      label: "Aggravating Factors",
+      labelAr: "العوامل المفاقمة",
+      replies: [
+        { en: "Movement / exercise", ar: "الحركة / الرياضة" },
+        { en: "Deep breathing", ar: "التنفس العميق" },
+        { en: "Eating", ar: "الأكل" },
+        { en: "Stress / anxiety", ar: "التوتر / القلق" },
+        { en: "Cold weather", ar: "الطقس البارد" },
+        { en: "Lying flat", ar: "الاستلقاء" },
+        { en: "Nothing specific", ar: "لا شيء محدد" },
+      ],
+    },
+  },
+  {
+    triggers: ["associated", "other symptoms", "anything else", "accompanying", "along with", "besides"],
+    triggersAr: ["أعراض أخرى", "مصاحب", "بالإضافة", "غير ذلك"],
+    group: {
+      label: "Associated Symptoms",
+      labelAr: "الأعراض المصاحبة",
+      replies: [
+        { en: "Nausea / vomiting", ar: "غثيان / قيء" },
+        { en: "Fever / chills", ar: "حمى / قشعريرة" },
+        { en: "Shortness of breath", ar: "ضيق تنفس" },
+        { en: "Dizziness / fainting", ar: "دوخة / إغماء" },
+        { en: "Fatigue / weakness", ar: "إرهاق / ضعف" },
+        { en: "Sweating", ar: "تعرق" },
+        { en: "No other symptoms", ar: "لا أعراض أخرى" },
+      ],
+    },
+  },
+  {
+    triggers: ["constant", "intermittent", "come and go", "continuous", "pattern", "frequency", "how often"],
+    triggersAr: ["مستمر", "متقطع", "يأتي ويذهب", "كم مرة", "كيف"],
+    group: {
+      label: "Pattern / Frequency",
+      labelAr: "النمط / التكرار",
+      replies: [
+        { en: "Constant (never stops)", ar: "مستمر (لا يتوقف)" },
+        { en: "Comes and goes", ar: "يأتي ويذهب" },
+        { en: "Several times a day", ar: "عدة مرات يومياً" },
+        { en: "Once a day", ar: "مرة في اليوم" },
+        { en: "A few times a week", ar: "بضع مرات أسبوعياً" },
+        { en: "Occasional / random", ar: "عرضي / غير منتظم" },
+      ],
+    },
+  },
+  {
+    triggers: ["medical history", "past medical", "previous", "chronic", "conditions", "diagnosed", "suffer from"],
+    triggersAr: ["تاريخ طبي", "أمراض سابقة", "مزمن", "تشخيص", "تعاني من"],
+    group: {
+      label: "Medical History",
+      labelAr: "التاريخ الطبي",
+      replies: [
+        { en: "Diabetes", ar: "السكري" },
+        { en: "Hypertension", ar: "ضغط الدم" },
+        { en: "Heart disease", ar: "أمراض القلب" },
+        { en: "Asthma / COPD", ar: "الربو / أمراض الرئة" },
+        { en: "Thyroid disorder", ar: "اضطراب الغدة الدرقية" },
+        { en: "No chronic conditions", ar: "لا أمراض مزمنة" },
+      ],
+    },
+  },
+  {
+    triggers: ["medication", "medicine", "drug", "taking any", "current medication", "treatment"],
+    triggersAr: ["دواء", "أدوية", "علاج", "تتناول"],
+    group: {
+      label: "Medications",
+      labelAr: "الأدوية",
+      replies: [
+        { en: "No medications", ar: "لا أتناول أدوية" },
+        { en: "Pain relievers (e.g. ibuprofen)", ar: "مسكنات (مثل إيبوبروفين)" },
+        { en: "Blood pressure medication", ar: "أدوية ضغط الدم" },
+        { en: "Diabetes medication / insulin", ar: "أدوية السكري / إنسولين" },
+        { en: "Antibiotics", ar: "مضادات حيوية" },
+        { en: "I'll list them in writing", ar: "سأذكرها كتابةً" },
+      ],
+    },
+  },
+  {
+    triggers: ["allerg", "reaction", "sensitive to", "intolerant"],
+    triggersAr: ["حساسية", "تفاعل", "حساس"],
+    group: {
+      label: "Allergies",
+      labelAr: "الحساسية",
+      replies: [
+        { en: "No known allergies", ar: "لا توجد حساسية معروفة" },
+        { en: "Penicillin / antibiotics", ar: "البنسلين / مضادات حيوية" },
+        { en: "NSAIDs (aspirin / ibuprofen)", ar: "مضادات الالتهاب (أسبرين / إيبوبروفين)" },
+        { en: "Latex", ar: "اللاتكس" },
+        { en: "Food allergy", ar: "حساسية غذائية" },
+      ],
+    },
+  },
+  {
+    triggers: ["smoke", "smoking", "alcohol", "drink", "lifestyle", "exercise", "diet"],
+    triggersAr: ["تدخين", "كحول", "نمط حياة", "رياضة", "غذاء"],
+    group: {
+      label: "Lifestyle",
+      labelAr: "نمط الحياة",
+      replies: [
+        { en: "Non-smoker", ar: "لا أدخن" },
+        { en: "Current smoker", ar: "أدخن حالياً" },
+        { en: "Ex-smoker", ar: "أدخنت سابقاً" },
+        { en: "No alcohol", ar: "لا أشرب الكحول" },
+        { en: "Sedentary lifestyle", ar: "نمط حياة خامل" },
+        { en: "Physically active", ar: "نشيط بدنياً" },
+      ],
+    },
+  },
+];
+
+// ─── Detect which quick-reply group to show ───────────────────────────────────
+function detectQuickReplyGroup(
+  lastAssistantMessage: string,
+  language: "en" | "ar"
+): QuickReplyGroup | null {
+  const lower = lastAssistantMessage.toLowerCase();
+  for (const entry of QUICK_REPLY_GROUPS) {
+    const triggers = language === "ar" ? entry.triggersAr : entry.triggers;
+    const allTriggers = [...entry.triggers, ...entry.triggersAr]; // always check both
+    if (allTriggers.some((t) => lower.includes(t.toLowerCase()))) {
+      return entry.group;
+    }
+  }
+  return null;
 }
 
 // ─── Avatar Video Panel ───────────────────────────────────────────────────────
@@ -46,7 +291,6 @@ function AvatarVideoPanel({
 }) {
   return (
     <div className="relative w-full aspect-video bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl overflow-hidden flex items-center justify-center border border-border">
-      {/* Animated avatar placeholder — replace with HeyGen embed when API key is set */}
       <div className="flex flex-col items-center gap-4">
         <div
           className={`relative w-28 h-28 rounded-full bg-primary/20 flex items-center justify-center transition-all duration-300 ${
@@ -65,20 +309,14 @@ function AvatarVideoPanel({
           <p className="text-xs text-muted-foreground mt-1">
             {isActive
               ? isSpeaking
-                ? language === "ar"
-                  ? "يتحدث..."
-                  : "Speaking..."
-                : language === "ar"
-                ? "جاهز للمحادثة"
-                : "Ready to continue"
+                ? language === "ar" ? "يتحدث..." : "Speaking..."
+                : language === "ar" ? "جاهز للمحادثة" : "Ready to continue"
               : language === "ar"
               ? "صف أعراضك أدناه للبدء"
               : "Describe your symptoms below to begin"}
           </p>
         </div>
       </div>
-
-      {/* HeyGen integration note */}
       <div className="absolute bottom-3 left-3 right-3">
         <div className="bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground text-center border border-border">
           {language === "ar"
@@ -172,6 +410,46 @@ function DocumentPanel({
   );
 }
 
+// ─── Quick-reply strip ────────────────────────────────────────────────────────
+function QuickReplyStrip({
+  group,
+  language,
+  onSelect,
+  disabled,
+}: {
+  group: QuickReplyGroup;
+  language: "en" | "ar";
+  onSelect: (text: string) => void;
+  disabled: boolean;
+}) {
+  const isRtl = language === "ar";
+  const label = language === "ar" ? group.labelAr : group.label;
+
+  return (
+    <div className="px-4 py-2 border-t border-border bg-muted/30" dir={isRtl ? "rtl" : "ltr"}>
+      <p className="text-[10px] font-medium text-muted-foreground mb-2 flex items-center gap-1">
+        <ChevronRight className="w-3 h-3" />
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {group.replies.map((r, i) => {
+          const text = language === "ar" ? r.ar : r.en;
+          return (
+            <button
+              key={i}
+              onClick={() => onSelect(text)}
+              disabled={disabled}
+              className="inline-flex items-center px-3 py-1 rounded-full border border-border bg-background text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function MedicalAvatarSession() {
   const [, params] = useRoute("/consultation/:id/avatar");
@@ -195,17 +473,18 @@ export default function MedicalAvatarSession() {
 
   const consultation = consultations?.find((c: any) => c.id === consultationId);
 
+  // ── Detect quick-reply group from last assistant message ───────────────────
+  const quickReplyGroup = useMemo<QuickReplyGroup | null>(() => {
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) return null;
+    return detectQuickReplyGroup(lastAssistant.content, language);
+  }, [messages, language]);
+
   const initSession = trpc.avatarSession.getOrCreate.useMutation({
     onSuccess: (session) => {
       try {
         const history: ChatMessage[] = JSON.parse(session.transcript || "[]");
-        if (history.length > 0) {
-          setMessages(history);
-        } else {
-          // The AI doctor will greet the patient on first message send.
-          // We show an empty-state prompt instead of a hardcoded greeting
-          // so the LLM generates the first message naturally.
-        }
+        if (history.length > 0) setMessages(history);
       } catch {
         // ignore parse errors
       }
@@ -221,7 +500,6 @@ export default function MedicalAvatarSession() {
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-      // Speak the response if not muted
       if (!isMuted && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(replyText);
         utterance.lang = language === "ar" ? "ar-SA" : "en-US";
@@ -244,42 +522,49 @@ export default function MedicalAvatarSession() {
     }
   }, [consultationId, isAuthenticated]);
 
-  // Detect language from consultation
   useEffect(() => {
     if (consultation?.preferredLanguage) {
       setLanguage(consultation.preferredLanguage as "en" | "ar");
     }
   }, [consultation]);
 
-  // Auto-scroll chat
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Cleanup speech on unmount
   useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel();
-    };
+    return () => { window.speechSynthesis?.cancel(); };
   }, []);
 
-  // ── Send a message (or trigger the opening greeting) ──────────────────────
+  // ── Send helpers ───────────────────────────────────────────────────────────
   const handleSend = useCallback(
     (overrideText?: string) => {
       const text = overrideText ?? input.trim();
       if (!text || !consultationId || chatMutation.isPending) return;
-      const userMsg: ChatMessage = {
-        role: "user",
-        content: text,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: text, timestamp: Date.now() },
+      ]);
       chatMutation.mutate({ consultationId, message: text, language });
       if (!overrideText) setInput("");
     },
     [input, consultationId, chatMutation, language]
+  );
+
+  // Quick-reply: append to textarea OR send immediately
+  const handleQuickReply = useCallback(
+    (text: string) => {
+      // If there's already something typed, append with a space
+      if (input.trim()) {
+        setInput((prev) => prev.trim() + " " + text);
+      } else {
+        // Send immediately
+        handleSend(text);
+      }
+    },
+    [input, handleSend]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -297,7 +582,7 @@ export default function MedicalAvatarSession() {
     setIsMuted((m) => !m);
   };
 
-  // ── Guard: not logged in ───────────────────────────────────────────────────
+  // ── Guards ─────────────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <div className="container py-20 text-center">
@@ -306,7 +591,6 @@ export default function MedicalAvatarSession() {
     );
   }
 
-  // ── Guard: consultation not found ──────────────────────────────────────────
   if (consultations && !consultation) {
     return (
       <div className="container py-20 text-center">
@@ -327,12 +611,7 @@ export default function MedicalAvatarSession() {
       {/* ── Header ── */}
       <div className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/dashboard")}
-            className="gap-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
             <ArrowLeft className={`w-4 h-4 ${isRtl ? "rotate-180" : ""}`} />
             {language === "ar" ? "لوحة التحكم" : "Dashboard"}
           </Button>
@@ -375,13 +654,8 @@ export default function MedicalAvatarSession() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── Left: Avatar + Documents ── */}
           <div className="lg:col-span-1 flex flex-col gap-4">
-            <AvatarVideoPanel
-              isActive={messages.length > 0}
-              isSpeaking={isSpeaking}
-              language={language}
-            />
+            <AvatarVideoPanel isActive={messages.length > 0} isSpeaking={isSpeaking} language={language} />
 
-            {/* Document downloads */}
             <Card className="p-4">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Download className="w-4 h-4 text-muted-foreground" />
@@ -424,9 +698,7 @@ export default function MedicalAvatarSession() {
                     </div>
                     <div className="max-w-sm">
                       <p className="text-sm font-medium text-foreground mb-1">
-                        {language === "ar"
-                          ? "ابدأ جلسة الفحص الأولي"
-                          : "Begin Your Clinical Intake"}
+                        {language === "ar" ? "ابدأ جلسة الفحص الأولي" : "Begin Your Clinical Intake"}
                       </p>
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         {language === "ar"
@@ -508,6 +780,16 @@ export default function MedicalAvatarSession() {
                 )}
               </ScrollArea>
 
+              {/* ── Quick-reply strip (contextual) ── */}
+              {quickReplyGroup && messages.length > 0 && (
+                <QuickReplyStrip
+                  group={quickReplyGroup}
+                  language={language}
+                  onSelect={handleQuickReply}
+                  disabled={chatMutation.isPending}
+                />
+              )}
+
               {/* Disclaimer */}
               <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
                 <p className="text-xs text-blue-700 flex items-center gap-1">
@@ -526,8 +808,8 @@ export default function MedicalAvatarSession() {
                   onKeyDown={handleKeyDown}
                   placeholder={
                     language === "ar"
-                      ? "اكتب ردك هنا..."
-                      : "Type your response here..."
+                      ? "اكتب ردك هنا، أو اختر من الخيارات أعلاه..."
+                      : "Type your response, or tap a quick reply above..."
                   }
                   className="flex-1 resize-none min-h-[44px] max-h-[120px]"
                   rows={1}

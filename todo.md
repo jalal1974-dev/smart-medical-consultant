@@ -913,3 +913,16 @@
 - [x] Add clinical intake UI: avatar asks questions, patient answers, avatar narrows diagnosis
 - [ ] Show session progress indicator (history taking → differential → focused questions → summary) — future enhancement
 - [x] Persist full conversation transcript in avatar_sessions table
+
+## Quick-Reply Buttons in Clinical Intake Chat
+- [x] Design contextual quick-reply button system (13 trigger groups)
+- [x] Implement severity scale 1-10 quick replies
+- [x] Implement Yes / No / Sometimes / Not sure quick replies
+- [x] Implement Duration, Pain Character, Radiation, Relieving/Aggravating Factors quick replies
+- [x] Implement Associated Symptoms, Pattern/Frequency, Medical History, Medications, Allergies, Lifestyle quick replies
+- [x] Detect active group from last assistant message via keyword matching (EN + AR triggers)
+- [x] Quick-reply strip renders between ScrollArea and disclaimer bar
+- [x] Tapping a quick reply when textarea is empty sends immediately; when textarea has text, appends to it
+- [x] Bilingual labels and button text (EN/AR)
+- [x] Disabled state while AI is responding
+- [x] TypeScript: 0 errors
