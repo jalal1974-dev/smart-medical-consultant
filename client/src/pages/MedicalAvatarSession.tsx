@@ -25,6 +25,8 @@ import {
   Stethoscope,
   ClipboardList,
   ChevronRight,
+  X,
+  PenLine,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -415,23 +417,50 @@ function QuickReplyStrip({
   group,
   language,
   onSelect,
+  onOther,
+  onDismiss,
   disabled,
 }: {
   group: QuickReplyGroup;
   language: "en" | "ar";
   onSelect: (text: string) => void;
+  onOther: () => void;
+  onDismiss: () => void;
   disabled: boolean;
 }) {
   const isRtl = language === "ar";
   const label = language === "ar" ? group.labelAr : group.label;
 
   return (
-    <div className="px-4 py-2 border-t border-border bg-muted/30" dir={isRtl ? "rtl" : "ltr"}>
-      <p className="text-[10px] font-medium text-muted-foreground mb-2 flex items-center gap-1">
-        <ChevronRight className="w-3 h-3" />
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-1.5">
+    <div
+      className="border-t border-border bg-muted/30 overflow-hidden"
+      style={{
+        animation: "quickReplySlideUp 220ms cubic-bezier(0.22, 1, 0.36, 1) both",
+      }}
+      dir={isRtl ? "rtl" : "ltr"}
+    >
+      <style>{`
+        @keyframes quickReplySlideUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Header row */}
+      <div className="flex items-center gap-1 px-4 pt-2 pb-1">
+        <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+        <p className="text-[10px] font-medium text-muted-foreground flex-1 truncate">{label}</p>
+        <button
+          onClick={onDismiss}
+          title={language === "ar" ? "إخفاء الاقتراحات" : "Dismiss suggestions"}
+          className="ml-1 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Horizontally scrollable button row */}
+      <div className="flex gap-1.5 overflow-x-auto px-4 pb-2 scrollbar-none" style={{ scrollbarWidth: "none" }}>
         {group.replies.map((r, i) => {
           const text = language === "ar" ? r.ar : r.en;
           return (
@@ -439,12 +468,21 @@ function QuickReplyStrip({
               key={i}
               onClick={() => onSelect(text)}
               disabled={disabled}
-              className="inline-flex items-center px-3 py-1 rounded-full border border-border bg-background text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center whitespace-nowrap flex-shrink-0 px-3 py-1 rounded-full border border-border bg-background text-xs font-medium text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {text}
             </button>
           );
         })}
+        {/* Other button — always last */}
+        <button
+          onClick={onOther}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 whitespace-nowrap flex-shrink-0 px-3 py-1 rounded-full border border-dashed border-border bg-background text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground hover:border-border disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <PenLine className="w-3 h-3" />
+          {language === "ar" ? "أخرى..." : "Other..."}
+        </button>
       </div>
     </div>
   );
@@ -463,7 +501,9 @@ export default function MedicalAvatarSession() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [language, setLanguage] = useState<"en" | "ar">("en");
+  const [quickRepliesDismissed, setQuickRepliesDismissed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -474,6 +514,15 @@ export default function MedicalAvatarSession() {
   const consultation = consultations?.find((c: any) => c.id === consultationId);
 
   // ── Detect quick-reply group from last assistant message ───────────────────
+  // Reset dismissed state whenever a new assistant message arrives
+  const lastAssistantMsgCount = useMemo(
+    () => messages.filter((m) => m.role === "assistant").length,
+    [messages]
+  );
+  useEffect(() => {
+    setQuickRepliesDismissed(false);
+  }, [lastAssistantMsgCount]);
+
   const quickReplyGroup = useMemo<QuickReplyGroup | null>(() => {
     const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
     if (!lastAssistant) return null;
@@ -556,16 +605,20 @@ export default function MedicalAvatarSession() {
   // Quick-reply: append to textarea OR send immediately
   const handleQuickReply = useCallback(
     (text: string) => {
-      // If there's already something typed, append with a space
       if (input.trim()) {
         setInput((prev) => prev.trim() + " " + text);
+        inputRef.current?.focus();
       } else {
-        // Send immediately
         handleSend(text);
       }
     },
     [input, handleSend]
   );
+
+  // "Other" button: focus the textarea so the patient can type freely
+  const handleOther = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -781,11 +834,13 @@ export default function MedicalAvatarSession() {
               </ScrollArea>
 
               {/* ── Quick-reply strip (contextual) ── */}
-              {quickReplyGroup && messages.length > 0 && (
+              {quickReplyGroup && messages.length > 0 && !quickRepliesDismissed && (
                 <QuickReplyStrip
                   group={quickReplyGroup}
                   language={language}
                   onSelect={handleQuickReply}
+                  onOther={handleOther}
+                  onDismiss={() => setQuickRepliesDismissed(true)}
                   disabled={chatMutation.isPending}
                 />
               )}
@@ -803,6 +858,7 @@ export default function MedicalAvatarSession() {
               {/* Input */}
               <div className="p-4 border-t border-border flex gap-2">
                 <Textarea
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
