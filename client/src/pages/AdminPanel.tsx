@@ -14,7 +14,7 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown, Undo2 } from "lucide-react";
+import { Users, FileText, Video, BarChart3, Plus, Upload, Loader2, Brain, ExternalLink, Search, FileDown, Undo2, Trash2, Eye, EyeOff, Pencil, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { MindMapVisualization } from "@/components/MindMapVisualization";
@@ -668,19 +668,34 @@ export default function AdminPanel() {
   });
 
   // Doctor manual material upload mutations
-  const uploadDoctorVideo = trpc.admin.uploadDoctorVideo.useMutation({
-    onSuccess: () => { toast.success('Video uploaded successfully'); utils.admin.consultations.invalidate(); },
+    const uploadDoctorVideo = trpc.admin.uploadDoctorVideo.useMutation({
+    onSuccess: () => { toast.success('Video uploaded'); utils.admin.consultations.invalidate(); },
     onError: (e) => toast.error(`Video upload failed: ${e.message}`),
   });
   const uploadDoctorAudio = trpc.admin.uploadDoctorAudio.useMutation({
-    onSuccess: () => { toast.success('Audio uploaded successfully'); utils.admin.consultations.invalidate(); },
+    onSuccess: () => { toast.success('Audio uploaded'); utils.admin.consultations.invalidate(); },
     onError: (e) => toast.error(`Audio upload failed: ${e.message}`),
   });
   const uploadDoctorOther = trpc.admin.uploadDoctorOther.useMutation({
-    onSuccess: () => { toast.success('Document uploaded successfully'); utils.admin.consultations.invalidate(); },
+    onSuccess: () => { toast.success('Document uploaded'); utils.admin.consultations.invalidate(); },
     onError: (e) => toast.error(`Document upload failed: ${e.message}`),
   });
-
+  const deleteDoctorMaterial = trpc.admin.deleteDoctorMaterial.useMutation({
+    onSuccess: () => { toast.success('Material deleted'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Delete failed: ${e.message}`),
+  });
+  const updateDoctorMaterialNote = trpc.admin.updateDoctorMaterialNote.useMutation({
+    onSuccess: () => { toast.success('Note saved'); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Save failed: ${e.message}`),
+  });
+  // Per-material preview and note state: keyed by `${consultationId}-${type}`
+  const [materialPreview, setMaterialPreview] = useState<Record<string, boolean>>({});
+  const [materialNoteEdit, setMaterialNoteEdit] = useState<Record<string, string | null>>({});
+  const togglePreview = (key: string) => setMaterialPreview(p => ({ ...p, [key]: !p[key] }));
+  const startNoteEdit = (key: string, current: string | null) =>
+    setMaterialNoteEdit(p => ({ ...p, [key]: current ?? '' }));
+  const cancelNoteEdit = (key: string) =>
+    setMaterialNoteEdit(p => { const n = { ...p }; delete n[key]; return n; });
   const handleDoctorMaterialUpload = (consultationId: number, type: 'video' | 'audio' | 'other') => {
     const inp = document.createElement('input');
     inp.type = 'file';
@@ -1455,71 +1470,150 @@ export default function AdminPanel() {
                         })()}
                         
                         {/* ── Doctor Manual Materials (NotebookLM output) ── */}
-                        <div className="mt-4 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-3">
+                        <div className="mt-4 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-4">
                           <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                             <Upload className="w-3.5 h-3.5" />
                             Manual Materials (NotebookLM)
                           </p>
-                          {/* Video */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium">🎬 Video</p>
-                              {(consultation as any).doctorUploadedVideoUrl
-                                ? <a href={(consultation as any).doctorUploadedVideoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedVideoTitle || 'Video'} ↗</a>
-                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorVideo.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'video')}>
-                                {uploadDoctorVideo.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                              </Button>
-                              {(consultation as any).doctorUploadedVideoUrl && !((consultation as any).sentVideoToPatient) && (
-                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendVideo: true })}>
-                                  <Send className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {(consultation as any).sentVideoToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
-                            </div>
-                          </div>
-                          {/* Audio */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium">🎧 Audio / Podcast</p>
-                              {(consultation as any).doctorUploadedAudioUrl
-                                ? <a href={(consultation as any).doctorUploadedAudioUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedAudioTitle || 'Audio'} ↗</a>
-                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorAudio.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'audio')}>
-                                {uploadDoctorAudio.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                              </Button>
-                              {(consultation as any).doctorUploadedAudioUrl && !((consultation as any).sentAudioToPatient) && (
-                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendAudio: true })}>
-                                  <Send className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {(consultation as any).sentAudioToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
-                            </div>
-                          </div>
-                          {/* Other Document */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium">📎 Other Document</p>
-                              {(consultation as any).doctorUploadedOtherUrl
-                                ? <a href={(consultation as any).doctorUploadedOtherUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block">{(consultation as any).doctorUploadedOtherTitle || 'Document'} ↗</a>
-                                : <span className="text-xs text-muted-foreground">Not uploaded</span>}
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={uploadDoctorOther.isPending} onClick={() => handleDoctorMaterialUpload(consultation.id, 'other')}>
-                                {uploadDoctorOther.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                              </Button>
-                              {(consultation as any).doctorUploadedOtherUrl && !((consultation as any).sentOtherToPatient) && (
-                                <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, sendOther: true })}>
-                                  <Send className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {(consultation as any).sentOtherToPatient && <Badge variant="secondary" className="text-xs h-7">Sent</Badge>}
-                            </div>
-                          </div>
+
+                          {/* ── Reusable material row renderer ── */}
+                          {(['video', 'audio', 'other'] as const).map((type) => {
+                            const urlKey = type === 'video' ? 'doctorUploadedVideoUrl' : type === 'audio' ? 'doctorUploadedAudioUrl' : 'doctorUploadedOtherUrl';
+                            const titleKey = type === 'video' ? 'doctorUploadedVideoTitle' : type === 'audio' ? 'doctorUploadedAudioTitle' : 'doctorUploadedOtherTitle';
+                            const noteKey = type === 'video' ? 'doctorUploadedVideoNote' : type === 'audio' ? 'doctorUploadedAudioNote' : 'doctorUploadedOtherNote';
+                            const sentKey = type === 'video' ? 'sentVideoToPatient' : type === 'audio' ? 'sentAudioToPatient' : 'sentOtherToPatient';
+                            const mimeKey = 'doctorUploadedOtherMimeType';
+                            const url: string | null = (consultation as any)[urlKey];
+                            const title: string | null = (consultation as any)[titleKey];
+                            const note: string | null = (consultation as any)[noteKey];
+                            const sent: boolean = (consultation as any)[sentKey];
+                            const mime: string | null = type === 'other' ? (consultation as any)[mimeKey] : null;
+                            const previewKey = `${consultation.id}-${type}`;
+                            const showPreview = materialPreview[previewKey];
+                            const noteEditValue = materialNoteEdit[previewKey];
+                            const isEditingNote = noteEditValue !== undefined;
+                            const label = type === 'video' ? '🎬 Video' : type === 'audio' ? '🎧 Audio / Podcast' : '📎 Other Document';
+                            const uploadPending = type === 'video' ? uploadDoctorVideo.isPending : type === 'audio' ? uploadDoctorAudio.isPending : uploadDoctorOther.isPending;
+                            const sendMutation = type === 'video' ? { sendVideo: true } : type === 'audio' ? { sendAudio: true } : { sendOther: true };
+
+                            return (
+                              <div key={type} className="border border-emerald-100 dark:border-emerald-900 rounded-lg p-2.5 space-y-2 bg-white/60 dark:bg-black/20">
+                                {/* Row header: label + action buttons */}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold">{label}</p>
+                                    {url
+                                      ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline truncate block max-w-[200px]">{title || type} ↗</a>
+                                      : <span className="text-xs text-muted-foreground italic">Not uploaded yet</span>}
+                                  </div>
+                                  <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                                    {/* Upload / Replace */}
+                                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title={url ? 'Replace file' : 'Upload file'} disabled={uploadPending} onClick={() => handleDoctorMaterialUpload(consultation.id, type)}>
+                                      {uploadPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                                      <span className="ml-1">{url ? 'Replace' : 'Upload'}</span>
+                                    </Button>
+                                    {/* Preview toggle */}
+                                    {url && (
+                                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs" title={showPreview ? 'Hide preview' : 'Preview'} onClick={() => togglePreview(previewKey)}>
+                                        {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                        <span className="ml-1">{showPreview ? 'Hide' : 'Preview'}</span>
+                                      </Button>
+                                    )}
+                                    {/* Delete */}
+                                    {url && (
+                                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950" title="Delete material"
+                                        disabled={deleteDoctorMaterial.isPending}
+                                        onClick={() => { if (window.confirm(`Delete this ${type}? This cannot be undone.`)) deleteDoctorMaterial.mutate({ consultationId: consultation.id, type }); }}>
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {/* Send to patient */}
+                                    {url && !sent && (
+                                      <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" title="Send to patient" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, ...sendMutation })}>
+                                        <Send className="h-3 w-3" />
+                                        <span className="ml-1">Send</span>
+                                      </Button>
+                                    )}
+                                    {sent && <Badge variant="secondary" className="text-xs h-7 px-2">✓ Sent</Badge>}
+                                  </div>
+                                </div>
+
+                                {/* Inline preview */}
+                                {url && showPreview && (
+                                  <div className="rounded overflow-hidden border border-emerald-200 dark:border-emerald-800 bg-black/5">
+                                    {type === 'video' && (
+                                      <video controls className="w-full max-h-48 rounded" src={url}>
+                                        Your browser does not support video playback.
+                                      </video>
+                                    )}
+                                    {type === 'audio' && (
+                                      <audio controls className="w-full p-2" src={url}>
+                                        Your browser does not support audio playback.
+                                      </audio>
+                                    )}
+                                    {type === 'other' && (() => {
+                                      const isImage = mime?.startsWith('image/');
+                                      const isPdf = mime === 'application/pdf' || url.toLowerCase().endsWith('.pdf');
+                                      if (isImage) return <img src={url} alt={title || 'Document'} className="w-full max-h-64 object-contain rounded" />;
+                                      if (isPdf) return <iframe src={url} className="w-full h-64 rounded" title={title || 'Document'} />;
+                                      return (
+                                        <div className="p-3 text-center">
+                                          <p className="text-xs text-muted-foreground mb-2">Preview not available for this file type ({mime || 'unknown'})</p>
+                                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-600 hover:underline">
+                                            Open in new tab ↗
+                                          </a>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+
+                                {/* Personalized note */}
+                                {url && (
+                                  <div className="space-y-1">
+                                    {!isEditingNote ? (
+                                      <div className="flex items-start gap-1.5">
+                                        <div className="flex-1 min-w-0">
+                                          {note
+                                            ? <p className="text-xs text-slate-600 dark:text-slate-400 italic">📝 {note}</p>
+                                            : <p className="text-xs text-muted-foreground italic">No note added yet</p>}
+                                        </div>
+                                        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs shrink-0" title="Add / edit note" onClick={() => startNoteEdit(previewKey, note)}>
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex gap-1.5 items-start">
+                                        <textarea
+                                          className="flex-1 text-xs rounded border border-input bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+                                          rows={2}
+                                          maxLength={1000}
+                                          placeholder="Add a short note for the patient (e.g. 'This video explains your diagnosis in simple terms')…"
+                                          value={noteEditValue ?? ''}
+                                          onChange={e => setMaterialNoteEdit(p => ({ ...p, [previewKey]: e.target.value }))}
+                                        />
+                                        <div className="flex flex-col gap-1">
+                                          <Button size="sm" className="h-6 px-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" title="Save note"
+                                            disabled={updateDoctorMaterialNote.isPending}
+                                            onClick={() => {
+                                              updateDoctorMaterialNote.mutate(
+                                                { consultationId: consultation.id, type, note: noteEditValue ?? '' },
+                                                { onSuccess: () => cancelNoteEdit(previewKey) }
+                                              );
+                                            }}>
+                                            {updateDoctorMaterialNote.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                                          </Button>
+                                          <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs" title="Cancel" onClick={() => cancelNoteEdit(previewKey)}>
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
 
                         {consultation.specialistApprovalStatus === "pending_review" && (

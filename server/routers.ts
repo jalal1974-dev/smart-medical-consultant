@@ -1225,6 +1225,55 @@ export const appRouter = router({
         return { success: true, otherUrl: url, title };
       }),
 
+    // Delete a doctor-uploaded manual material (clears URL, title, note, and sent flag)
+    deleteDoctorMaterial: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        type: z.enum(['video', 'audio', 'other']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const updates: Record<string, any> = {};
+        if (input.type === 'video') {
+          updates.doctorUploadedVideoUrl = null;
+          updates.doctorUploadedVideoTitle = null;
+          updates.doctorUploadedVideoNote = null;
+          updates.sentVideoToPatient = false;
+        } else if (input.type === 'audio') {
+          updates.doctorUploadedAudioUrl = null;
+          updates.doctorUploadedAudioTitle = null;
+          updates.doctorUploadedAudioNote = null;
+          updates.sentAudioToPatient = false;
+        } else {
+          updates.doctorUploadedOtherUrl = null;
+          updates.doctorUploadedOtherTitle = null;
+          updates.doctorUploadedOtherNote = null;
+          updates.doctorUploadedOtherMimeType = null;
+          updates.sentOtherToPatient = false;
+        }
+        await db.updateConsultation(input.consultationId, updates);
+        return { success: true };
+      }),
+
+    // Save the personalized note for a doctor-uploaded material
+    updateDoctorMaterialNote: adminProcedure
+      .input(z.object({
+        consultationId: z.number(),
+        type: z.enum(['video', 'audio', 'other']),
+        note: z.string().max(1000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const updates: Record<string, any> = {};
+        if (input.type === 'video') updates.doctorUploadedVideoNote = input.note || null;
+        else if (input.type === 'audio') updates.doctorUploadedAudioNote = input.note || null;
+        else updates.doctorUploadedOtherNote = input.note || null;
+        await db.updateConsultation(input.consultationId, updates);
+        return { success: true };
+      }),
+
     // Send one or more reports to the patient — sets the sentXxxToPatient flags
     sendReportToPatient: adminProcedure
       .input(z.object({

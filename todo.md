@@ -953,3 +953,16 @@
 - [x] Add "View Report Page" button to Dashboard consultation cards
 - [ ] Add branding watermark overlay to uploaded PDFs (future enhancement — requires server-side PDF processing)
 - [ ] Notification to patient when new material is sent (future enhancement)
+
+## Manual Materials Panel Enhancements
+- [x] Add doctorUploadedVideoNote, doctorUploadedAudioNote, doctorUploadedOtherNote columns to schema + migration
+- [x] Add deleteDoctorMaterial tRPC procedure (clears URL, title, note, sent flag)
+- [x] Add updateDoctorMaterialNote tRPC procedure (saves personalized note per material type)
+- [x] Rebuild Manual Materials panel as a unified loop over video/audio/other rows
+- [x] Upload/Replace button: shows 'Upload' when empty, 'Replace' when file exists
+- [x] Inline preview: video player for video, audio player for audio, iframe/img/fallback for other
+- [x] Preview toggle button (Eye / EyeOff) per material row
+- [x] Delete button (red trash icon) with confirmation dialog per material row
+- [x] Personalized note field: shows note or 'No note added yet', pencil icon to edit, save/cancel buttons
+- [x] Note textarea with 1000-char limit and placeholder text
+- [x] TypeScript: 0 errors

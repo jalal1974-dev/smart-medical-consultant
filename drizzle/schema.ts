@@ -79,11 +79,14 @@ export const consultations = mysqlTable("consultations", {
   // Doctor-uploaded manual materials (NotebookLM output, custom videos, podcasts, etc.)
   doctorUploadedVideoUrl: varchar("doctorUploadedVideoUrl", { length: 500 }), // MP4/video uploaded by doctor
   doctorUploadedVideoTitle: varchar("doctorUploadedVideoTitle", { length: 255 }), // Display title for the video
+  doctorUploadedVideoNote: text("doctorUploadedVideoNote"), // Personalized note shown to patient alongside video
   doctorUploadedAudioUrl: varchar("doctorUploadedAudioUrl", { length: 500 }), // MP3/audio/podcast uploaded by doctor
   doctorUploadedAudioTitle: varchar("doctorUploadedAudioTitle", { length: 255 }), // Display title for the audio
+  doctorUploadedAudioNote: text("doctorUploadedAudioNote"), // Personalized note shown to patient alongside audio
   doctorUploadedOtherUrl: varchar("doctorUploadedOtherUrl", { length: 500 }), // Any other file (Word, Excel, extra PDF)
   doctorUploadedOtherTitle: varchar("doctorUploadedOtherTitle", { length: 255 }), // Display title for the other file
   doctorUploadedOtherMimeType: varchar("doctorUploadedOtherMimeType", { length: 100 }), // MIME type of other file
+  doctorUploadedOtherNote: text("doctorUploadedOtherNote"), // Personalized note shown to patient alongside other doc
 
   // Admin "Send to Patient" approval flags — each report is hidden from patient until explicitly sent
   sentPdfToPatient: boolean("sentPdfToPatient").default(false).notNull(),
