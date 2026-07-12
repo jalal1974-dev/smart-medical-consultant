@@ -977,3 +977,12 @@
 - [x] Q&A thread: patient question + doctor reply with timestamps, awaiting-reply indicator
 - [x] Publish All button in AdminPanel Manual Materials header (teal, shows when any file uploaded)
 - [x] TypeScript: 0 errors
+
+## Admin & Patient UX Enhancements — Round 2 (Jul 2026)
+- [x] Unanswered questions count tRPC procedure (admin.unansweredQuestionsCount)
+- [x] Unanswered questions badge on admin nav header (Header.tsx) — red pill next to "Admin" link
+- [x] Draft / Published status badge on each manual material row in AdminPanel (amber = Draft, green = Published)
+- [x] File attachment button in patient follow-up question form (ConsultationDetail)
+- [x] attachment_url / attachment_mime_type / attachment_name columns added to consultation_questions (migration 0006)
+- [x] askQuestion tRPC procedure extended with optional attachmentUrl / attachmentMimeType / attachmentName fields
+- [x] TypeScript: 0 errors

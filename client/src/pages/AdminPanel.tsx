@@ -1548,6 +1548,19 @@ export default function AdminPanel() {
                                         <Trash2 className="h-3 w-3" />
                                       </Button>
                                     )}
+                                    {/* Draft / Published status badge */}
+                                    {url && (
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-xs h-7 px-2 font-semibold ${
+                                          sent
+                                            ? 'border-emerald-500 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                            : 'border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400'
+                                        }`}
+                                      >
+                                        {sent ? '✓ Published' : '⏸ Draft'}
+                                      </Badge>
+                                    )}
                                     {/* Send to patient */}
                                     {url && !sent && (
                                       <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" title="Send to patient" disabled={sendReportToPatient.isPending} onClick={() => sendReportToPatient.mutate({ consultationId: consultation.id, ...sendMutation })}>
@@ -1555,7 +1568,6 @@ export default function AdminPanel() {
                                         <span className="ml-1">Send</span>
                                       </Button>
                                     )}
-                                    {sent && <Badge variant="secondary" className="text-xs h-7 px-2">✓ Sent</Badge>}
                                   </div>
                                 </div>
 

@@ -408,6 +408,20 @@ export async function answerQuestion(id: number, answer: string, answeredBy: num
   }).where(eq(consultationQuestions.id, id));
 }
 
+export async function getUnansweredQuestionsCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select().from(consultationQuestions);
+  return rows.filter((q: any) => !q.answer).length;
+}
+
+export async function getAllUnansweredQuestions() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(consultationQuestions).orderBy(desc(consultationQuestions.createdAt));
+  return rows.filter((q: any) => !q.answer);
+}
+
 // ============================================
 // Analytics Functions
 // ============================================

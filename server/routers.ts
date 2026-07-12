@@ -439,6 +439,9 @@ export const appRouter = router({
       .input(z.object({
         consultationId: z.number(),
         question: z.string().min(10),
+        attachmentUrl: z.string().url().optional(),
+        attachmentMimeType: z.string().max(100).optional(),
+        attachmentName: z.string().max(255).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         // Verify user owns this consultation
@@ -454,6 +457,9 @@ export const appRouter = router({
           answer: null,
           answeredBy: null,
           answeredAt: null,
+          attachmentUrl: input.attachmentUrl ?? null,
+          attachmentMimeType: input.attachmentMimeType ?? null,
+          attachmentName: input.attachmentName ?? null,
         });
 
         // Send notification to admins
@@ -1464,9 +1470,24 @@ export const appRouter = router({
       }
       const all = await db.getAllConsultations();
       const unread = all.filter((c: any) => new Date(c.createdAt) > new Date(lastVisit));
-      return { count: unread.length };
+            return { count: unread.length };
     }),
-
+    // Count unanswered patient questions (for badge in header)
+    unansweredQuestionsCount: adminProcedure.query(async () => {
+      const count = await db.getUnansweredQuestionsCount();
+      return { count };
+    }),
+    // Get all unanswered questions with consultation context (for Questions tab)
+    getAllUnansweredQuestions: adminProcedure.query(async () => {
+      const unanswered = await db.getAllUnansweredQuestions();
+      // Enrich with consultation info
+      const enriched = await Promise.all(unanswered.map(async (q: any) => {
+        const consultation = await db.getConsultationById(q.consultationId);
+        const user = consultation ? await db.getUserById(consultation.userId) : null;
+        return { ...q, consultation, patientName: user?.name || 'Unknown', patientEmail: user?.email || '' };
+      }));
+      return enriched;
+    }),
     // Update the admin's lastAdminPanelVisitAt timestamp to now
     markConsultationsSeen: adminProcedure.mutation(async ({ ctx }) => {
       const drizzleDb = await (await import('./db')).getDb();

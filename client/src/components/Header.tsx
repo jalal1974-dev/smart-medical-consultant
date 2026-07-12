@@ -34,6 +34,13 @@ export function Header() {
   });
   const unreadCount = unreadData?.count ?? 0;
 
+  // Unanswered patient questions badge — only for admins
+  const { data: unansweredQData } = trpc.admin.unansweredQuestionsCount.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+    refetchInterval: 60_000,
+  });
+  const unansweredQCount = unansweredQData?.count ?? 0;
+
   // Patient notification bell — only for non-admin authenticated users
   const isPatient = isAuthenticated && user?.role !== "admin";
   const { data: notifData } = trpc.notifications.getUnreadCount.useQuery(undefined, {
@@ -114,6 +121,12 @@ export function Header() {
               {item.path === "/admin" && unreadCount > 0 && (
                 <span className="absolute -top-2 -right-3 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                   {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+              {/* Unanswered questions badge — amber, positioned below the red badge */}
+              {item.path === "/admin" && unansweredQCount > 0 && (
+                <span className="absolute -bottom-2.5 -right-3 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-white" title={`${unansweredQCount} unanswered question${unansweredQCount !== 1 ? 's' : ''}`}>
+                  {unansweredQCount > 99 ? "99+" : unansweredQCount}
                 </span>
               )}
             </Link>
@@ -312,6 +325,11 @@ export function Header() {
                 {item.path === "/admin" && unreadCount > 0 && (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+                {item.path === "/admin" && unansweredQCount > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-white" title={`${unansweredQCount} unanswered question${unansweredQCount !== 1 ? 's' : ''}`}>
+                    {unansweredQCount > 99 ? "99+" : unansweredQCount}
                   </span>
                 )}
               </Link>

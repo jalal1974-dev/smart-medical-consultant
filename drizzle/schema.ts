@@ -190,6 +190,9 @@ export const consultationQuestions = mysqlTable("consultation_questions", {
   answeredBy: int("answered_by"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   answeredAt: timestamp("answeredAt"),
+  attachmentUrl: text("attachment_url"),
+  attachmentMimeType: varchar("attachment_mime_type", { length: 100 }),
+  attachmentName: varchar("attachment_name", { length: 255 }),
 });
 
 export type ConsultationQuestion = typeof consultationQuestions.$inferSelect;

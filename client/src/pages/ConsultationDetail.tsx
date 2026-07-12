@@ -13,7 +13,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 
 // ─── SMC Brand Header ─────────────────────────────────────────────────────────
@@ -178,6 +178,10 @@ function FollowUpSection({ consultationId, language }: { consultationId: number;
   const utils = trpc.useUtils();
   const [questionText, setQuestionText] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [attachment, setAttachment] = useState<{ url: string; mimeType: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadMutation = trpc.upload.file.useMutation();
 
   const { data: questions, isLoading: loadingQ } = trpc.consultation.getMyQuestions.useQuery(
     { consultationId },
@@ -188,11 +192,44 @@ function FollowUpSection({ consultationId, language }: { consultationId: number;
     onSuccess: () => {
       toast.success(isAr ? "تم إرسال سؤالك بنجاح" : "Your question has been submitted");
       setQuestionText("");
+      setAttachment(null);
       setSubmitted(true);
       utils.consultation.getMyQuestions.invalidate({ consultationId });
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const maxMB = 10;
+    if (file.size > maxMB * 1024 * 1024) {
+      toast.error(isAr ? `حجم الملف يتجاوز ${maxMB} ميغابايت` : `File size exceeds ${maxMB} MB`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadMutation.mutateAsync({
+        fileName: file.name,
+        fileType: file.type,
+        fileData: base64,
+        category: 'other',
+      });
+      setAttachment({ url: result.url, mimeType: file.type, name: file.name });
+      toast.success(isAr ? "تم رفع الملف بنجاح" : "File uploaded successfully");
+    } catch (err: any) {
+      toast.error(err.message || (isAr ? "فشل رفع الملف" : "File upload failed"));
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = () => {
     const trimmed = questionText.trim();
@@ -200,7 +237,13 @@ function FollowUpSection({ consultationId, language }: { consultationId: number;
       toast.error(isAr ? "يرجى كتابة سؤال أكثر تفصيلاً (10 أحرف على الأقل)" : "Please write a more detailed question (at least 10 characters)");
       return;
     }
-    askMutation.mutate({ consultationId, question: trimmed });
+    askMutation.mutate({
+      consultationId,
+      question: trimmed,
+      attachmentUrl: attachment?.url,
+      attachmentMimeType: attachment?.mimeType,
+      attachmentName: attachment?.name,
+    });
   };
 
   return (
@@ -275,12 +318,54 @@ function FollowUpSection({ consultationId, language }: { consultationId: number;
             maxLength={1000}
             dir={isAr ? "rtl" : "ltr"}
           />
+
+          {/* Attachment preview */}
+          {attachment && (
+            <div className="flex items-center gap-2 rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50/60 dark:bg-teal-950/20 px-3 py-2">
+              <Paperclip className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-xs text-teal-800 dark:text-teal-300 flex-1 truncate">{attachment.name}</span>
+              <button
+                type="button"
+                className="text-xs text-red-500 hover:text-red-700 shrink-0 ml-1"
+                onClick={() => setAttachment(null)}
+                title={isAr ? "إزالة الملف" : "Remove file"}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">{questionText.length}/1000</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{questionText.length}/1000</span>
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*,application/pdf,.doc,.docx"
+                onChange={handleFileChange}
+              />
+              {/* Attach file button */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs gap-1 border-teal-300 text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950"
+                disabled={uploading || askMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+                title={isAr ? "إرفاق صورة أو ملف" : "Attach image or document"}
+              >
+                {uploading
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Paperclip className="w-3 h-3" />}
+                <span>{uploading ? (isAr ? "جارٍ الرفع…" : "Uploading…") : (isAr ? "إرفاق ملف" : "Attach file")}</span>
+              </Button>
+            </div>
             <Button
               size="sm"
               className="gap-1.5 bg-teal-700 hover:bg-teal-800 text-white"
-              disabled={askMutation.isPending || questionText.trim().length < 10}
+              disabled={askMutation.isPending || uploading || questionText.trim().length < 10}
               onClick={handleSubmit}
             >
               {askMutation.isPending
@@ -288,6 +373,11 @@ function FollowUpSection({ consultationId, language }: { consultationId: number;
                 : <><Send className="w-3.5 h-3.5" />{isAr ? "إرسال السؤال" : "Submit Question"}</>}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            {isAr
+              ? "يمكنك إرفاق صورة أو ملف PDF أو مستند Word (حتى 10 ميغابايت)"
+              : "You can attach an image, PDF, or Word document (up to 10 MB)"}
+          </p>
           {submitted && (
             <p className="text-xs text-teal-700 dark:text-teal-400 flex items-center gap-1">
               <CheckCircle className="w-3.5 h-3.5" />
