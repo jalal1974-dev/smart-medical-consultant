@@ -986,3 +986,13 @@
 - [x] attachment_url / attachment_mime_type / attachment_name columns added to consultation_questions (migration 0006)
 - [x] askQuestion tRPC procedure extended with optional attachmentUrl / attachmentMimeType / attachmentName fields
 - [x] TypeScript: 0 errors
+
+## Frontend Audit Fixes — Launch Prep (Jul 2026)
+- [x] Create ProtectedRoute component — auth loading guard, redirects unauthenticated users to /login?next=<path>
+- [x] Create AdminRoute component — wraps ProtectedRoute + role=admin check, shows Access Denied for non-admins
+- [x] Rewrite App.tsx — explicit public/protected/admin route split; all protected pages wrapped in ProtectedRoute
+- [x] Fix Login.tsx — honour ?next= redirect param after login; redirect already-authenticated users away; Loader2 spinner on submit; loading guard to prevent flash
+- [x] Fix Register.tsx — remove $5 pricing card from success screen; update launch-stage free messaging in banner and success card
+- [x] Rewrite PaymentConfirmation.tsx — frozen payment state; always shows free consultation confirmation; removes PayPal status/retry logic; fixes auth redirect to /login not /; clean loading and not-found states
+- [x] Fix AdminPanel.tsx — split unauthenticated (redirect to /login?next=/admin) vs non-admin (Access Denied card with dashboard/home escape routes)
+- [x] TypeScript: 0 errors

@@ -1,27 +1,47 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Eye, EyeOff, User, Lock, LogIn, Shield } from "lucide-react";
+import { Eye, EyeOff, User, Lock, LogIn, Shield, Loader2 } from "lucide-react";
 import { getLoginUrl } from "@/const";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Login() {
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  // Resolve the ?next= redirect target, defaulting to /dashboard
+  const nextPath = (() => {
+    const params = new URLSearchParams(search);
+    const raw = params.get("next");
+    if (!raw) return "/dashboard";
+    const decoded = decodeURIComponent(raw);
+    // Only allow relative paths to prevent open-redirect attacks
+    return decoded.startsWith("/") ? decoded : "/dashboard";
+  })();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
+
+  // Redirect already-authenticated users away from the login page
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) navigate(nextPath);
+  }, [authLoading, isAuthenticated, navigate, nextPath]);
+
   const loginMutation = trpc.auth.loginLocal.useMutation({
     onSuccess: async () => {
       await utils.auth.me.invalidate();
       toast.success("Welcome back!");
-      navigate("/dashboard");
+      navigate(nextPath);
     },
     onError: (err) => {
       setError(err.message || "Invalid username or password");
@@ -37,6 +57,15 @@ export default function Login() {
     }
     loginMutation.mutate({ username: username.trim(), password });
   };
+
+  // Show spinner while auth state is resolving to avoid flash
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center px-4 py-12">
@@ -76,6 +105,7 @@ export default function Login() {
                     onChange={e => { setUsername(e.target.value); setError(null); }}
                     className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 pl-9"
                     autoComplete="username"
+                    disabled={loginMutation.isPending}
                   />
                 </div>
               </div>
@@ -96,6 +126,7 @@ export default function Login() {
                     onChange={e => { setPassword(e.target.value); setError(null); }}
                     className="bg-slate-700 border-slate-600 text-white placeholder-slate-400 pl-9 pr-10"
                     autoComplete="current-password"
+                    disabled={loginMutation.isPending}
                   />
                   <button
                     type="button"
@@ -108,7 +139,7 @@ export default function Login() {
               </div>
 
               {error && (
-                <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm">
+                <div role="alert" className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm">
                   {error}
                 </div>
               )}
@@ -118,7 +149,9 @@ export default function Login() {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={loginMutation.isPending}
               >
-                {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                {loginMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Signing in...</>
+                ) : "Sign In"}
               </Button>
 
               <div className="relative">
@@ -137,7 +170,7 @@ export default function Login() {
                 className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 bg-transparent"
                 onClick={() => { window.location.href = getLoginUrl(); }}
               >
-                Sign in with Manus Account
+                Sign in with Google / Manus Account
               </Button>
 
               <p className="text-center text-slate-400 text-sm">

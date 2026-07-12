@@ -991,18 +991,28 @@ export default function AdminPanel() {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated) {
+    // Not logged in — redirect to login preserving the destination
+    setLocation("/login?next=%2Fadmin");
+    return null;
+  }
+  if (user?.role !== "admin") {
     return (
       <div className="min-h-screen py-12">
         <div className="container max-w-3xl">
           <Card>
             <CardHeader>
-              <CardTitle>{t("admin")}</CardTitle>
-              <CardDescription>Admin access required</CardDescription>
+              <CardTitle className="text-destructive">Access Denied</CardTitle>
+              <CardDescription>
+                This area is restricted to administrators. If you believe this is a mistake, please contact the site owner.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <a href={getLoginUrl()}>{t("signIn")}</a>
+            <CardContent className="flex gap-3">
+              <Button onClick={() => setLocation("/dashboard")}>
+                Go to Dashboard
+              </Button>
+              <Button variant="outline" onClick={() => setLocation("/")}>
+                Go Home
               </Button>
             </CardContent>
           </Card>

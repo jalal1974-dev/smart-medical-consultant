@@ -118,7 +118,7 @@ export default function Register() {
                 <Gift className="w-5 h-5 text-green-400 shrink-0" />
                 <div>
                   <p className="text-green-300 font-medium text-sm">1 Free Consultation Included</p>
-                  <p className="text-slate-400 text-xs">Register today and get your first AI-powered medical consultation at no cost. Each additional consultation is $5.</p>
+                  <p className="text-slate-400 text-xs">Register today and get unlimited AI-powered medical consultations at no cost during our launch stage.</p>
                 </div>
               </div>
 
@@ -247,16 +247,12 @@ export default function Register() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">Welcome aboard!</h2>
-                <p className="text-slate-400 mt-2">Your account is ready with 1 free consultation</p>
+                <p className="text-slate-400 mt-2">Your account is ready — all consultations are free during our launch stage!</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-slate-700/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-green-400">1</p>
-                  <p className="text-slate-400">Free Consultation</p>
-                </div>
-                <div className="bg-slate-700/50 rounded-lg p-3">
-                  <p className="text-2xl font-bold text-blue-400">$5</p>
-                  <p className="text-slate-400">Each Additional</p>
+              <div className="flex justify-center">
+                <div className="bg-green-900/30 border border-green-700/50 rounded-lg px-8 py-4 text-center">
+                  <p className="text-3xl font-bold text-green-400">🎉 Free</p>
+                  <p className="text-slate-400 text-sm mt-1">All consultations during launch</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-left">
