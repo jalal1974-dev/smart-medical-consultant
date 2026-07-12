@@ -966,3 +966,14 @@
 - [x] Personalized note field: shows note or 'No note added yet', pencil icon to edit, save/cancel buttons
 - [x] Note textarea with 1000-char limit and placeholder text
 - [x] TypeScript: 0 errors
+
+## Consultation Detail Page & Admin Panel Enhancements (Jul 2026)
+- [x] Add getMyQuestions tRPC procedure (patient fetches their own Q&A for a consultation)
+- [x] Add publishAllMaterials tRPC admin procedure (sends all uploaded materials in one click)
+- [x] Redesign MaterialCard: color-coded accent per type, prominent doctor note block with StickyNote icon
+- [x] Add Download button to audio, PDF, and other document material cards
+- [x] Add FollowUpSection component: shows existing Q&A thread + new question textarea with 30s polling
+- [x] Follow-up question form: 1000-char limit, min 10 chars validation, bilingual (EN/AR)
+- [x] Q&A thread: patient question + doctor reply with timestamps, awaiting-reply indicator
+- [x] Publish All button in AdminPanel Manual Materials header (teal, shows when any file uploaded)
+- [x] TypeScript: 0 errors

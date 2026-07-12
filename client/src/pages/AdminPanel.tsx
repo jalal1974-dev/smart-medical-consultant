@@ -668,7 +668,11 @@ export default function AdminPanel() {
   });
 
   // Doctor manual material upload mutations
-    const uploadDoctorVideo = trpc.admin.uploadDoctorVideo.useMutation({
+  const publishAllMaterials = trpc.admin.publishAllMaterials.useMutation({
+    onSuccess: (data) => { toast.success(`Published ${data.published} material${data.published !== 1 ? 's' : ''} to patient`); utils.admin.consultations.invalidate(); },
+    onError: (e) => toast.error(`Publish All failed: ${e.message}`),
+  });
+  const uploadDoctorVideo = trpc.admin.uploadDoctorVideo.useMutation({
     onSuccess: () => { toast.success('Video uploaded'); utils.admin.consultations.invalidate(); },
     onError: (e) => toast.error(`Video upload failed: ${e.message}`),
   });
@@ -1471,10 +1475,27 @@ export default function AdminPanel() {
                         
                         {/* ── Doctor Manual Materials (NotebookLM output) ── */}
                         <div className="mt-4 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30 space-y-4">
-                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                            <Upload className="w-3.5 h-3.5" />
-                            Manual Materials (NotebookLM)
-                          </p>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              Manual Materials (NotebookLM)
+                            </p>
+                            {/* Publish All — sends every uploaded material to the patient at once */}
+                            {((consultation as any).doctorUploadedVideoUrl || (consultation as any).doctorUploadedAudioUrl || (consultation as any).doctorUploadedOtherUrl) && (
+                              <Button
+                                size="sm"
+                                className="h-7 px-3 text-xs bg-teal-700 hover:bg-teal-800 text-white gap-1.5 shrink-0"
+                                disabled={publishAllMaterials.isPending}
+                                title="Publish all uploaded materials to the patient in one click"
+                                onClick={() => publishAllMaterials.mutate({ consultationId: consultation.id })}
+                              >
+                                {publishAllMaterials.isPending
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <Send className="h-3 w-3" />}
+                                Publish All
+                              </Button>
+                            )}
+                          </div>
 
                           {/* ── Reusable material row renderer ── */}
                           {(['video', 'audio', 'other'] as const).map((type) => {

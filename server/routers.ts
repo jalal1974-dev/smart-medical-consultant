@@ -464,9 +464,18 @@ export const appRouter = router({
           input.question
         );
 
-        return { success: true, questionId: Number(questionId) };
+                return { success: true, questionId: Number(questionId) };
       }),
-
+    // Get patient's own questions + answers for a consultation
+    getMyQuestions: protectedProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation || consultation.userId !== ctx.user.id) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        return db.getQuestionsByConsultationId(input.consultationId);
+      }),
     // Update payment status (called after PayPal payment)
     updatePayment: protectedProcedure
       .input(z.object({
@@ -1272,6 +1281,29 @@ export const appRouter = router({
         else updates.doctorUploadedOtherNote = input.note || null;
         await db.updateConsultation(input.consultationId, updates);
         return { success: true };
+      }),
+
+    // Publish ALL uploaded materials to the patient in one click
+    publishAllMaterials: adminProcedure
+      .input(z.object({ consultationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const consultation = await db.getConsultationById(input.consultationId);
+        if (!consultation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Consultation not found' });
+        const updates: Record<string, any> = {};
+        let published = 0;
+        // AI-generated materials
+        if (consultation.aiReportUrl)        { updates.sentPdfToPatient = true;          published++; }
+        if (consultation.aiInfographicUrl)   { updates.sentInfographicToPatient = true;  published++; }
+        if (consultation.aiSlideDeckUrl)     { updates.sentSlidesToPatient = true;       published++; }
+        if ((consultation as any).pptxReportUrl)   { updates.sentPptxToPatient = true;         published++; }
+        if ((consultation as any).aiMindMapUrl)    { updates.sentMindMapToPatient = true;      published++; }
+        // Doctor-uploaded manual materials
+        if ((consultation as any).doctorUploadedVideoUrl) { updates.sentVideoToPatient = true; published++; }
+        if ((consultation as any).doctorUploadedAudioUrl) { updates.sentAudioToPatient = true; published++; }
+        if ((consultation as any).doctorUploadedOtherUrl) { updates.sentOtherToPatient = true; published++; }
+        if (published === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'No materials to publish' });
+        await db.updateConsultation(input.consultationId, updates);
+        return { success: true, published };
       }),
 
     // Send one or more reports to the patient — sets the sentXxxToPatient flags

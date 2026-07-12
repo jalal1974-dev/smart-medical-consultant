@@ -5,8 +5,16 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ArrowLeft, FileText, Image, Presentation, Network, Download, Play, Headphones, Paperclip, Phone, MessageCircle, ExternalLink, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Loader2, ArrowLeft, FileText, Image, Presentation, Network,
+  Download, Play, Headphones, Paperclip, Phone, MessageCircle,
+  ExternalLink, CheckCircle, StickyNote, Send, HelpCircle, Clock,
+  CheckCheck,
+} from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import { toast } from "sonner";
 
 // ─── SMC Brand Header ─────────────────────────────────────────────────────────
 function SMCBrandHeader({ language }: { language: string }) {
@@ -48,58 +56,104 @@ function SMCBrandHeader({ language }: { language: string }) {
 function MaterialCard({
   icon,
   title,
-  subtitle,
+  note,
   url,
   type,
   language,
 }: {
   icon: React.ReactNode;
   title: string;
-  subtitle?: string;
+  note?: string | null;
   url: string;
   type: "pdf" | "image" | "slides" | "video" | "audio" | "other";
   language: string;
 }) {
   const isAr = language === "ar";
 
-  const actionLabel = {
-    pdf: isAr ? "فتح التقرير" : "Open Report",
-    image: isAr ? "عرض الصورة" : "View Image",
-    slides: isAr ? "فتح العرض" : "Open Slides",
-    video: isAr ? "مشاهدة الفيديو" : "Watch Video",
-    audio: isAr ? "الاستماع" : "Listen",
-    other: isAr ? "فتح الملف" : "Open File",
+  // Primary action label and icon
+  const openLabel = {
+    pdf:    isAr ? "فتح التقرير"    : "Open Report",
+    image:  isAr ? "عرض الصورة"    : "View Image",
+    slides: isAr ? "فتح العرض"     : "Open Slides",
+    video:  isAr ? "مشاهدة الفيديو" : "Watch Video",
+    audio:  isAr ? "الاستماع"       : "Listen",
+    other:  isAr ? "فتح الملف"     : "Open File",
   }[type];
 
-  const ActionIcon = {
-    pdf: Download,
-    image: ExternalLink,
+  const OpenIcon = {
+    pdf:    ExternalLink,
+    image:  ExternalLink,
     slides: ExternalLink,
-    video: Play,
-    audio: Headphones,
-    other: Download,
+    video:  Play,
+    audio:  Headphones,
+    other:  ExternalLink,
+  }[type];
+
+  // Show a Download button for audio and document types
+  const showDownload = type === "audio" || type === "other" || type === "pdf";
+  const downloadLabel = isAr ? "تحميل" : "Download";
+
+  // Colour accent per type
+  const accentClass = {
+    pdf:    "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+    image:  "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800",
+    slides: "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800",
+    video:  "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800",
+    audio:  "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
+    other:  "bg-slate-50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800",
+  }[type];
+
+  const iconBgClass = {
+    pdf:    "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+    image:  "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300",
+    slides: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300",
+    video:  "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300",
+    audio:  "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+    other:  "bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300",
   }[type];
 
   return (
-    <div className="flex items-start gap-3 p-4 rounded-xl border bg-card hover:bg-accent/30 transition-colors">
-      <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center shrink-0 text-teal-700 dark:text-teal-300">
-        {icon}
+    <div className={`rounded-xl border p-4 space-y-3 ${accentClass}`}>
+      {/* Header row */}
+      <div className="flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBgClass}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm leading-snug">{title}</p>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">{title}</p>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+
+      {/* Doctor's personalized note — prominently displayed */}
+      {note && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-white/70 dark:bg-black/20 border border-teal-200 dark:border-teal-800">
+          <StickyNote className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-teal-700 dark:text-teal-400 mb-0.5">
+              {isAr ? "ملاحظة من طبيبك" : "Note from your specialist"}
+            </p>
+            <p className="text-sm text-foreground leading-relaxed">{note}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 flex-wrap">
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <Button size="sm" className="gap-1.5 text-xs bg-teal-700 hover:bg-teal-800 text-white">
+            <OpenIcon className="w-3.5 h-3.5" />
+            {openLabel}
+          </Button>
+        </a>
+        {showDownload && (
+          <a href={url} download>
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+              <Download className="w-3.5 h-3.5" />
+              {downloadLabel}
+            </Button>
+          </a>
+        )}
       </div>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="shrink-0"
-      >
-        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-          <ActionIcon className="w-3.5 h-3.5" />
-          {actionLabel}
-        </Button>
-      </a>
     </div>
   );
 }
@@ -108,14 +162,142 @@ function MaterialCard({
 function StatusBadge({ status, language }: { status: string; language: string }) {
   const isAr = language === "ar";
   const map: Record<string, { label: string; labelAr: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-    submitted:         { label: "Submitted",          labelAr: "مُقدَّم",              variant: "secondary" },
-    ai_processing:     { label: "AI Processing",      labelAr: "قيد المعالجة",         variant: "secondary" },
-    specialist_review: { label: "Under Review",       labelAr: "قيد المراجعة",         variant: "default" },
-    completed:         { label: "Completed",          labelAr: "مكتمل",               variant: "default" },
-    rejected:          { label: "Needs More Info",    labelAr: "يحتاج مزيداً من المعلومات", variant: "destructive" },
+    submitted:         { label: "Submitted",       labelAr: "مُقدَّم",                    variant: "secondary" },
+    ai_processing:     { label: "AI Processing",   labelAr: "قيد المعالجة",               variant: "secondary" },
+    specialist_review: { label: "Under Review",    labelAr: "قيد المراجعة",               variant: "default" },
+    completed:         { label: "Completed",       labelAr: "مكتمل",                      variant: "default" },
+    rejected:          { label: "Needs More Info", labelAr: "يحتاج مزيداً من المعلومات",  variant: "destructive" },
   };
   const info = map[status] ?? { label: status, labelAr: status, variant: "secondary" as const };
   return <Badge variant={info.variant}>{isAr ? info.labelAr : info.label}</Badge>;
+}
+
+// ─── Follow-up Questions Section ──────────────────────────────────────────────
+function FollowUpSection({ consultationId, language }: { consultationId: number; language: string }) {
+  const isAr = language === "ar";
+  const utils = trpc.useUtils();
+  const [questionText, setQuestionText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const { data: questions, isLoading: loadingQ } = trpc.consultation.getMyQuestions.useQuery(
+    { consultationId },
+    { refetchInterval: 30_000 } // poll every 30 s for new answers
+  );
+
+  const askMutation = trpc.consultation.askQuestion.useMutation({
+    onSuccess: () => {
+      toast.success(isAr ? "تم إرسال سؤالك بنجاح" : "Your question has been submitted");
+      setQuestionText("");
+      setSubmitted(true);
+      utils.consultation.getMyQuestions.invalidate({ consultationId });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleSubmit = () => {
+    const trimmed = questionText.trim();
+    if (trimmed.length < 10) {
+      toast.error(isAr ? "يرجى كتابة سؤال أكثر تفصيلاً (10 أحرف على الأقل)" : "Please write a more detailed question (at least 10 characters)");
+      return;
+    }
+    askMutation.mutate({ consultationId, question: trimmed });
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <HelpCircle className="w-5 h-5 text-teal-600" />
+          {isAr ? "اسأل طبيبك" : "Ask Your Specialist"}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {isAr
+            ? "هل لديك سؤال حول التقارير أو المواد المُسلَّمة؟ اكتب سؤالك وسيرد عليك الطبيب في أقرب وقت."
+            : "Have a question about the reports or delivered materials? Write it below and your specialist will reply as soon as possible."}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Existing questions + answers */}
+        {loadingQ ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {isAr ? "جارٍ التحميل…" : "Loading…"}
+          </div>
+        ) : questions && questions.length > 0 ? (
+          <div className="space-y-3">
+            {questions.map((q: any) => (
+              <div key={q.id} className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                {/* Patient question */}
+                <div className="flex items-start gap-2">
+                  <div className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-teal-700 dark:text-teal-300" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-muted-foreground mb-0.5">
+                      {isAr ? "سؤالك" : "Your question"} · {format(new Date(q.createdAt), "PPp")}
+                    </p>
+                    <p className="text-sm">{q.question}</p>
+                  </div>
+                </div>
+                {/* Doctor answer */}
+                {q.answer ? (
+                  <div className="flex items-start gap-2 pl-2 border-l-2 border-teal-400">
+                    <div className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCheck className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-teal-700 dark:text-teal-400 mb-0.5">
+                        {isAr ? "رد الطبيب" : "Specialist reply"} · {q.answeredAt ? format(new Date(q.answeredAt), "PPp") : ""}
+                      </p>
+                      <p className="text-sm leading-relaxed">{q.answer}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 pl-8 text-xs text-muted-foreground italic">
+                    <Clock className="w-3.5 h-3.5" />
+                    {isAr ? "في انتظار رد الطبيب…" : "Awaiting specialist reply…"}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* New question form */}
+        <div className="space-y-2">
+          <Textarea
+            placeholder={isAr
+              ? "اكتب سؤالك هنا… مثال: ما هو الدواء الموصى به لهذه الحالة؟"
+              : "Type your question here… e.g. What medication is recommended for this condition?"}
+            className="min-h-[96px] resize-none text-sm"
+            value={questionText}
+            onChange={(e) => { setQuestionText(e.target.value); setSubmitted(false); }}
+            maxLength={1000}
+            dir={isAr ? "rtl" : "ltr"}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">{questionText.length}/1000</span>
+            <Button
+              size="sm"
+              className="gap-1.5 bg-teal-700 hover:bg-teal-800 text-white"
+              disabled={askMutation.isPending || questionText.trim().length < 10}
+              onClick={handleSubmit}
+            >
+              {askMutation.isPending
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />{isAr ? "جارٍ الإرسال…" : "Sending…"}</>
+                : <><Send className="w-3.5 h-3.5" />{isAr ? "إرسال السؤال" : "Submit Question"}</>}
+            </Button>
+          </div>
+          {submitted && (
+            <p className="text-xs text-teal-700 dark:text-teal-400 flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5" />
+              {isAr ? "تم إرسال سؤالك. سيرد عليك الطبيب قريباً." : "Question submitted. Your specialist will reply soon."}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
@@ -144,9 +326,11 @@ export default function ConsultationDetail() {
   if (!isAuthenticated || !consultation) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center p-4">
-        <p className="text-muted-foreground">{isAr ? "الاستشارة غير موجودة أو غير مصرح لك." : "Consultation not found or you are not authorized."}</p>
+        <p className="text-muted-foreground">
+          {isAr ? "الاستشارة غير موجودة أو غير مصرح لك." : "Consultation not found or you are not authorized."}
+        </p>
         <Button variant="outline" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className={`w-4 h-4 ${isAr ? "ml-2 rotate-180" : "mr-2"}`} />
           {isAr ? "العودة" : "Go Back"}
         </Button>
       </div>
@@ -155,47 +339,71 @@ export default function ConsultationDetail() {
 
   const c = consultation as any;
 
-  // Collect all sent materials
+  // Collect all sent materials with their notes
   const sentMaterials: React.ReactNode[] = [];
 
   if (c.sentPdfToPatient && c.aiReportUrl) {
     sentMaterials.push(
-      <MaterialCard key="pdf" icon={<FileText className="w-5 h-5" />} title={isAr ? "التقرير الطبي التفصيلي" : "Detailed Medical Report"} subtitle={isAr ? "تقرير PDF شامل" : "Comprehensive PDF report"} url={c.aiReportUrl} type="pdf" language={language} />
+      <MaterialCard key="pdf" icon={<FileText className="w-5 h-5" />}
+        title={isAr ? "التقرير الطبي التفصيلي" : "Detailed Medical Report"}
+        note={null}
+        url={c.aiReportUrl} type="pdf" language={language} />
     );
   }
   if (c.sentInfographicToPatient && c.aiInfographicUrl) {
     sentMaterials.push(
-      <MaterialCard key="infographic" icon={<Image className="w-5 h-5" />} title={isAr ? "الإنفوجرافيك الطبي" : "Medical Infographic"} subtitle={isAr ? "ملخص بصري" : "Visual summary"} url={c.aiInfographicUrl} type="image" language={language} />
+      <MaterialCard key="infographic" icon={<Image className="w-5 h-5" />}
+        title={isAr ? "الإنفوجرافيك الطبي" : "Medical Infographic"}
+        note={null}
+        url={c.aiInfographicUrl} type="image" language={language} />
     );
   }
   if (c.sentSlidesToPatient && c.aiSlideDeckUrl) {
     sentMaterials.push(
-      <MaterialCard key="slides" icon={<Presentation className="w-5 h-5" />} title={isAr ? "العرض التقديمي" : "Slide Presentation"} subtitle={isAr ? "شرائح تعليمية" : "Educational slides"} url={c.aiSlideDeckUrl} type="slides" language={language} />
+      <MaterialCard key="slides" icon={<Presentation className="w-5 h-5" />}
+        title={isAr ? "العرض التقديمي" : "Slide Presentation"}
+        note={null}
+        url={c.aiSlideDeckUrl} type="slides" language={language} />
     );
   }
   if (c.sentPptxToPatient && c.pptxReportUrl) {
     sentMaterials.push(
-      <MaterialCard key="pptx" icon={<Presentation className="w-5 h-5" />} title={isAr ? "ملف PPTX" : "PPTX File"} subtitle={isAr ? "قابل للتعديل" : "Editable presentation"} url={c.pptxReportUrl} type="slides" language={language} />
+      <MaterialCard key="pptx" icon={<Presentation className="w-5 h-5" />}
+        title={isAr ? "ملف PPTX" : "PPTX File"}
+        note={null}
+        url={c.pptxReportUrl} type="slides" language={language} />
     );
   }
   if (c.sentMindMapToPatient && c.aiMindMapUrl) {
     sentMaterials.push(
-      <MaterialCard key="mindmap" icon={<Network className="w-5 h-5" />} title={isAr ? "الخريطة الذهنية" : "Mind Map"} subtitle={isAr ? "خريطة التشخيص" : "Diagnostic map"} url={c.aiMindMapUrl} type="image" language={language} />
+      <MaterialCard key="mindmap" icon={<Network className="w-5 h-5" />}
+        title={isAr ? "الخريطة الذهنية" : "Mind Map"}
+        note={null}
+        url={c.aiMindMapUrl} type="image" language={language} />
     );
   }
   if (c.sentVideoToPatient && c.doctorUploadedVideoUrl) {
     sentMaterials.push(
-      <MaterialCard key="video" icon={<Play className="w-5 h-5" />} title={c.doctorUploadedVideoTitle || (isAr ? "فيديو شرح" : "Explanation Video")} subtitle={isAr ? "من الطبيب المعالج" : "From your specialist"} url={c.doctorUploadedVideoUrl} type="video" language={language} />
+      <MaterialCard key="video" icon={<Play className="w-5 h-5" />}
+        title={c.doctorUploadedVideoTitle || (isAr ? "فيديو شرح" : "Explanation Video")}
+        note={c.doctorUploadedVideoNote}
+        url={c.doctorUploadedVideoUrl} type="video" language={language} />
     );
   }
   if (c.sentAudioToPatient && c.doctorUploadedAudioUrl) {
     sentMaterials.push(
-      <MaterialCard key="audio" icon={<Headphones className="w-5 h-5" />} title={c.doctorUploadedAudioTitle || (isAr ? "ملخص صوتي / بودكاست" : "Audio Summary / Podcast")} subtitle={isAr ? "من الطبيب المعالج" : "From your specialist"} url={c.doctorUploadedAudioUrl} type="audio" language={language} />
+      <MaterialCard key="audio" icon={<Headphones className="w-5 h-5" />}
+        title={c.doctorUploadedAudioTitle || (isAr ? "ملخص صوتي / بودكاست" : "Audio Summary / Podcast")}
+        note={c.doctorUploadedAudioNote}
+        url={c.doctorUploadedAudioUrl} type="audio" language={language} />
     );
   }
   if (c.sentOtherToPatient && c.doctorUploadedOtherUrl) {
     sentMaterials.push(
-      <MaterialCard key="other" icon={<Paperclip className="w-5 h-5" />} title={c.doctorUploadedOtherTitle || (isAr ? "مستند إضافي" : "Additional Document")} subtitle={isAr ? "من الطبيب المعالج" : "From your specialist"} url={c.doctorUploadedOtherUrl} type="other" language={language} />
+      <MaterialCard key="other" icon={<Paperclip className="w-5 h-5" />}
+        title={c.doctorUploadedOtherTitle || (isAr ? "مستند إضافي" : "Additional Document")}
+        note={c.doctorUploadedOtherNote}
+        url={c.doctorUploadedOtherUrl} type="other" language={language} />
     );
   }
 
@@ -259,11 +467,14 @@ export default function ConsultationDetail() {
           )}
         </CardHeader>
         {sentMaterials.length > 0 && (
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {sentMaterials}
           </CardContent>
         )}
       </Card>
+
+      {/* Follow-up Questions */}
+      <FollowUpSection consultationId={consultationId} language={language} />
 
       {/* Contact Section */}
       <Card>
