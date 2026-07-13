@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { getLoginUrl } from "@/const";
 import { Header } from "@/components/Header";
 import { useLocation, useSearch } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
@@ -18,7 +17,10 @@ import { RecordPicker } from "@/components/RecordPicker";
 import { Loader2 } from "lucide-react";
 
 export default function Consultations() {
-  const { user, isAuthenticated, loading } = useAuth();
+  // ProtectedRoute in App.tsx already blocks unauthenticated access before this
+  // component mounts. We still read isAuthenticated here for the submit guard
+  // and for conditionally showing the launch banner.
+  const { isAuthenticated } = useAuth();
   const { t, language } = useLanguage();
   const [, setLocation] = useLocation();
   const createMutation = trpc.consultation.create.useMutation();
@@ -130,38 +132,6 @@ export default function Consultations() {
     
     toast.success(language === "ar" ? "سيتم فتح واتساب..." : "Opening WhatsApp...");
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 container py-8">
-          <div className="text-center">{t("loading")}</div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 container py-8">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>{t("consultationTitle")}</CardTitle>
-              <CardDescription>{t("loginRequired")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <a href={getLoginUrl()}>{t("signIn")}</a>
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
-  }
 
   // PAYMENT FROZEN — PayPal checkout screen removed for launch stage
 
