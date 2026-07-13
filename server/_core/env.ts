@@ -1,10 +1,43 @@
+/**
+ * Environment variable access with startup validation.
+ *
+ * CRITICAL vars (marked below) cause the server to throw at module-load time
+ * if they are missing or empty, so misconfigured deployments fail loudly
+ * instead of silently degrading at runtime.
+ *
+ * NON-CRITICAL vars default to "" and are checked at call-site where needed.
+ */
+
+function requireEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim() === "") {
+    // In test environments some vars may be intentionally absent — warn only.
+    if (process.env.NODE_ENV === "test") {
+      console.warn(`[ENV] WARNING: required env var ${key} is not set (test mode)`);
+      return "";
+    }
+    throw new Error(
+      `[ENV] Missing required environment variable: ${key}. ` +
+      `Set it in your .env file or deployment secrets before starting the server.`
+    );
+  }
+  return value;
+}
+
+function optionalEnv(key: string, fallback = ""): string {
+  return process.env[key] ?? fallback;
+}
+
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // ── Critical: server will not start without these ──────────────────────────
+  cookieSecret:   requireEnv("JWT_SECRET"),
+  oAuthServerUrl: requireEnv("OAUTH_SERVER_URL"),
+  forgeApiUrl:    requireEnv("BUILT_IN_FORGE_API_URL"),
+  forgeApiKey:    requireEnv("BUILT_IN_FORGE_API_KEY"),
+
+  // ── Non-critical: missing degrades specific features, not auth ──────────────
+  appId:          optionalEnv("VITE_APP_ID"),
+  databaseUrl:    optionalEnv("DATABASE_URL"),
+  ownerOpenId:    optionalEnv("OWNER_OPEN_ID"),
+  isProduction:   process.env.NODE_ENV === "production",
 };

@@ -34,14 +34,18 @@ describe("Material Generator", () => {
   it("should generate all consultation materials successfully", async () => {
     const result = await generateConsultationMaterials(mockConsultationData);
 
+    // reportUrl is the HTML report (fake-PDF path, kept for backward compat)
     expect(result).toHaveProperty("reportUrl");
-    expect(result).toHaveProperty("infographicUrl");
-    expect(result).toHaveProperty("slideDeckUrl");
+    // infographicContent and slideDeckContent are JSON strings (not URLs)
+    expect(result).toHaveProperty("infographicContent");
+    expect(result).toHaveProperty("slideDeckContent");
     expect(result).toHaveProperty("analysisText");
 
     expect(result.reportUrl).toContain("https://storage.example.com/");
-    expect(result.slideDeckUrl).toContain("https://storage.example.com/");
     expect(result.analysisText).toBeTruthy();
+    // Verify infographicContent and slideDeckContent are valid JSON
+    expect(() => JSON.parse(result.infographicContent)).not.toThrow();
+    expect(() => JSON.parse(result.slideDeckContent)).not.toThrow();
   });
 
   it("should generate materials in Arabic when preferred language is ar", async () => {
@@ -54,7 +58,7 @@ describe("Material Generator", () => {
 
     expect(result.analysisText).toBeTruthy();
     expect(result.reportUrl).toBeTruthy();
-    expect(result.slideDeckUrl).toBeTruthy();
+    expect(result.slideDeckContent).toBeTruthy();
   });
 
   it("should handle consultation with no medical history", async () => {
@@ -77,6 +81,9 @@ describe("Material Generator", () => {
     });
 
     expect(result1.reportUrl).not.toBe(result2.reportUrl);
-    expect(result1.slideDeckUrl).not.toBe(result2.slideDeckUrl);
+    // slideDeckContent is deterministic JSON (not a URL), so uniqueness is not applicable here;
+    // uniqueness of reportUrl is sufficient to verify nanoid-based file naming
+    expect(result1.reportUrl).toBeTruthy();
+    expect(result2.reportUrl).toBeTruthy();
   });
 });

@@ -11,9 +11,16 @@ import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { processConsultationWithAI, reprocessConsultationAfterRejection } from "./aiProcessingOrchestrator";
 import { generateConsultationPDF } from "./consultationPDFGenerator";
-import { transcribeAudio } from "./voiceTranscription";
+// CANONICAL: use _core/voiceTranscription (validates size, verbose_json, typed errors)
+// server/voiceTranscription.ts (legacy) is kept for backward compat but no longer imported here.
+import { transcribeAudio } from "./_core/voiceTranscription";
 import bcrypt from "bcryptjs";
 import { sdk } from "./_core/sdk";
+
+// ── Launch configuration ──────────────────────────────────────────────────────
+// Set to true to freeze all paid checkout flows and default every consultation
+// to the free path. Flip to false when payment is ready to go live.
+const LAUNCH_FREE_MODE = true;
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin') {
@@ -515,6 +522,8 @@ export const appRouter = router({
 
     // ── Step 1: Save form data as a draft (payment_pending) ──
     // Called before PayPal checkout so we have a consultationId to reference.
+    // FROZEN: createDraft is disabled during LAUNCH_FREE_MODE — all consultations
+    // go through the free `create` path instead.
     createDraft: protectedProcedure
       .input(z.object({
         patientName: z.string().min(1),
@@ -531,6 +540,12 @@ export const appRouter = router({
         attachedRecordIds: z.array(z.number()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (LAUNCH_FREE_MODE) {
+          throw new TRPCError({
+            code: 'METHOD_NOT_SUPPORTED',
+            message: 'Paid checkout is frozen during launch. Use the free consultation flow.',
+          });
+        }
         // Save as draft — paymentStatus=pending, status=submitted but isFree=false
         const consultationId = await db.createConsultation({
           userId: ctx.user.id,
@@ -561,8 +576,8 @@ export const appRouter = router({
 
     // ── Step 2: Confirm PayPal payment for a draft consultation ──
     // Called after PayPal onApprove with the captured order ID.
-    // PAYMENT FROZEN for launch — this procedure is preserved but not called by the UI.
-    // Idempotency: safe to call multiple times with the same paypalOrderId.
+    // PAYMENT FROZEN for launch — this procedure is preserved for backward compat
+    // but blocked by LAUNCH_FREE_MODE. Idempotency guards remain in place.
     confirmConsultationPayment: protectedProcedure
       .input(z.object({
         consultationId: z.number(),
@@ -570,6 +585,13 @@ export const appRouter = router({
         paypalPayerId: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // LAUNCH_FREE_MODE: block live payment confirmation while frozen
+        if (LAUNCH_FREE_MODE) {
+          throw new TRPCError({
+            code: 'METHOD_NOT_SUPPORTED',
+            message: 'Paid checkout is frozen during launch. Use the free consultation flow.',
+          });
+        }
         const consultation = await db.getConsultationById(input.consultationId);
         if (!consultation || consultation.userId !== ctx.user.id) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Consultation not found' });
@@ -622,17 +644,17 @@ export const appRouter = router({
 
   // Admin routes for managing consultations and AI workflow
   admin: router({
-    // Get all consultations
-    consultations: adminProcedure.query(async () => {
-      const consultations = await db.getAllConsultations();
-      return consultations.map(c => ({
-        ...c,
-        medicalReports: c.medicalReports ? JSON.parse(c.medicalReports) : [],
-        labResults: c.labResults ? JSON.parse(c.labResults) : [],
-        xrayImages: c.xrayImages ? JSON.parse(c.xrayImages) : [],
-        otherDocuments: c.otherDocuments ? JSON.parse(c.otherDocuments) : [],
-      }));
-    }),
+    // Get consultations list (lightweight — no large text blobs to keep response < 1 MB)
+    // Large fields (aiAnalysis, aiInfographicContent, etc.) are fetched per-consultation via getById.
+    consultations: adminProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(500).default(200),
+        offset: z.number().min(0).default(0),
+      }).optional())
+      .query(async ({ input }) => {
+        const { limit = 200, offset = 0 } = input ?? {};
+        return await db.getConsultationsList(limit, offset);
+      }),
 
     // Update consultation status
     updateStatus: adminProcedure
@@ -1834,19 +1856,23 @@ export const appRouter = router({
         prompt: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        try {
-          const result = await transcribeAudio({
-            audioUrl: input.audioUrl,
-            language: input.language,
-            prompt: input.prompt,
-          });
-          return result;
-        } catch (error: any) {
+        const result = await transcribeAudio({
+          audioUrl: input.audioUrl,
+          language: input.language,
+          prompt: input.prompt,
+        });
+        // _core/voiceTranscription returns a discriminated union: WhisperResponse | TranscriptionError
+        if ('error' in result) {
+          const code = result.code === 'FILE_TOO_LARGE' ? 'PAYLOAD_TOO_LARGE'
+            : result.code === 'INVALID_FORMAT' ? 'BAD_REQUEST'
+            : 'INTERNAL_SERVER_ERROR';
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: error.message || 'Failed to transcribe audio',
+            code: code as any,
+            message: result.error,
+            cause: result.details,
           });
         }
+        return result;
       }),
   }),
 
@@ -2141,6 +2167,7 @@ export const appRouter = router({
     }),
 
     // Purchase additional consultations via PayPal
+    // FROZEN during LAUNCH_FREE_MODE — preserved for backward compat, blocked at runtime.
     purchaseConsultations: protectedProcedure
       .input(z.object({
         paypalOrderId: z.string(),
@@ -2148,6 +2175,12 @@ export const appRouter = router({
         plan: z.enum(['basic', 'standard', 'premium']), // all map to 1 consultation for $5
       }))
       .mutation(async ({ ctx, input }) => {
+        if (LAUNCH_FREE_MODE) {
+          throw new TRPCError({
+            code: 'METHOD_NOT_SUPPORTED',
+            message: 'Paid checkout is frozen during launch.',
+          });
+        }
         // Pricing model: $5 = 1 consultation (flat rate, no bulk discounts)
         const planDetails: Record<string, { consultations: number; amount: number }> = {
           basic: { consultations: 1, amount: 5 },

@@ -202,6 +202,83 @@ export async function getAllConsultations() {
   return await db.select().from(consultations).orderBy(desc(consultations.createdAt));
 }
 
+// Lightweight list query — omits large text blobs (aiAnalysis, aiInfographicContent, etc.)
+// Used by admin panel list view to avoid ~7 MB payloads.
+export async function getConsultationsList(limit = 200, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select({
+      id: consultations.id,
+      userId: consultations.userId,
+      patientName: consultations.patientName,
+      patientEmail: consultations.patientEmail,
+      patientPhone: consultations.patientPhone,
+      symptoms: consultations.symptoms,
+      preferredLanguage: consultations.preferredLanguage,
+      priority: consultations.priority,
+      status: consultations.status,
+      paymentStatus: consultations.paymentStatus,
+      paymentId: consultations.paymentId,
+      isFree: consultations.isFree,
+      amount: consultations.amount,
+      aiReportUrl: consultations.aiReportUrl,
+      aiVideoUrl: consultations.aiVideoUrl,
+      aiAudioUrl: consultations.aiAudioUrl,
+      aiInfographicUrl: consultations.aiInfographicUrl,
+      aiSlideDeckUrl: consultations.aiSlideDeckUrl,
+      aiMindMapUrl: consultations.aiMindMapUrl,
+      pptxReportUrl: consultations.pptxReportUrl,
+      doctorUploadedVideoUrl: consultations.doctorUploadedVideoUrl,
+      doctorUploadedVideoTitle: consultations.doctorUploadedVideoTitle,
+      doctorUploadedAudioUrl: consultations.doctorUploadedAudioUrl,
+      doctorUploadedAudioTitle: consultations.doctorUploadedAudioTitle,
+      doctorUploadedOtherUrl: consultations.doctorUploadedOtherUrl,
+      doctorUploadedOtherTitle: consultations.doctorUploadedOtherTitle,
+      doctorUploadedOtherMimeType: consultations.doctorUploadedOtherMimeType,
+      sentPdfToPatient: consultations.sentPdfToPatient,
+      sentInfographicToPatient: consultations.sentInfographicToPatient,
+      sentSlidesToPatient: consultations.sentSlidesToPatient,
+      sentMindMapToPatient: consultations.sentMindMapToPatient,
+      sentPptxToPatient: consultations.sentPptxToPatient,
+      sentVideoToPatient: consultations.sentVideoToPatient,
+      sentAudioToPatient: consultations.sentAudioToPatient,
+      sentOtherToPatient: consultations.sentOtherToPatient,
+      sentToPatientAt: consultations.sentToPatientAt,
+      specialistApprovalStatus: consultations.specialistApprovalStatus,
+      aiConfidence: consultations.aiConfidence,
+      aiConfidenceLabel: consultations.aiConfidenceLabel,
+      aiRequiresHumanReview: consultations.aiRequiresHumanReview,
+      aiProcessingAttempts: consultations.aiProcessingAttempts,
+      aiLastProcessedAt: consultations.aiLastProcessedAt,
+      materialsRegeneratedAt: consultations.materialsRegeneratedAt,
+      materialsRegeneratedCount: consultations.materialsRegeneratedCount,
+      followUpStatus: consultations.followUpStatus,
+      // Short text fields used in the admin list view
+      aiDisclaimer: consultations.aiDisclaimer,
+      doctorNotes: consultations.doctorNotes,
+      medicalHistory: consultations.medicalHistory,
+      medicalReports: consultations.medicalReports,
+      labResults: consultations.labResults,
+      xrayImages: consultations.xrayImages,
+      otherDocuments: consultations.otherDocuments,
+      // aiAnalysis is large — include it so existing pages work (detail view uses getById anyway)
+      aiAnalysis: consultations.aiAnalysis,
+      // Large JSON content blobs are intentionally excluded (aiInfographicContent, aiSlideDeckContent)
+      specialistNotes: consultations.specialistNotes,
+      specialistRejectionReason: consultations.specialistRejectionReason,
+      treatmentPlan: consultations.treatmentPlan,
+      followUpNotes: consultations.followUpNotes,
+      createdAt: consultations.createdAt,
+      updatedAt: consultations.updatedAt,
+    })
+    .from(consultations)
+    .orderBy(desc(consultations.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
 export async function updateConsultationStatus(id: number, status: typeof consultations.$inferSelect.status) {
   const db = await getDb();
   if (!db) return;
@@ -213,11 +290,17 @@ export async function updateConsultationPayment(id: number, paymentStatus: typeo
   const db = await getDb();
   if (!db) return;
 
-  await db.update(consultations).set({ 
-    paymentStatus, 
-    paymentId,
-    updatedAt: new Date() 
-  }).where(eq(consultations.id, id));
+  try {
+    await db.update(consultations).set({ 
+      paymentStatus, 
+      paymentId,
+      updatedAt: new Date() 
+    }).where(eq(consultations.id, id));
+  } catch (err: any) {
+    // Re-throw so callers (e.g. tRPC procedures) can handle DB constraint violations
+    // (e.g. UNIQUE constraint on paymentId)
+    throw err;
+  }
 }
 
 export async function updateConsultationAIResults(

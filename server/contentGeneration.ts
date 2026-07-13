@@ -6,6 +6,7 @@
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { MedicalAnalysisResult, generateSlideDeckContent, generateMindMapData } from "./aiMedicalAnalysis";
+// NOTE: nanoid is still used by generateInfographic (re-upload to S3)
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { invokeLLM } from "./_core/llm";
@@ -18,100 +19,23 @@ export interface GeneratedContent {
 }
 
 /**
- * Generate PDF report from medical analysis
+ * REAL_PDF: Auto-processing path does NOT generate a PDF.
+ * The real PDF is generated on-demand by the admin via:
+ *   server/consultationPDFGenerator.ts → generateConsultationPDF()
+ *   routers.ts → admin.generatePptxReport (PPTX) or admin.generateConsultationPDF (PDFKit)
+ *
+ * This stub returns null so the orchestrator stores no reportPdfUrl for auto-processed
+ * consultations. The admin triggers PDF generation explicitly after specialist review.
  */
 async function generatePDFReport(
-  analysisResult: MedicalAnalysisResult,
-  patientName: string,
+  _analysisResult: MedicalAnalysisResult,
+  _patientName: string,
   consultationId: number,
-  language: "en" | "ar"
+  _language: "en" | "ar"
 ): Promise<string | null> {
-  try {
-    // Create HTML content for PDF
-    const htmlContent = `
-<!DOCTYPE html>
-<html dir="${language === 'ar' ? 'rtl' : 'ltr'}">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-    h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-    h2 { color: #34495e; margin-top: 30px; }
-    .header { text-align: center; margin-bottom: 40px; }
-    .section { margin: 20px 0; }
-    .urgency { padding: 10px; border-radius: 5px; font-weight: bold; }
-    .urgency-low { background: #d4edda; color: #155724; }
-    .urgency-medium { background: #fff3cd; color: #856404; }
-    .urgency-high { background: #f8d7da; color: #721c24; }
-    .urgency-critical { background: #f5c6cb; color: #721c24; }
-    ul { margin: 10px 0; }
-    li { margin: 5px 0; }
-    .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; font-size: 12px; color: #666; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>${language === 'ar' ? 'تقرير التحليل الطبي' : 'Medical Analysis Report'}</h1>
-    <p><strong>${language === 'ar' ? 'المريض' : 'Patient'}:</strong> ${patientName}</p>
-    <p><strong>${language === 'ar' ? 'رقم الاستشارة' : 'Consultation ID'}:</strong> #${consultationId}</p>
-    <p><strong>${language === 'ar' ? 'التاريخ' : 'Date'}:</strong> ${new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}</p>
-  </div>
-
-  <div class="section">
-    <div class="urgency urgency-${analysisResult.urgencyLevel}">
-      ${language === 'ar' ? 'مستوى الأولوية' : 'Urgency Level'}: ${analysisResult.urgencyLevel?.toUpperCase()}
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>${language === 'ar' ? 'ملخص تنفيذي' : 'Executive Summary'}</h2>
-    <p>${analysisResult.summary}</p>
-  </div>
-
-  <div class="section">
-    <h2>${language === 'ar' ? 'النتائج الرئيسية' : 'Key Findings'}</h2>
-    <ul>
-      ${analysisResult.keyFindings?.map(finding => `<li>${finding}</li>`).join('') || ''}
-    </ul>
-  </div>
-
-  <div class="section">
-    <h2>${language === 'ar' ? 'التوصيات' : 'Recommendations'}</h2>
-    <ul>
-      ${analysisResult.recommendations?.map(rec => `<li>${rec}</li>`).join('') || ''}
-    </ul>
-  </div>
-
-  <div class="section">
-    <h2>${language === 'ar' ? 'التحليل التفصيلي' : 'Detailed Analysis'}</h2>
-    <p>${analysisResult.analysis?.replace(/\n/g, '<br>')}</p>
-  </div>
-
-  <div class="footer">
-    <p><strong>${language === 'ar' ? 'تنويه' : 'Disclaimer'}:</strong> ${language === 'ar' ? 'هذا التحليل تم إنشاؤه بمساعدة الذكاء الاصطناعي ويتطلب مراجعة من قبل طبيب متخصص. لا يجب اعتباره تشخيصاً نهائياً أو بديلاً عن الاستشارة الطبية المباشرة.' : 'This analysis was generated with AI assistance and requires review by a medical specialist. It should not be considered a final diagnosis or substitute for direct medical consultation.'}</p>
-  </div>
-</body>
-</html>
-    `;
-
-    // Save HTML to file temporarily
-    const htmlFileName = `consultation-${consultationId}-${nanoid()}.html`;
-    const htmlBuffer = Buffer.from(htmlContent, 'utf-8');
-    const { url: htmlUrl } = await storagePut(
-      `reports/${htmlFileName}`,
-      htmlBuffer,
-      "text/html"
-    );
-
-    // Note: In production, you would convert HTML to PDF using a service like Puppeteer or WeasyPrint
-    // For now, we'll return the HTML URL as the "PDF" URL
-    // TODO: Implement actual PDF conversion
-    return htmlUrl;
-
-  } catch (error) {
-    console.error("Error generating PDF report:", error);
-    return null;
-  }
+  // Intentionally returns null — real PDF is admin-triggered via consultationPDFGenerator
+  console.log(`[ContentGen] PDF generation skipped for #${consultationId} — use admin.generatePptxReport or admin.generateConsultationPDF`);
+  return null;
 }
 
 /**

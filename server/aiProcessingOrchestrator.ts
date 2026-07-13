@@ -1,6 +1,13 @@
 /**
  * AI Processing Orchestrator
  * Handles the complete AI analysis and content generation workflow
+ *
+ * Retry contract:
+ * - Max 3 attempts per consultation (enforced by MAX_AI_ATTEMPTS)
+ * - On failure: status reverts to 'submitted' so admin can retry manually
+ * - On max-attempts exceeded: status set to 'ai_failed' (permanent, requires admin intervention)
+ * - Run-once guard: AI_SKIP_STATUSES prevents re-triggering on downstream statuses
+ * - Content generation failures are non-fatal: analysis is saved even if infographic/slides fail
  */
 
 import * as db from "./db";
@@ -10,8 +17,11 @@ import { generateAllContent } from "./contentGeneration";
 // Statuses from which AI processing must NOT be re-triggered (already downstream)
 const AI_SKIP_STATUSES = [
   'ai_processing', 'ai_processing_complete', 'specialist_review',
-  'doctor_reviewed', 'completed',
+  'doctor_reviewed', 'completed', 'ai_failed',
 ];
+
+// Maximum number of AI processing attempts before marking as permanently failed
+const MAX_AI_ATTEMPTS = 3;
 
 /**
  * Process a consultation with AI analysis and content generation.
@@ -31,6 +41,17 @@ export async function processConsultationWithAI(consultationId: number): Promise
     // Run-once guard — skip if already in a downstream status
     if (AI_SKIP_STATUSES.includes(consultation.status)) {
       console.log(`[AI Orchestrator] Skipping #${consultationId} — already in status '${consultation.status}'`);
+      return;
+    }
+
+    // Max-attempts guard — prevent infinite retry loops
+    const attempts = consultation.aiProcessingAttempts || 0;
+    if (attempts >= MAX_AI_ATTEMPTS) {
+      console.error(`[AI Orchestrator] #${consultationId} exceeded max attempts (${MAX_AI_ATTEMPTS}). Marking as ai_failed.`);
+      await db.updateConsultation(consultationId, {
+        status: 'ai_failed' as any,
+        aiLastProcessedAt: new Date(),
+      });
       return;
     }
 
@@ -62,15 +83,22 @@ export async function processConsultationWithAI(consultationId: number): Promise
       return;
     }
 
-    // Generate all content (PDF, infographic, slides, mind map)
-    console.log(`Generating content for consultation #${consultationId}...`);
-    const generatedContent = await generateAllContent(
-      analysisResult,
-      consultation.patientName,
-      consultationId,
-      consultation.symptoms,
-      consultation.preferredLanguage
-    );
+    // Generate all content (infographic, slides, mind map) — non-fatal
+    // PDF is NOT generated here; it is admin-triggered via admin.generatePptxReport
+    console.log(`[AI Orchestrator] Generating content for consultation #${consultationId}...`);
+    let generatedContent: { reportPdfUrl?: string; infographicUrl?: string; slideDeckUrl?: string; mindMapUrl?: string } = {};
+    try {
+      generatedContent = await generateAllContent(
+        analysisResult,
+        consultation.patientName,
+        consultationId,
+        consultation.symptoms,
+        consultation.preferredLanguage
+      );
+    } catch (contentErr) {
+      // Content generation failure is non-fatal — analysis is still saved
+      console.error(`[AI Orchestrator] Content generation failed for #${consultationId} (non-fatal):`, contentErr);
+    }
 
     // Update consultation with AI results
     await db.updateConsultation(consultationId, {
@@ -79,18 +107,23 @@ export async function processConsultationWithAI(consultationId: number): Promise
       aiInfographicUrl: generatedContent.infographicUrl || null,
       aiSlideDeckUrl: generatedContent.slideDeckUrl || null,
       aiMindMapUrl: generatedContent.mindMapUrl || null,
-      aiProcessingAttempts: (consultation.aiProcessingAttempts || 0) + 1,
+      aiProcessingAttempts: attempts + 1,
       aiLastProcessedAt: new Date(),
       status: "specialist_review",
       specialistApprovalStatus: "pending_review",
     });
 
-    console.log(`AI processing completed successfully for consultation #${consultationId}`);
+    console.log(`[AI Orchestrator] Processing complete for #${consultationId} (attempt ${attempts + 1}/${MAX_AI_ATTEMPTS})`);
 
   } catch (error) {
-    console.error(`Error in AI processing for consultation #${consultationId}:`, error);
-    // Update status back to submitted so it can be retried
-    await db.updateConsultationStatus(consultationId, "submitted");
+    console.error(`[AI Orchestrator] Fatal error for #${consultationId}:`, error);
+    // Revert to submitted so admin can retry manually (unless max attempts reached)
+    const currentAttempts = (await db.getConsultationById(consultationId))?.aiProcessingAttempts || 0;
+    if (currentAttempts >= MAX_AI_ATTEMPTS) {
+      await db.updateConsultation(consultationId, { status: 'ai_failed' as any });
+    } else {
+      await db.updateConsultationStatus(consultationId, "submitted");
+    }
   }
 }
 

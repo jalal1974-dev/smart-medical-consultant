@@ -1,7 +1,8 @@
 import * as db from './db';
 import { generateInfographicContent, generateSlideDeckContent } from './slideContentGenerator';
-import { generateAllContent } from './contentGeneration';
-import { MedicalAnalysisResult } from './aiMedicalAnalysis';
+// NOTE: generateAllContent (contentGeneration) is NOT used here — this path uses
+// the lightweight slideContentGenerator (regex-parse, no LLM) for fast post-research regeneration.
+// Full AI re-analysis is triggered separately via aiProcessingOrchestrator.reprocessConsultationAfterRejection.
 
 /**
  * Regenerates consultation materials after deep research is completed
