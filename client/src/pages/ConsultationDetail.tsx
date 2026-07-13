@@ -15,6 +15,9 @@ import {
 import { format } from "date-fns";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { SITE_URL } from "@/const";
+
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
 // ─── SMC Brand Header ─────────────────────────────────────────────────────────
 function SMCBrandHeader({ language }: { language: string }) {
@@ -23,7 +26,7 @@ function SMCBrandHeader({ language }: { language: string }) {
     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-700 to-teal-900 rounded-xl text-white mb-6 print:mb-4">
       <div className="flex items-center gap-3">
         <img
-          src="https://smartmedcon-jsnymp6w.manus.space/logo.png"
+          src={`${SITE_URL}/logo.png`}
           alt="Smart Medical Consultant"
           className="h-12 w-12 rounded-full object-contain bg-white p-0.5"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -46,7 +49,7 @@ function SMCBrandHeader({ language }: { language: string }) {
           <MessageCircle className="w-3 h-3" />
           <a href="https://wa.me/00962777066005" target="_blank" rel="noopener noreferrer" className="hover:text-white">WhatsApp</a>
         </div>
-        <div className="text-teal-300">smartmedcon-jsnymp6w.manus.space</div>
+        <div className="text-teal-300">{SITE_HOST}</div>
       </div>
     </div>
   );
@@ -593,7 +596,7 @@ export default function ConsultationDetail() {
 
       {/* Print footer */}
       <div className="mt-8 text-center text-xs text-muted-foreground print:block hidden">
-        Smart Medical Consultant — smartmedcon-jsnymp6w.manus.space — +962 777 066 005
+        Smart Medical Consultant — {SITE_HOST} — +962 777 066 005
       </div>
     </div>
   );

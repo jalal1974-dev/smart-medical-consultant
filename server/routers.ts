@@ -16,6 +16,7 @@ import { generateConsultationPDF } from "./consultationPDFGenerator";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import bcrypt from "bcryptjs";
 import { sdk } from "./_core/sdk";
+import { ENV } from "./_core/env";
 
 // ── Launch configuration ──────────────────────────────────────────────────────
 // Set to true to freeze all paid checkout flows and default every consultation
@@ -87,9 +88,10 @@ export const appRouter = router({
         if (!isValid) {
           throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid username or password' });
         }
-        // Create session cookie
+        // Create session cookie. Note: verifySession rejects tokens whose
+        // name claim is empty, so always fall back to a non-empty value.
         const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.name || '',
+          name: user.name || user.username || 'User',
           expiresInMs: ONE_YEAR_MS,
         });
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -97,47 +99,10 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // DEPRECATED: Registration is now free. This route is kept for backward compatibility only.
-    // New users get 1 free consultation automatically via createLocalUser in db.ts.
-    confirmPaypalPayment: publicProcedure
-      .input(z.object({
-        userId: z.number(),
-        paypalOrderId: z.string(),
-        paypalPayerId: z.string().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        // Check payment not already processed
-        const existing = await db.getRegistrationPaymentByOrderId(input.paypalOrderId);
-        if (existing && existing.status === 'completed') {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Payment already processed' });
-        }
-        // Record payment
-        if (!existing) {
-          await db.createRegistrationPayment({
-            userId: input.userId,
-            paypalOrderId: input.paypalOrderId,
-            amount: 1.00,
-            currency: 'USD',
-            status: 'completed',
-            consultationsGranted: 10,
-          });
-        } else {
-          await db.updateRegistrationPaymentStatus(input.paypalOrderId, 'completed', input.paypalPayerId);
-        }
-        // Grant 10 consultations to the user
-        await db.grantConsultationsAfterPayment(input.userId, 1); // DEPRECATED: now grants 1 for backward compat
-        // Auto-login: create session for the new user
-        const user = await db.getUserById(input.userId);
-        if (user) {
-          const sessionToken = await sdk.createSessionToken(user.openId, {
-            name: user.name || '',
-            expiresInMs: ONE_YEAR_MS,
-          });
-          const cookieOptions = getSessionCookieOptions(ctx.req);
-          ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        }
-        return { success: true, consultationsGranted: 10 };
-      }),
+    // REMOVED: confirmPaypalPayment (security: public endpoint could grant
+    // consultations and create a session for any userId without verifying the
+    // payment with PayPal). Registration is free; reintroduce payment via a
+    // server-side PayPal order verification flow when payments go live.
 
     // Request password reset - sends email with token
     requestPasswordReset: publicProcedure
@@ -162,7 +127,7 @@ export const appRouter = router({
 
         // Send reset email
         const { sendPasswordResetEmail } = await import('./emailNotifications');
-        const resetUrl = `https://smartmedcon-jsnymp6w.manus.space/reset-password?token=${token}`;
+        const resetUrl = `${ENV.appUrl}/reset-password?token=${token}`;
         await sendPasswordResetEmail(user.email || input.email, user.name, resetUrl);
 
         return { success: true };
@@ -1016,7 +981,7 @@ export const appRouter = router({
             consultation.patientEmail,
             consultation.patientName,
             consultation.id,
-            pdfUrl ?? `${ctx.req.headers.origin ?? 'https://smartmedcon-jsnymp6w.manus.space'}/dashboard`,
+            pdfUrl ?? `${ctx.req.headers.origin ?? ENV.appUrl}/dashboard`,
             lang
           ).catch(err => console.error('[Email] Failed to send report-ready notification:', err));
         }
@@ -1398,7 +1363,7 @@ export const appRouter = router({
             consultation.patientEmail,
             consultation.patientName,
             consultation.id,
-            (reportUrl as string | null) ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            (reportUrl as string | null) ?? `${ENV.appUrl}/dashboard`,
             (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
           ).catch(err => console.error('[Email] sendReportToPatient notification failed:', err));
         }
@@ -2611,7 +2576,7 @@ export const appRouter = router({
             patient.email,
             patient.name || 'Patient',
             consultation.id,
-            consultation.aiReportUrl ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            consultation.aiReportUrl ?? `${ENV.appUrl}/dashboard`,
             (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
           ).catch((err: unknown) => console.error('[Email] approveAIMaterials notification failed:', err));
         }
@@ -2674,7 +2639,7 @@ export const appRouter = router({
             patient.email,
             patient.name || 'Patient',
             consultation.id,
-            (updates.aiReportUrl as string | undefined) ?? consultation.aiReportUrl ?? 'https://smartmedcon-jsnymp6w.manus.space/dashboard',
+            (updates.aiReportUrl as string | undefined) ?? consultation.aiReportUrl ?? `${ENV.appUrl}/dashboard`,
             (consultation.preferredLanguage ?? 'ar') as 'en' | 'ar'
           ).catch((err: unknown) => console.error('[Email] editAndApprove notification failed:', err));
         }

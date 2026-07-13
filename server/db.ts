@@ -1401,7 +1401,7 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   if (!db) return;
 
   await (db as any).execute(
-    `UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?`,
+    `UPDATE users SET password_hash = ?, updatedAt = NOW() WHERE id = ?`,
     [passwordHash, userId]
   );
 }

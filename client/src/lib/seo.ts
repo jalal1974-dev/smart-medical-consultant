@@ -2,6 +2,7 @@
  * SEO Utilities for Smart Medical Consultant
  * Provides dynamic page titles, descriptions, and meta tags
  */
+import { SITE_URL } from "@/const";
 
 export interface PageSEO {
   title: string;
@@ -122,7 +123,7 @@ export function updateOpenGraphTags(page: keyof typeof pageSEO) {
     if (seo.ogImage) {
       let ogImage = document.querySelector('meta[property="og:image"]');
       if (ogImage) {
-        ogImage.setAttribute('content', `https://smartmedcon-jsnymp6w.manus.space${seo.ogImage}`);
+        ogImage.setAttribute('content', `${SITE_URL}${seo.ogImage}`);
       }
     }
   }
@@ -142,8 +143,7 @@ export function updatePageSEO(page: keyof typeof pageSEO) {
  * Get canonical URL for current page
  */
 export function getCanonicalURL(path: string): string {
-  const baseURL = "https://smartmedcon-jsnymp6w.manus.space";
-  return `${baseURL}${path}`;
+  return `${SITE_URL}${path}`;
 }
 
 /**

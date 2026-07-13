@@ -39,10 +39,14 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
+  const secure = isSecureRequest(req);
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    // "none" requires Secure and is only needed for cross-site/iframe embeds
+    // (e.g. the Manus preview). On plain HTTP (local dev) browsers reject
+    // SameSite=None cookies entirely, so fall back to "lax".
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
+import { SITE_URL } from '@/const';
 
 interface SEOProps {
   title?: string;
@@ -21,13 +22,13 @@ export function SEO({
   const defaultTitle = "Smart Medical Consultant - AI-Powered Medical Analysis | مستشارك الطبي الذكي";
   const defaultDescription = "Get instant AI-powered medical consultation with comprehensive reports, infographics, and specialist review. Bilingual Arabic/English support. First consultation FREE!";
   const defaultKeywords = "medical consultation, AI doctor, symptom checker, online medical advice, telemedicine, healthcare AI, استشارة طبية, طبيب ذكي";
-  const defaultImage = "https://smartmedcon-jsnymp6w.manus.space/og-image.jpg";
-  
+  const defaultImage = `${SITE_URL}/og-image.jpg`;
+
   const pageTitle = title || defaultTitle;
   const pageDescription = description || defaultDescription;
   const pageKeywords = keywords || defaultKeywords;
   const pageImage = image || defaultImage;
-  const pageUrl = `https://smartmedcon-jsnymp6w.manus.space${location}`;
+  const pageUrl = `${SITE_URL}${location}`;
   
   useEffect(() => {
     // Update document title
@@ -84,8 +85,8 @@ export function OrganizationSchema() {
     "@type": "MedicalOrganization",
     "name": "Smart Medical Consultant",
     "alternateName": "مستشارك الطبي الذكي",
-    "url": "https://smartmedcon-jsnymp6w.manus.space",
-    "logo": "https://smartmedcon-jsnymp6w.manus.space/logo.png",
+    "url": SITE_URL,
+    "logo": `${SITE_URL}/logo.png`,
     "description": "AI-powered medical consultation platform providing comprehensive health analysis, reports, and specialist review in Arabic and English",
     "address": {
       "@type": "PostalAddress",
@@ -138,7 +139,7 @@ export function MedicalServiceSchema() {
     "serviceType": "Medical Consultation",
     "availableChannel": {
       "@type": "ServiceChannel",
-      "serviceUrl": "https://smartmedcon-jsnymp6w.manus.space/consultations",
+      "serviceUrl": `${SITE_URL}/consultations`,
       "serviceName": "Online Medical Consultation",
       "availableLanguage": ["English", "Arabic"]
     },
@@ -201,10 +202,10 @@ export function WebsiteSchema() {
     "@type": "WebSite",
     "name": "Smart Medical Consultant",
     "alternateName": "مستشارك الطبي الذكي",
-    "url": "https://smartmedcon-jsnymp6w.manus.space",
+    "url": SITE_URL,
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://smartmedcon-jsnymp6w.manus.space/search?q={search_term_string}",
+      "target": `${SITE_URL}/search?q={search_term_string}`,
       "query-input": "required name=search_term_string"
     },
     "inLanguage": ["en", "ar"]

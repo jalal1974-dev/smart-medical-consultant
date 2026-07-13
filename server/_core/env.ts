@@ -37,6 +37,9 @@ export const ENV = {
 
   // ── Non-critical: missing degrades specific features, not auth ──────────────
   appId:          optionalEnv("VITE_APP_ID"),
+  // Canonical public site URL used in emails (password reset, report links).
+  // Set APP_URL in production; falls back to the legacy Manus deployment URL.
+  appUrl:         optionalEnv("APP_URL", "https://smartmedcon-jsnymp6w.manus.space"),
   databaseUrl:    optionalEnv("DATABASE_URL"),
   ownerOpenId:    optionalEnv("OWNER_OPEN_ID"),
   isProduction:   process.env.NODE_ENV === "production",
