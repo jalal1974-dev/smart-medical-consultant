@@ -996,3 +996,15 @@
 - [x] Rewrite PaymentConfirmation.tsx — frozen payment state; always shows free consultation confirmation; removes PayPal status/retry logic; fixes auth redirect to /login not /; clean loading and not-found states
 - [x] Fix AdminPanel.tsx — split unauthenticated (redirect to /login?next=/admin) vs non-admin (Access Denied card with dashboard/home escape routes)
 - [x] TypeScript: 0 errors
+
+## Backend Audit Fixes — Launch Prep (Jul 2026)
+- [x] Add idempotency guard to updatePayment: return alreadyCompleted=true on second call with same consultationId
+- [x] Add idempotency guard to confirmConsultationPayment: return alreadyCompleted=true on retry; throw CONFLICT if same paypalOrderId used for different consultation
+- [x] Add getConsultationByPaypalOrderId helper to db.ts for duplicate order ID detection
+- [x] Wrap email/WhatsApp side effects in fire-and-forget try/catch so notification failure never blocks patient submission
+- [x] Add run-once guard to processConsultationWithAI: skip if consultation already in ai_processing/specialist_review/completed state
+- [x] Add Payment Idempotency vitest tests: 4 new tests all passing
+- [x] Fix test isolation: use seed-based unique order IDs to prevent DB collision across test runs
+- [x] Fix "should reject free consultation if already used" test: use incrementFreeConsultationsUsed instead of hasUsedFreeConsultation flag
+- [ ] Re-enable PayPal tests once new PayPal account credentials are configured
+- [ ] TypeScript: 0 errors

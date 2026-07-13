@@ -7,18 +7,30 @@ import * as db from "./db";
 import { analyzeMedicalConsultation, ConsultationData } from "./aiMedicalAnalysis";
 import { generateAllContent } from "./contentGeneration";
 
+// Statuses from which AI processing must NOT be re-triggered (already downstream)
+const AI_SKIP_STATUSES = [
+  'ai_processing', 'ai_processing_complete', 'specialist_review',
+  'doctor_reviewed', 'completed',
+];
+
 /**
- * Process a consultation with AI analysis and content generation
- * This is the main orchestrator function that ties everything together
+ * Process a consultation with AI analysis and content generation.
+ * Idempotent: skips if the consultation is already in a downstream status.
  */
 export async function processConsultationWithAI(consultationId: number): Promise<void> {
   try {
-    console.log(`Starting AI processing for consultation #${consultationId}...`);
+    console.log(`[AI Orchestrator] Starting for consultation #${consultationId}...`);
 
     // Get consultation data
     const consultation = await db.getConsultationById(consultationId);
     if (!consultation) {
-      console.error(`Consultation #${consultationId} not found`);
+      console.error(`[AI Orchestrator] Consultation #${consultationId} not found`);
+      return;
+    }
+
+    // Run-once guard — skip if already in a downstream status
+    if (AI_SKIP_STATUSES.includes(consultation.status)) {
+      console.log(`[AI Orchestrator] Skipping #${consultationId} — already in status '${consultation.status}'`);
       return;
     }
 

@@ -335,8 +335,8 @@ export const appRouter = router({
           await db.incrementFreeConsultationsUsed(ctx.user.id);
         }
 
-        // Send email receipt to patient
-        await sendConsultationReceipt({
+                // Side effects — all fire-and-forget so a notification failure never blocks the patient
+        sendConsultationReceipt({
           consultationId: Number(consultationId),
           patientName: input.patientName,
           patientEmail: input.patientEmail,
@@ -345,18 +345,15 @@ export const appRouter = router({
           preferredLanguage: input.preferredLanguage,
           createdAt: new Date(),
           status: 'submitted',
-        });
-
-        // Send WhatsApp notification to admin
-        await sendConsultationWhatsAppNotification({
+        }).catch(err => console.error(`[consultation.create] Email receipt failed for #${consultationId}:`, err));
+        sendConsultationWhatsAppNotification({
           patientName: input.patientName,
           symptoms: input.symptoms,
           consultationId: Number(consultationId),
-        });
-
-        // Trigger AI processing in the background (non-blocking)
+        }).catch(err => console.error(`[consultation.create] WhatsApp notification failed for #${consultationId}:`, err));
+        // AI processing — non-blocking, runs in background
         processConsultationWithAI(Number(consultationId)).catch(error => {
-          console.error(`Background AI processing failed for consultation #${consultationId}:`, error);
+          console.error(`[consultation.create] Background AI failed for #${consultationId}:`, error);
         });
 
         // Attach existing medical records if provided
@@ -483,6 +480,9 @@ export const appRouter = router({
         return db.getQuestionsByConsultationId(input.consultationId);
       }),
     // Update payment status (called after PayPal payment)
+    // LEGACY — kept for backward compat but FROZEN for launch.
+    // New flow: createDraft → confirmConsultationPayment.
+    // This procedure is safe: idempotency guard prevents double-completion.
     updatePayment: protectedProcedure
       .input(z.object({
         consultationId: z.number(),
@@ -494,19 +494,23 @@ export const appRouter = router({
         if (!consultation || consultation.userId !== ctx.user.id) {
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
-
+        // Idempotency guard — do not re-complete an already-completed payment
+        if (consultation.paymentStatus === 'completed') {
+          return { success: true, alreadyCompleted: true };
+        }
         await db.updateConsultationPayment(
           input.consultationId,
           input.status,
           input.paymentId
         );
-
-        // If payment completed, move to AI processing
-        if (input.status === "completed") {
-          await db.updateConsultationStatus(input.consultationId, "ai_processing");
+        // Trigger AI only once, only on completion, only if not already processing
+        if (input.status === 'completed' &&
+            !['ai_processing', 'specialist_review', 'ai_processing_complete', 'doctor_reviewed', 'completed'].includes(consultation.status)) {
+          processConsultationWithAI(input.consultationId).catch(err =>
+            console.error(`[updatePayment] Background AI failed for #${input.consultationId}:`, err)
+          );
         }
-
-        return { success: true };
+        return { success: true, alreadyCompleted: false };
       }),
 
     // ── Step 1: Save form data as a draft (payment_pending) ──
@@ -557,6 +561,8 @@ export const appRouter = router({
 
     // ── Step 2: Confirm PayPal payment for a draft consultation ──
     // Called after PayPal onApprove with the captured order ID.
+    // PAYMENT FROZEN for launch — this procedure is preserved but not called by the UI.
+    // Idempotency: safe to call multiple times with the same paypalOrderId.
     confirmConsultationPayment: protectedProcedure
       .input(z.object({
         consultationId: z.number(),
@@ -568,21 +574,34 @@ export const appRouter = router({
         if (!consultation || consultation.userId !== ctx.user.id) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Consultation not found' });
         }
+        // ── Idempotency guard 1: already completed ──
         if (consultation.paymentStatus === 'completed') {
-          // Idempotent — already confirmed
-          return { success: true, consultationId: input.consultationId };
+          return { success: true, consultationId: input.consultationId, alreadyCompleted: true };
         }
-
+        // ── Idempotency guard 2: paypalOrderId already used for a DIFFERENT consultation ──
+        // Only block if the order ID is stored on a consultation that is NOT this one.
+        // (If it is stored on this same consultation it means guard 1 above missed it — treat as idempotent.)
+        const existingByOrder = await db.getConsultationByPaypalOrderId(input.paypalOrderId);
+        if (existingByOrder && existingByOrder.id !== input.consultationId) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'This PayPal order has already been applied to a different consultation.',
+          });
+        }
+        // Guard 2b: this consultation already has this exact order ID stored (race condition / retry)
+        if (consultation.paymentId === input.paypalOrderId) {
+          return { success: true, consultationId: input.consultationId, alreadyCompleted: true };
+        }
         // Mark payment as completed and store the PayPal order ID
         await db.updateConsultationPayment(input.consultationId, 'completed', input.paypalOrderId);
-
-        // Trigger AI processing in the background
-        processConsultationWithAI(input.consultationId).catch(error => {
-          console.error(`Background AI processing failed for consultation #${input.consultationId}:`, error);
-        });
-
-        // Send receipt email
-        await sendConsultationReceipt({
+        // Trigger AI only once, only if not already in a downstream status
+        if (!['ai_processing', 'specialist_review', 'ai_processing_complete', 'doctor_reviewed', 'completed'].includes(consultation.status)) {
+          processConsultationWithAI(input.consultationId).catch(error => {
+            console.error(`[confirmPayment] Background AI failed for #${input.consultationId}:`, error);
+          });
+        }
+        // Side effects — wrapped individually so one failure does not block the response
+        sendConsultationReceipt({
           consultationId: input.consultationId,
           patientName: consultation.patientName,
           patientEmail: consultation.patientEmail,
@@ -591,16 +610,13 @@ export const appRouter = router({
           preferredLanguage: consultation.preferredLanguage as 'en' | 'ar',
           createdAt: new Date(),
           status: 'submitted',
-        });
-
-        // WhatsApp admin notification
-        await sendConsultationWhatsAppNotification({
+        }).catch(err => console.error(`[confirmPayment] Email receipt failed for #${input.consultationId}:`, err));
+        sendConsultationWhatsAppNotification({
           patientName: consultation.patientName,
           symptoms: consultation.symptoms,
           consultationId: input.consultationId,
-        });
-
-        return { success: true, consultationId: input.consultationId };
+        }).catch(err => console.error(`[confirmPayment] WhatsApp notification failed for #${input.consultationId}:`, err));
+        return { success: true, consultationId: input.consultationId, alreadyCompleted: false };
       }),
   }),
 

@@ -164,6 +164,15 @@ export async function getConsultationById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getConsultationByPaypalOrderId(paypalOrderId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(consultations)
+    .where(eq(consultations.paymentId, paypalOrderId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getConsultationsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
