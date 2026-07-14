@@ -1,5 +1,26 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import * as db from "./db";
+
+// ── Mock the LLM layer so tests never hit the real API ────────────────────────
+vi.mock("./_core/llm", () => ({
+  invokeLLM: vi.fn().mockResolvedValue({
+    choices: [{
+      message: {
+        content: JSON.stringify({
+          success: true,
+          analysis: "The patient presents with persistent headache, photophobia, and nausea — consistent with migraine or tension-type headache. Neurological causes should be excluded.",
+          summary: "Persistent headache with photophobia and nausea",
+          keyFindings: ["Persistent headache for 3 days", "Photophobia", "Mild nausea"],
+          recommendations: ["Consult a neurologist", "Avoid bright lights", "Consider OTC analgesics"],
+          urgencyLevel: "moderate",
+          disclaimer: "This is an AI-generated analysis and does not constitute medical advice.",
+        }),
+      },
+    }],
+  }),
+}));
+
+// Static import — vi.mock hoisting ensures the mock is in place before this runs
 import { analyzeMedicalConsultation } from "./aiMedicalAnalysis";
 
 describe("AI Medical Analysis Workflow", () => {
@@ -7,16 +28,16 @@ describe("AI Medical Analysis Workflow", () => {
   let testUserId: number;
 
   beforeAll(async () => {
-    // Create a test user
-    testUserId = await db.createUser({
+    // upsertUser is the canonical helper (createUser was removed)
+    const user = await db.upsertUser({
       openId: `test-ai-${Date.now()}`,
       name: "Test AI User",
-      email: "test-ai@example.com",
+      email: `test-ai-${Date.now()}@example.com`,
       loginMethod: "test",
       role: "user",
     });
+    testUserId = user.id;
 
-    // Create a test consultation
     testConsultationId = Number(await db.createConsultation({
       userId: testUserId,
       patientName: "John Doe",
@@ -33,14 +54,12 @@ describe("AI Medical Analysis Workflow", () => {
       isFree: true,
       amount: 0,
       paymentStatus: "completed",
+      priority: "routine",
     }));
   });
 
   afterAll(async () => {
-    // Cleanup: delete test consultation and user
-    if (testConsultationId) {
-      // Note: Add cleanup functions to db.ts if needed
-    }
+    // Cleanup is best-effort; test DB rows are acceptable to leave
   });
 
   it("should analyze medical consultation and return structured results", async () => {
@@ -68,13 +87,12 @@ describe("AI Medical Analysis Workflow", () => {
     expect(analysisResult.keyFindings).toBeDefined();
     expect(analysisResult.recommendations).toBeDefined();
     expect(analysisResult.urgencyLevel).toBeDefined();
-    
-    // Verify analysis contains relevant medical information
+
+    // Verify analysis contains relevant medical information (from mock)
     expect(analysisResult.analysis).toMatch(/headache|migraine|neurological/i);
-  }, 60000); // 60 second timeout for AI processing
+  });
 
   it("should update consultation status through workflow", async () => {
-    // Test status transitions
     await db.updateConsultationStatus(testConsultationId, "ai_processing");
     let consultation = await db.getConsultationById(testConsultationId);
     expect(consultation?.status).toBe("ai_processing");
@@ -89,7 +107,6 @@ describe("AI Medical Analysis Workflow", () => {
   });
 
   it("should handle specialist approval workflow", async () => {
-    // Update consultation with approval
     await db.updateConsultation(testConsultationId, {
       specialistApprovalStatus: "approved",
       specialistNotes: "Analysis looks good, approved for patient delivery",
@@ -104,7 +121,6 @@ describe("AI Medical Analysis Workflow", () => {
   });
 
   it("should handle specialist rejection workflow", async () => {
-    // Update consultation with rejection
     await db.updateConsultation(testConsultationId, {
       specialistApprovalStatus: "rejected",
       specialistRejectionReason: "Need more detailed differential diagnosis",

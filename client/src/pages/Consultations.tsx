@@ -14,7 +14,8 @@ import { useLocation, useSearch } from "wouter";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { RecordPicker } from "@/components/RecordPicker";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Consultations() {
   // ProtectedRoute in App.tsx already blocks unauthenticated access before this
@@ -24,6 +25,23 @@ export default function Consultations() {
   const { t, language } = useLanguage();
   const [, setLocation] = useLocation();
   const createMutation = trpc.consultation.create.useMutation();
+
+  // ── Quota state ──────────────────────────────────────────────────────────
+  // Track whether the quota was exhausted (either from a pre-check or from
+  // a submission attempt). This drives the inline exhaustion banner.
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
+
+  // Pre-check quota on mount so the banner appears before the user submits
+  const { data: statusData } = trpc.subscription.getStatus.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  // Derive quota exhaustion from the status query result
+  useEffect(() => {
+    if (statusData && (statusData as any).consultationsRemaining === 0 && (statusData as any).subscriptionType === 'free') {
+      setQuotaExhausted(true);
+    }
+  }, [statusData]);
   // PAYMENT FROZEN FOR LAUNCH — draft/payment mutations kept for future re-enablement
   // const createDraftMutation = trpc.consultation.createDraft.useMutation();
   // const confirmPaymentMutation = trpc.consultation.confirmConsultationPayment.useMutation();
@@ -78,7 +96,17 @@ export default function Consultations() {
       toast.success(t('consultationBooked'));
       setLocation(`/payment-confirmation/${result.consultationId}`);
     } catch (error: any) {
-      toast.error(error.message || t('consultationError'));
+      // Detect the structured quota-exhaustion error code from the backend
+      const isQuotaError =
+        error?.message === 'FREE_QUOTA_EXHAUSTED' ||
+        error?.data?.message === 'FREE_QUOTA_EXHAUSTED';
+      if (isQuotaError) {
+        setQuotaExhausted(true);
+        // Scroll to the top of the form so the banner is visible
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.error(error.message || t('consultationError'));
+      }
     }
   };
 
@@ -148,15 +176,45 @@ export default function Consultations() {
                   ? "قدم معلوماتك الطبية وسنقوم بتحليلها باستخدام الذكاء الاصطناعي تحت إشراف أطبائنا المتخصصين"
                   : "Submit your medical information and we'll analyze it using AI under the supervision of our medical specialists"}
               </CardDescription>
-              {/* FREE LAUNCH BANNER */}
-              {isAuthenticated && (
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              {/* FREE LAUNCH BANNER — switches to quota-exhausted state when limit is reached */}
+              {isAuthenticated && !quotaExhausted && (
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <p className="text-sm font-medium text-green-800 dark:text-green-200">
                     {language === 'ar'
                       ? '🎉 جميع الاستشارات مجانية خلال مرحلة الإطلاق — لا حاجة لأي دفع!'
                       : '🎉 All consultations are free during our launch stage — no payment required!'}
                   </p>
                 </div>
+              )}
+
+              {/* QUOTA EXHAUSTED BANNER */}
+              {quotaExhausted && (
+                <Alert variant="destructive" className="border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200">
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <AlertTitle className="text-amber-800 dark:text-amber-300 font-semibold">
+                    {language === 'ar'
+                      ? 'لقد استخدمت استشارتك المجانية'
+                      : 'Free consultation limit reached'}
+                  </AlertTitle>
+                  <AlertDescription className="mt-1 space-y-2">
+                    <p className="text-sm">
+                      {language === 'ar'
+                        ? 'لقد استفدت من استشارتك المجانية المتاحة خلال مرحلة الإطلاق. يمكنك التواصل معنا عبر واتساب للحصول على مزيد من المساعدة.'
+                        : 'You have used your free consultation for the launch stage. Please contact us via WhatsApp for further assistance.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleWhatsAppSubmit}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                      {language === 'ar' ? 'تواصل عبر واتساب' : 'Contact via WhatsApp'}
+                    </button>
+                  </AlertDescription>
+                </Alert>
               )}
             </CardHeader>
             <CardContent>
@@ -383,8 +441,8 @@ export default function Consultations() {
                     <Button
                       type="submit"
                       size="lg"
-                      disabled={createMutation.isPending}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      disabled={createMutation.isPending || quotaExhausted}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-60"
                     >
                       {createMutation.isPending
                         ? t("loading")
