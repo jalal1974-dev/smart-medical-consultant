@@ -17,6 +17,26 @@ export async function getDb() {
   return _db;
 }
 
+
+// Raw parameterized SQL helper. Drizzle's execute() does NOT accept
+// (sqlString, params) pairs - placeholders were silently left unbound -
+// so raw queries go through a dedicated mysql2 pool instead.
+import mysqlRaw from "mysql2/promise";
+let _rawPool: mysqlRaw.Pool | null = null;
+
+function getRawPool(): mysqlRaw.Pool | null {
+  if (!_rawPool && process.env.DATABASE_URL) {
+    _rawPool = mysqlRaw.createPool(process.env.DATABASE_URL);
+  }
+  return _rawPool;
+}
+
+async function rawExecute(sqlText: string, params: unknown[] = []): Promise<any> {
+  const pool = getRawPool();
+  if (!pool) throw new Error("[Database] not available for raw query");
+  return pool.execute(sqlText, params as any[]);
+}
+
 // ==================== User Functions ====================
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -1236,7 +1256,7 @@ export async function getUserByUsername(username: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `SELECT * FROM users WHERE username = ? LIMIT 1`,
     [username]
   );
@@ -1249,7 +1269,7 @@ export async function getUserByEmail(email: string) {
   if (!db) return undefined;
 
   // Use raw SQL to include password_hash which was added via direct SQL migration
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `SELECT * FROM users WHERE email = ? LIMIT 1`,
     [email]
   );
@@ -1288,13 +1308,13 @@ export async function createLocalUser(data: {
   // Generate a unique openId for local users
   const openId = `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `INSERT INTO users (openId, username, email, name, password_hash, auth_method, loginMethod, role, hasUsedFreeConsultation, subscription_type, consultations_remaining, lastSignedIn, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, 'local', 'local', 'user', 0, 'free', 0, NOW(), NOW(), NOW())`,
     [openId, data.username, data.email, data.name, data.passwordHash]
   );
-  const rows = Array.isArray(result[0]) ? result[0] : result;
-  return (rows as any).insertId;
+  // mysql2 execute() returns [ResultSetHeader, fields] for INSERTs
+  return (result[0] as any).insertId as number;
 }
 
 export async function grantConsultationsAfterPayment(userId: number, count: number): Promise<void> {
@@ -1302,7 +1322,7 @@ export async function grantConsultationsAfterPayment(userId: number, count: numb
   if (!db) return;
 
   // Also update free_consultations_total so the quota system reflects the premium plan
-  await (db as any).execute(
+  await rawExecute(
     `UPDATE users SET consultations_remaining = consultations_remaining + ?,
      free_consultations_total = free_consultations_total + ?,
      subscription_type = 'pay_per_case'
@@ -1322,7 +1342,7 @@ export async function createRegistrationPayment(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `INSERT INTO registration_payments (user_id, paypal_order_id, amount, currency, status, consultations_granted)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [data.userId, data.paypalOrderId, data.amount, data.currency, data.status, data.consultationsGranted]
@@ -1335,7 +1355,7 @@ export async function updateRegistrationPaymentStatus(paypalOrderId: string, sta
   const db = await getDb();
   if (!db) return;
 
-  await (db as any).execute(
+  await rawExecute(
     `UPDATE registration_payments SET status = ?, paypal_payer_id = ?, updated_at = NOW() WHERE paypal_order_id = ?`,
     [status, paypalPayerId || null, paypalOrderId]
   );
@@ -1345,7 +1365,7 @@ export async function getRegistrationPaymentByOrderId(paypalOrderId: string) {
   const db = await getDb();
   if (!db) return undefined;
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `SELECT * FROM registration_payments WHERE paypal_order_id = ? LIMIT 1`,
     [paypalOrderId]
   );
@@ -1359,7 +1379,7 @@ export async function createPasswordResetToken(userId: number, token: string, ex
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await (db as any).execute(
+  await rawExecute(
     `INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)`,
     [userId, token, expiresAt]
   );
@@ -1369,7 +1389,7 @@ export async function getPasswordResetToken(token: string) {
   const db = await getDb();
   if (!db) return null;
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `SELECT * FROM password_reset_tokens WHERE token = ? LIMIT 1`,
     [token]
   );
@@ -1390,7 +1410,7 @@ export async function markPasswordResetTokenUsed(token: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  await (db as any).execute(
+  await rawExecute(
     `UPDATE password_reset_tokens SET used_at = ? WHERE token = ?`,
     [Date.now(), token]
   );
@@ -1400,7 +1420,7 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   const db = await getDb();
   if (!db) return;
 
-  await (db as any).execute(
+  await rawExecute(
     `UPDATE users SET password_hash = ?, updatedAt = NOW() WHERE id = ?`,
     [passwordHash, userId]
   );
@@ -1434,7 +1454,7 @@ export async function createUserMedicalRecord(data: {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `INSERT INTO user_medical_records (user_id, file_name, file_url, file_key, file_type, file_size, category, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [data.userId, data.fileName, data.fileUrl, data.fileKey, data.fileType, data.fileSize ?? null, data.category, data.notes ?? null]
@@ -1446,7 +1466,7 @@ export async function deleteUserMedicalRecord(id: number, userId: number): Promi
   const db = await getDb();
   if (!db) return false;
 
-  const result = await (db as any).execute(
+  const result = await rawExecute(
     `DELETE FROM user_medical_records WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
@@ -1474,7 +1494,7 @@ export async function attachRecordsToConsultation(consultationId: number, record
 
   // Insert each record link (ignore duplicates)
   for (const recordId of recordIds) {
-    await (db as any).execute(
+    await rawExecute(
       `INSERT IGNORE INTO consultation_attached_records (consultation_id, record_id) VALUES (?, ?)`,
       [consultationId, recordId]
     );
@@ -1485,7 +1505,7 @@ export async function getAttachedRecordsForConsultation(consultationId: number):
   const db = await getDb();
   if (!db) return [];
 
-  const rows = await (db as any).execute(
+  const rows = await rawExecute(
     `SELECT car.id, car.consultation_id, car.record_id, car.createdAt,
             umr.file_name AS fileName, umr.file_url AS fileUrl,
             umr.file_type AS fileType, umr.category
@@ -1504,7 +1524,7 @@ export async function getAttachedRecordsForConsultations(consultationIds: number
   if (!db || consultationIds.length === 0) return {};
 
   const placeholders = consultationIds.map(() => '?').join(',');
-  const rows = await (db as any).execute(
+  const rows = await rawExecute(
     `SELECT car.consultation_id, car.record_id,
             umr.file_name AS fileName, umr.file_url AS fileUrl,
             umr.file_type AS fileType, umr.category
@@ -1728,7 +1748,7 @@ export async function getActiveMedicalHistorySessionForUser(userId: number): Pro
 export async function acknowledgeDisclaimer(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await (db as any).execute(
+  await rawExecute(
     `UPDATE users SET disclaimerAcknowledgedAt = NOW() WHERE id = ?`,
     [userId]
   );
